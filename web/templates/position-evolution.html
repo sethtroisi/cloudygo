@@ -1,0 +1,186 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html>
+  {% from "macros.html" import models_link, favicon_links with context %}
+  <head lang="en">
+      <meta charset="UTF-8">
+      <title>Minigo {{ group|title }} Evolution</title>
+
+      {{ favicon_links() }}
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
+
+      <script type="text/javascript" src="{{ url_for('static',filename='graphs.js') }}"></script>
+      <script type="text/javascript" src="{{ url_for('static',filename='general.js') }}"></script>
+
+      <script src="https://d3js.org/d3.v4.min.js"></script>
+
+      <script type="text/javascript" src="/static/wgo/wgo.min.js"></script>
+      <script type="text/javascript" src="/static/wgo/wgo.player.min.js"></script>
+      <script type="text/javascript" src="/static/wgo/wgo_markers.js"></script>
+      <link type="text/css" href="/static/wgo/wgo.player.css" rel="stylesheet" />
+
+      <style>
+        .container-container {
+          display: inline-block;
+          width: 98%;
+        }
+        .input-container {
+          width: 100%;
+          text-align: center
+        }
+        #model-select, #position-select {
+          width: 30%;
+          border: 1px dotted blue;
+        }
+        .wgo-container {
+          display: inline-block;
+          width: 45%;
+          margin: 0 2.4%;
+        }
+        .title-title {
+          text-align: center;
+          width: 300px;
+          margin: auto;
+        }
+        .diagram-title {
+          display: inline-block;
+          font-weight: bold;
+          font-size: 1.5em;
+          min-width: 200px;
+          text-align: right;
+        }
+        .wgo-diagram .wgo-board {
+            border-bottom: none;
+        }
+      </style>
+  </head>
+  <body>
+    <h1>
+        {{ models_link() }}
+        | Model Evolution ({{ count }})
+    </h1>
+
+    <hr>
+    <div class="container-container">
+      <div class="input-container">
+        <span class="diagram-title title-model">Model</span>&nbsp;
+				<input type="range" id="model-select" autofocus>
+        <div></div>
+
+        <span class="diagram-title title-position">Position</span>&nbsp;
+				<input type="range" id="position-select">
+        <div class="title-title">
+          <div class="diagram-title title-both"></div>
+          <div class="diagram-title title-both-q"></div>
+        </div>
+      </div>
+      <div class="wgo-container position-data">
+        <div class="wgo-diagram" id="diagram-a"></div>
+      </div>
+      <div class="wgo-container position-data">
+        <div class="wgo-diagram" id="diagram-b"></div>
+      </div>
+    </div>
+
+  </body>
+  <script>
+    function player(elem) {
+        var player = new WGo.BasicPlayer(elem, {
+            move: 99,
+            board: {
+              stoneHandler: WGo.Board.drawHandlers.MONO,
+              theme: {font: 'arial' },
+              background: '#f2b26d',
+              lineWidth: 0,
+              theme: {markupLinesWidth: 0 },
+            },
+            layout: "{top: [], right: [], left: [], bottom: []}",
+            enableKeys: false,
+            enableWheel: false,
+        });
+        player.setCoordinates(true);
+        player.marker = new WGo.Player.Marker(player, player.board);
+        return player;
+    }
+
+    /**** POSITION ****/
+    var modelSlider = d3.select("#model-select");
+    var positionSlider = d3.select("#position-select");
+
+    var playerA = player(document.getElementById("diagram-a"));
+    var playerB = player(document.getElementById("diagram-b"));
+    var titleA = d3.select(".title-model");
+    var titleB = d3.select(".title-position");
+    var titleC = d3.select(".title-both");
+    var titleD = d3.select(".title-both-q");
+
+    var sgfs = JSON.parse('{{ sgfs | tojson | safe }}');
+    var positions = sgfs ? (sgfs.length > 0 ? sgfs[0].length : 0) : 0;
+
+    /**** Slider Magic ****/
+
+    var m = 0;
+    var p = 1;
+
+    function update(mNew, pNew) {
+				m = mNew;
+				p = pNew;
+
+        var data = sgfs[m];
+        var r = data[p];
+        var model_num = data[0];
+
+        var model_text = "Model " + model_num;
+        var pos_text   = r[0];
+        pos_text = pos_text.charAt(0).toUpperCase() + pos_text.slice(1);
+
+        titleA.text(model_text);
+        titleB.text(pos_text);
+        titleC.text(model_text + " " + pos_text);
+        titleD.text("Q: " + r[2] + ", " + r[4]);
+        playerA.loadSgf(r[1], 99);
+        playerB.loadSgf(r[3], 99);
+
+        playerB.config.markLastMove=false;
+        playerB.marker.clearDefaultSytle();
+        playerB.marker.switchMaker({
+            'markerNum': r[5],
+        });
+
+        update_url_inplace("M", model_num);
+        update_url_inplace("P", p);
+    }
+
+    function update_m(m) { update(m, p); }
+    function update_p(p) { update(m, p); }
+
+    add_slider(modelSlider, update_m, 0, sgfs.length - 1, 0);
+    add_slider(positionSlider, update_p, 1, positions - 1, 1);
+
+    // TODO make these work with sgfs or index or something to be stable
+    find_and_set_slider(
+        modelSlider,
+        sgfs, function(d) { return d[0]+""; },
+        '{{ request.args.get("M", "") }}');
+
+    find_and_set_slider(
+        positionSlider,
+        sgfs[0], function(d) { return d[0]+""; },
+        '{{ request.args.get("P", "") }}');
+
+  </script>
+</html>

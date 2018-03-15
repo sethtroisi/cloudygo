@@ -1,0 +1,193 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html>
+  {% from "macros.html" import models_link, favicon_links with context %}
+  <head lang="en">
+      <meta charset="UTF-8">
+      <title>Minigo Model Graphs</title>
+
+      {{ favicon_links() }}
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
+
+      <script src="https://d3js.org/d3.v4.min.js"></script>
+      <script type="text/javascript" src="{{ url_for('static',filename='graphs.js') }}"></script>
+      <script type="text/javascript" src="{{ url_for('static',filename='general.js') }}"></script>
+
+      <script type="text/javascript" src="/static/wgo/wgo.min.js"></script>
+      <script type="text/javascript" src="/static/wgo/wgo.player.min.js"></script>
+      <script type="text/javascript" src="/static/wgo/wgo_markers.js"></script>
+      <link type="text/css" href="/static/wgo/wgo.player.css" rel="stylesheet" />
+
+      <style>
+        #game-length-svg {
+            margin: 20px;
+            width: 480px;
+            height: 480px;
+        }
+        path {
+            opacity: 0.8;
+        }
+
+        .wgo-container {
+          display: inline-block;
+          margin: 10px;
+        }
+        .wgo-container, .wgo-diagram {
+            width: 482px;
+        }
+        .wgo-container input {
+            width: 200px;
+        }
+        .diagram-title {
+            vertical-align: top;
+        }
+        .wgo-diagram .wgo-board {
+            border-bottom: none;
+        }
+      </style>
+  </head>
+  <body>
+    <h1>
+        {{ models_link() }}
+        | <a class="model-name" href="{{ url_for('model_details', bucket=bucket, model_name=model[2]) }}">
+            {{ model[1] }} Details</a>
+        | Graphs
+    </h1>
+
+    <hr>
+    <div class="wgo-container policy-data">
+      <input type="range" id="policy-select">
+      <div class="diagram-title"></div>
+      <div class="wgo-diagram" id="policy-diagram"></div>
+    </div>
+    <div class="wgo-container pv-data">
+      <div class="diagram-title"></div>
+      <div class="wgo-diagram" id="pv-diagram"></div>
+    </div>
+    <div class="wgo-container opening-response">
+      <input type="range" id="opening-response-select" autofocus>
+      <div class="diagram-title"></div>
+      <div class="wgo-diagram" id="opening-response-diagram"></div>
+    </div>
+
+    <hr>
+    <svg id="game-length-svg"></svg>
+    <!-- <svg id="bleakest-eval-svg"></svg> -->
+
+  </body>
+  <script>
+    var game_length = JSON.parse('{{ game_length | tojson | safe}}');
+
+    var model_num = {{ model[4] }};
+    per_model_slider_graph(
+        model_num,
+        d3.select("#game-length-svg"),
+        game_length.map(function(d) { return [model_num].concat(d); }),
+        function(d) { return d[2] },
+        function(d) { return d[3] },
+        "Game length breakdown",
+        "Number of moves in game",
+        "Number of games ending on <X> move");
+
+    /**** RESPONSE ****/
+    function player(elem) {
+        var player = new WGo.BasicPlayer(elem, {
+            move: 99,
+            board: {
+              stoneHandler: WGo.Board.drawHandlers.MONO,
+              theme: {font: 'arial' },
+              background: '#f2b26d',
+              theme: {
+                  markupLinesWidth: 0,
+                  markupWhiteColor: '#000',
+              },
+            },
+            layout: "{top: [], right: [], left: [], bottom: []}",
+            enableKeys: false,
+            enableWheel: false,
+        });
+        player.setCoordinates(true);
+        player.marker = new WGo.Player.Marker(player, player.board);
+        return player
+    }
+
+    var responses = JSON.parse('{{ opening_responses | tojson | safe }}');
+    var responsePlayer = player(document.getElementById("opening-response-diagram"));
+    var responseSlider = d3.select("#opening-response-select");
+    var responseTitle = d3.select(".opening-response .diagram-title");
+
+    function update_response(index) {
+        var r = responses[index];
+        responseTitle.text(
+            "Response to " + r[0] + " (played " + r[1] + " times, " +
+            r[2] + " = " + Math.round(100 * r[2] / r[1]) + "% shown)");
+        var sgf = r[3];
+        responsePlayer.loadSgf(sgf, 99);
+        update_url_inplace("R", r[0]);
+    }
+
+    add_slider(responseSlider, update_response, 0, responses.length - 1, 0);
+    find_and_set_slider(
+        responseSlider,
+        responses,
+        function(d) { return d[0] },
+        '{{ request.args.get("R", "") }}');
+
+    /**** POLICY + PV ****/
+
+    var position_sgfs = JSON.parse('{{ position_sgfs | tojson | safe }}');
+
+      var policyPlayer = player(document.getElementById("policy-diagram"));
+      var policySlider = d3.select("#policy-select");
+      var policyTitle = d3.select(".policy-data .diagram-title");
+
+      var pvPlayer = player(document.getElementById("pv-diagram"));
+      var pvTitle = d3.select(".pv-data .diagram-title");
+
+    if (position_sgfs.length == 0) {
+      policyPlayer.element.style.display = "none";
+      pvPlayer.element.style.display = "none";
+      policySlider.style("display","none");
+    } else {
+      function update_policy(index) {
+          var r = position_sgfs[index];
+          var name = r[0];
+          policyTitle.text("Policy for " + name + " Q:" + r[2]);
+          var policySGF = r[1];
+          policyPlayer.loadSgf(policySGF, 99);
+          update_url_inplace("P", r[0]);
+
+          pvTitle.text("PV for " + name + " Q:" + r[4]);
+          var pvSGF = r[3];
+          pvPlayer.loadSgf(pvSGF, 99);
+
+          pvPlayer.config.markLastMove=false;
+          pvPlayer.marker.clearDefaultSytle();
+          pvPlayer.marker.switchMaker({
+              "markerNum": r[5]
+          });
+      }
+
+      add_slider(policySlider, update_policy, 0, position_sgfs.length - 1, 0);
+      find_and_set_slider(
+          policySlider,
+          position_sgfs,
+          function(d) { return d[0] },
+          '{{ request.args.get("P", "") }}');
+    }
+  </script>
+</html>

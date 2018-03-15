@@ -1,0 +1,137 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html>
+  {% from "macros.html" import models_link, favicon_links, tip with context %}
+  <head lang="en">
+      <meta charset="UTF-8">
+      <title>Minigo Eval crosstable</title>
+
+      {{ favicon_links() }}
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/table.css') }}">
+
+      <style>
+        .models-table.overall {
+          font-size: 200%
+        }
+        .winrate, .rating {
+          font-weight: bold;
+        }
+        .game-link-column {
+          display: block;
+        }
+      </style>
+  </head>
+  <body>
+    {% macro WLR(a, b, rounding=2) -%}
+      {% if b != 0 %}
+        {{ a }} / {{ b }}
+        {% if a == b %}
+          = <span class="winrate">100%</span>
+        {% elif a == 0 %}
+          = <span class="winrate">0%</span>
+        {% elif b != 0 %}
+          {% if rounding == 0 %}
+            = <span class="winrate">{{ (100 * a / b)|round|int }}%</span>
+          {% else %}
+            = <span class="winrate">{{ (100 * a / b)|round(rounding) }}%</span>
+          {% endif %}
+        {% endif %}
+      {% else %}
+          0 played
+      {% endif %}
+    {%- endmacro %}
+    <h1>
+      {{ models_link() }}
+      | <a href="{{ url_for('models_graphs', bucket=bucket) }}">Graphs</a>
+      | <a href="{{ url_for('eval_graphs', bucket=bucket) }}">Evaluations</a>
+      | Model {{ overall[0] }} Eval
+    </h1>
+    <table class="models-table overall">
+      <tbody>
+      <tr>
+        <td colspan="2" class="rating">
+          Rating {{ overall[2]|round(2) }} ~=
+          {% set log10e = 0.434294 %}
+          {{ (overall[2] * log10e * 400)|int() }}
+          elo
+        </td>
+        <td class="tooltip">
+          Uncertainty {{ overall[3]|round(3) }}
+          {{ tip('Std error of rating param') }}
+        </td>
+      </tr>
+      <tr>
+        <td>Overall {{ WLR(overall[6] + overall[8], overall[5] + overall[7]) }}</td>
+        <td>As Black {{ WLR(overall[6], overall[5]) }}</td>
+        <td>As White {{ WLR(overall[8], overall[7]) }}</td>
+      </tr>
+      <tr>
+        <td>vs Earlier Models {{ WLR(earlier_models[1], earlier_models[0]) }}</td>
+        <td>vs Later Models {{ WLR(later_models[1], later_models[0]) }}</td>
+        <td class="tooltip">
+          Played {{ played_better }} stronger* ranked models
+          {{ tip('Stronger based on current Bradley-Terry rankings') }}
+        </td>
+      </tr>
+      </tbody>
+    </table>
+    <hr>
+    <table class="models-table">
+      <thead>
+        <th>VS</th>
+        <th>As Black </th>
+        <th>As White </th>
+        <th>Total Games</th>
+        <th class="tooltip">
+          Expected
+          {{ tip('Based on current Bradley-Terry rankings') }}
+        </th>
+        <th>Game links</th>
+      </thead>
+      <tbody>
+      {% for data in model_games[::-1] %}
+        <tr>
+          <td>
+            <a href="{{ url_for('model_eval', bucket=bucket, model_name=data[1]) }}">
+              {{ data[1] }}</a>
+            {% if 49 > data[2] -%}(Strong){%- endif %}
+          </td>
+          <td>{{ WLR(data[6], data[5], 0) }}</td>
+          <td>{{ WLR(data[8], data[7], 0) }}</td>
+          <td>{{ WLR(data[6] + data[8], data[5] + data[7], 1) }}</td>
+          <td>{{ data[2]|round(1)  }}% </td>
+          <td class="game-link-column">
+            {% for eval_game in eval_games %}
+              {% if eval_game[0] == data[1] or eval_game[1] == data[1] %}
+              <a href="{{ url_for('game_view',
+                                  bucket=bucket,
+                                  model=data[0],
+                                  filename=eval_game[2],
+                                  type='eval') }}">{{ loop.index }}</a>,
+              {% endif %}
+            {% endfor %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </body>
+
+  <script type="text/javascript">
+  </script>
+</html>

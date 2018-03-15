@@ -1,0 +1,126 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html>
+  {% from "macros.html" import models_link, model_link, favicon_links, cloudy_footer with context %}
+  <head lang="en">
+      <meta charset="UTF-8">
+      <title>Minigo Site Nav</title>
+
+      {{ favicon_links() }}
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
+
+      <style>
+        body {
+          background: #abf
+        }
+
+        h1 + h3 {
+          margin-top: -20px;
+        }
+
+        .header {
+          text-align:center
+        }
+
+        #logo {
+          transform: rotate(7deg);
+          animation: bounce 5s infinite, spin 10s infinite;
+        }
+
+        @keyframes spin {
+          25% { transform:rotate(10deg); }
+          50% { transform:rotate(0deg); }
+          75% { transform:rotate(-10deg); }
+        }
+
+        .game-links .model-name {
+          text-transform: initial;
+        }
+
+        .bottom-hr {
+          margin-top: 100px;
+        }
+      </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Cloudy Go Site Navigation</h1>
+      <img id="logo" class="animated" src="/static/favicon-96x96.png">
+    </div>
+
+    <h1>Links to information about all model</h1>
+    <h2>
+      {{ models_link() }}
+      | <a href="{{ url_for('models_graphs', bucket=bucket) }}">Graphs</a>
+      | <a href="{{ url_for('figure_three', bucket=bucket) }}">Figure 3</a>
+      | <a href="{{ url_for('eval_graphs', bucket=bucket) }}">Evaluation</a>
+      | <a href="{{ url_for('models_evolution', bucket=bucket) }}">Evolution</a>
+    </h2>
+
+    <hr>
+    <h1>Links to information about a particular model</h1>
+    <h3>model number in these URLs can be change to any number or 'newest'</h3>
+    <h2>
+        {{ model_link('newest model details', model) }}
+        | <a href="{{ url_for('model_graphs', bucket=bucket, model_name=model) }}">
+            Graphs</a>
+        <br>
+        <a href="{{ url_for('model_eval', bucket=bucket, model_name=model-50) }}">
+              Eval cross table</a>
+        <br>
+        <a href="{{ url_for('position_comparison',
+                            bucket=bucket,
+                            model_name_a=model,
+                            model_name_b=300,
+                            group='policy') }}">Policy Comparison</a>
+        and
+        <a href="{{ url_for('position_comparison',
+                            bucket=bucket,
+                            model_name_a=model,
+                            model_name_b=300,
+                            group='pv') }}">PV Comparison</a>
+        compare the policy value, PV on several common human positions
+    </h2>
+
+    <hr>
+    <h1>Links to information about a game</h1>
+    <h3 class="game-links">
+      URLs can be found on a specific
+      {{ model_link('model page', model) }}
+      or in that model's
+      <a href="{{ url_for('model_eval', bucket=bucket, model_name=model-50) }}">
+          eval cross table</a>
+    </h3>
+
+
+    <hr class="bottom-hr">
+    <h2>Other pages that aren't *perfectly* maintained</h2>
+    <h3>
+      <a href="{{ url_for('models_graphs_sliders', bucket=bucket) }}">
+          Slider Graphs</a>
+      <br>
+      <a href="{{ url_for('missing_games', bucket=bucket, model_id=model) }}">
+          Missing eval games</a>
+      <br>
+    </h3>
+
+    {{ cloudy_footer() }}
+  </body>
+
+  <script type="text/javascript">
+  </script>
+</html>

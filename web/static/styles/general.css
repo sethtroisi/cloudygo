@@ -1,0 +1,15 @@
+.model-name {
+    text-transform: capitalize;
+}
+
+.back {
+    margin-right: 8px;
+}
+
+.right-nav {
+    float: right;
+}
+
+h1 {
+    overflow: auto;
+}

@@ -1,0 +1,9 @@
+add static/d3-tip.js which implements tip (or remove the macro)
+add static/favicon-16x16.png
+add static/favicon-32x32.png
+add static/favicon-96x96.png
+add static/favicon.ico
+add static/wgo/wgo.min.js
+add static/wgo/wgo.player.css
+add static/wgo/wgo.player.min.js
+add static/wgo/wgo_markers.js (from pull request #1)

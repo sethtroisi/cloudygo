@@ -1,0 +1,50 @@
+table {
+    border-collapse: collapse;
+}
+
+tr th {
+    padding: 6px 5px;
+    background: #ccc;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 2px 5px;
+}
+
+tr { background: #fff; }
+tr:nth-child(even) { background: #dadada; }
+
+.debug-sep {
+    border-left: 5px solid black
+}
+
+.tooltip {
+    position: relative;
+}
+.tooltip .tooltipcontainer {
+    position:absolute;
+    left: -150px;
+    right: -150px;
+    text-align: center;
+    z-index: 2;
+}
+
+.tooltip .tooltiptext {
+    background: #aaa;
+    border-radius: 8px;
+    display: none;
+    padding: 8px 10px;
+    max-width: 300px;
+}
+.tooltip:hover .tooltiptext {
+    display: inline-block;
+}
+
+.models-table {
+  display: inline-table;
+  font-size: 125%;
+  margin-bottom: 20px;
+  margin-right: 5px;
+}
+

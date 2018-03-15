@@ -1,0 +1,196 @@
+@media only screen and (max-width: 480px) {
+    body { background: #eff }
+}
+
+
+/*--- Box styles ----------------------------------------------------------------------*/
+
+/*--- Comments box ----------------------------------------------------------------------*/
+
+/*
+.wgo-comments-wrapper {
+	overflow: auto;
+	margin: 0 0 0 0;
+	height: 100%;
+	position: relative;
+	box-sizing: border-box;
+}
+
+.wgo-comments-content {
+	padding: 3px 5px;
+	border: 1px solid rgba(200,200,200,0.3);
+	background-color: rgba(255,255,255,0.3);
+	border-radius: 2px;
+	overflow-y: auto;
+}
+
+.wgo-comments-content p {
+	font-size: 0.9em;
+	margin: 0.5em 0;
+}
+
+.wgo-help {
+	background-color: rgba(236, 226, 216, 0.90);
+	padding: 1px 7px;
+	margin-bottom: 5px;
+}
+
+.wgo-notification {
+	background-color: rgba(16, 16, 16, 0.95);
+	color: white;
+	padding: 1px 7px;
+	margin-bottom: 5px;
+}
+
+.wgo-commentbox .wgo-box-title {
+	background-repeat: no-repeat;
+	background-position: right center;
+	background-size: 24px;
+}
+
+.wgo-commentbox .wgo-box-title::after {
+	content: '\e800';
+	font-family: "wgo-icons";
+	float: right;
+	font-weight: normal;
+	font-size: 0.9em;
+	padding-top: 4px;
+	width: 22px;
+	text-align: center;
+}
+
+.wgo-commentbox.wgo-gameinfo .wgo-box-title::after {
+	content: '\e801';
+	padding-top: 2px;
+}
+
+.wgo-comments-nick {
+	color: rgba(0,0,0,0.75);
+}
+
+a.wgo-move-link {
+	text-decoration: none;
+	border-bottom:1px dotted;
+}
+*/
+
+/* right and left modifications */
+
+/*
+.wgo-player-right .wgo-comments-content, .wgo-player-left .wgo-comments-content {
+	position: absolute;
+	left: 10px;
+	right: 10px;
+	bottom: 10px;
+	top: 40px;
+}
+
+.wgo-player-right .wgo-commentbox, .wgo-player-left .wgo-commentbox {
+	position: absolute;
+	bottom: 0;
+	right: 0;
+	left: 10px;
+	top: 170px;
+}
+*/
+/* top and bottom modifications */
+/*
+.wgo-player-top .wgo-comments-content, .wgo-player-bottom .wgo-comments-content {
+	position: absolute;
+	left: 40px;
+	right: 0;
+	top: 0;
+	bottom: 0;
+
+}
+*/
+/* TODO: handle too long title */
+/*
+.wgo-player-top .wgo-commentbox .wgo-box-title, .wgo-player-bottom .wgo-commentbox .wgo-box-title {
+	transform: rotate(-90deg);
+	-ms-transform: rotate(-90deg);
+	-webkit-transform: rotate(-90deg);
+	position: absolute;
+	left: -50px;
+	top: 55px;
+}
+
+.wgo-player-top .wgo-comments-wrapper, .wgo-player-bottom .wgo-comments-wrapper {
+	margin-top: 10px;
+	height: 150px;
+}
+*/
+/* game info table */
+/*
+.wgo-commentbox .wgo-info-list {
+	display: table;
+	width: 100%;
+}
+
+.wgo-commentbox .wgo-info-title {
+	display: table-caption;
+	font-weight: 600;
+	border-bottom: 2px solid rgba(200, 200, 200, 0.3);
+	padding: 2px 0;
+}
+
+.wgo-commentbox .wgo-info-item {
+	display: table-row;
+}
+
+.wgo-commentbox .wgo-info-label, .wgo-commentbox .wgo-info-value {
+	display: table-cell;
+	border-bottom: 1px solid rgba(200, 200, 200, 0.3);
+	padding: 2px 15px 2px 0;
+}
+
+.wgo-commentbox .wgo-info-label {
+	color: #000;
+}
+
+.wgo-commentbox .wgo-info-value {
+	color: #4c4c4c;
+}
+*/
+/* in gameinfo, last row is without border*/
+/*
+.wgo-commentbox.wgo-gameinfo .wgo-info-item:last-child .wgo-info-label, .wgo-commentbox.wgo-gameinfo .wgo-info-item:last-child .wgo-info-value {
+	border-bottom: 0;
+}
+*/
+/*--- /Comments box ----------------------------------------------------------------------*/
+
+
+
+/*--- Control box ------------------------------------------------------------------------*/
+
+.wgo-player-top .wgo-player-control {
+    height: 180px;
+    position: relative;
+}
+
+.wgo-ctrlgroup {
+    transform: scale(1.9,1.9);
+}
+
+.wgo-ctrlgroup-left {
+    position: absolute;
+    top: 90px;
+    left: 40px;
+    z-index: 600;
+}
+
+.wgo-ctrlgroup-right {
+    position: absolute;
+    top: 90px;
+    right: 40px;
+}
+
+.wgo-ctrlgroup-control {
+}
+
+.wgo-player-menu {
+    width: 200px;
+}
+
+/*--- /Control box ------------------------------------------------------------------------*/

@@ -1,0 +1,14 @@
+find . -iname '*.sgf' | shuf | tail -n +1001 | xargs rm
+grepri -ho 'RE\[[^]]*\]' | sort | uniq -c | sort -n
+
+grep --color=never -rL 'RE\[[BW]+[0-9.R]\{1,\}]' . | xargs rm
+grep -rho 'KM\[[^]]*]' . | sort | uniq -c
+
+
+# V3
+time find . -iname '*.sgf' | tqdm | xargs -I {} sh -c "sgfstrip C < {} > ../clean/{}"
+
+# V5
+find 0002* -type f -path '*/clean/*sgf' | sort | tqdm | tar cjf 'v5-19x19_clean_200-299.tar.bz2' -T -
+
+find . -maxdepth 1 -mindepth 1 -type d | sort | head -n 10 | tqdm | xargs -I{} sh -c "[ -f ../tar/{}.tar.bz2 ] || (echo '{}' && time -p tar -caf '../tar/{}.tar.bz2' '{}')"

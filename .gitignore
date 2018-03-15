@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+
+sgf
+instance/
+web/static/wgo
+web/static/favicon*
+web/static/d3-tip.js

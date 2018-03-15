@@ -1,0 +1,123 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html>
+  {% from "macros.html" import models_link with context %}
+  <head lang="en">
+      <meta charset="UTF-8">
+      <title>Minigo Stats</title>
+
+      <script type="text/javascript" src="/static/wgo/wgo.min.js"></script>
+      <script type="text/javascript" src="/static/wgo/wgo.player.min.js"></script>
+      <link type="text/css" href="/static/wgo/wgo.player.css" rel="stylesheet" />
+
+      <style>
+        .game {
+          float: left;
+        }
+        .game .wgo-board {
+            border-bottom: none;
+        }
+        .poll {
+          float: right;
+        }
+
+        .poll table {
+          border-collapse: collapse;
+        }
+        .poll th, .poll td {
+          border: 1px solid #999;
+        }
+        .poll thead {
+          text-align: center;
+        }
+        .vote-container {
+          text-align: center;
+          margin-top: 8px;
+          width: 100%;
+        }
+        .vote {
+          font-weight: bold;
+        }
+      </style>
+  </head>
+  <body>
+    <h1>
+        {{ models_link() }}
+        | <a href="{{ url_for('models_graphs', bucket=bucket) }}">Graphs</a>
+        | <a href="{{ url_for('figure_three', bucket=bucket) }}">Figure 3</a>
+        | <a href="{{ url_for('eval_graphs', bucket=bucket) }}">Evaluation</a>
+        | Play Minigo on CloudyGo
+    </h1>
+    <h2>
+      Hi, Here you (and others) are welcome to collaborate in a game of Go with Minigo.<br>
+      Black is played by Minigo ({{bucket}}, {{model_name}})<br>
+      White is played by Humans (with input from a friendly Minigo)<br>
+    </h2>
+
+    <div>
+      <div class="game" data-wgo="{{ game_sgf }}" data-wgo-move="400" data-wgo-marklastmove="true" style="width: 900px"></div>
+
+      <div class="poll">
+        <form action="{{ url_for('vote_play_cloudygo', bucket=bucket) }}" method="post">
+          <table>
+            <thead>
+              <tr>
+              <td></td>
+              {% for j in range(19) %}
+                <td> {{ poll_options[19 * j][0][0] }}</td>
+              {% endfor %}
+              </tr>
+            </thead>
+
+            {% for i in range(19) %}
+            <tr>
+              <td>{{ 19 - i }}</td>
+              {% for j in range(19) %}
+              <td>
+                {% set option = poll_options[19 * j + i] %}
+                <input type="radio" name="move" value="{{ option[0] }}">
+                {{ option[1] }}
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+            <tr>
+          </table>
+          <table>
+              {% for option in poll_options[19*19:] %}
+              <td>
+                <input type="radio" name="move" value="{{ option[0] }}">
+                  {{ option[1] }}
+              </td>
+              {% endfor %}
+          </table>
+
+          <div class="vote-container">
+            <input class="vote" type="submit" value="Vote" />
+          </div>
+        </form>
+      </div>
+
+      <div style="clear: both;" class="my-day-has-final-come"></div>
+    </div>
+
+    <hr>
+    TODO: resign and stuff
+    <br>
+    TODO: countdown
+  </body>
+</html>

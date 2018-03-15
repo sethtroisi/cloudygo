@@ -1,0 +1,194 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html>
+  {% from "macros.html" import models_link, favicon_links with context %}
+  <head lang="en">
+      <meta charset="UTF-8">
+      <title>Minigo Model Graphs</title>
+
+      {{ favicon_links() }}
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
+
+      <style>
+        svg {
+            margin: 20px;
+            width: 700px;
+            height: 700px;
+        }
+        path {
+            opacity: 0.8;
+        }
+        .data-line {
+            fill: none;
+        }
+        #winrate-svg .data-line {
+            fill: #444;
+        }
+
+        #sum-unluck-container, #game-length-container {
+            position: relative;
+            display: inline-block;
+        }
+        #length-model-select, #unluck-model-select {
+            display: block;
+            width: 630px;
+            margin: 0 70px;
+        }
+      </style>
+      <script src="https://d3js.org/d3.v4.min.js"></script>
+      <script type="text/javascript" src="{{ url_for('static',filename='graphs.js') }}"></script>
+  </head>
+  <body>
+    <h1>
+        {{ models_link() }}
+        | Graphs
+        | <a href="{{ url_for('figure_three', bucket=bucket) }}">Figure 3</a>
+        | <a href="{{ url_for('eval_graphs', bucket=bucket) }}">Evaluation</a>
+    </h1>
+    <hr>
+    <svg id="winrate-svg"></svg>
+    <svg id="bad-resign-rate-svg"></svg>
+    <svg id="game-len-simple-svg"></svg>
+    <svg id="num-games-svg"></svg>
+    <svg id="games-per-day-svg"></svg>
+    <svg id="num-visits-svg"></svg>
+    <svg id="rating-delta-svg"></svg>
+    <svg id="sum-unluck-svg"></svg>
+  </body>
+  <script type="text/javascript">
+/********************/
+f0 = function(d) { return d[0]; };
+f1 = function(d) { return d[1]; };
+f2 = function(d) { return d[2]; };
+f3 = function(d) { return d[3]; };
+
+
+var winrate_data = JSON.parse('{{ win_rate | tojson | safe}}');
+var model_nums = d3.extent(winrate_data, f0);
+winrate_data = [[model_nums[0],0]]
+    .concat(winrate_data)
+    .concat([[model_nums[1],0]]);
+
+per_model_graph(
+    d3.select("#winrate-svg"),
+    winrate_data,  f1, null,
+    true /* include_average */,
+    true /* include_right_axis */,
+    false /* y_from_zero */,
+    "Winrate by Model",
+    "Model Number",
+    "Winrate");
+
+/********************/
+
+var resign_rate_data = JSON.parse('{{ bad_resign_rate | tojson | safe}}');
+per_model_graph(
+    d3.select("#bad-resign-rate-svg"),
+    resign_rate_data, f1, null,
+    true /* include_average */,
+    false /* include_right_axis */,
+    true /* y_from_zero */,
+    "Bad Resign Rate by Model",
+    "Model Number",
+    "Bad resign rate");
+
+/********************/
+
+var game_len_data = JSON.parse('{{ game_len_simple | tojson | safe}}');
+per_model_graph(
+    d3.select("#game-len-simple-svg"),
+    game_len_data.slice(0, -1), f1, null,
+    true /* include_average */,
+    true /* include_right_axis */,
+    false /* y_from_zero */,
+    "Game length by Model",
+    "Model Number",
+    "Game length");
+
+/********************/
+
+var num_games_data = JSON.parse('{{ num_games | tojson | safe}}');
+per_model_graph(
+    d3.select("#num-games-svg"),
+    num_games_data.slice(0, -1), f1, null,
+    false /* include_average */,
+    false /* include_right_axis */,
+    false /* y_from_zero */,
+    "Number of games (processed) by Model",
+    "Model Number",
+    "Number of self-play games CloudyGo has ingested");
+
+/********************/
+
+var games_per_day_data = JSON.parse('{{ games_per_day | tojson | safe}}');
+var date_format = d3.timeParse("%Y-%m-%d");
+games_per_day_data = games_per_day_data.map(function (d) {
+  return [date_format(d[0]), d[1]];
+});
+per_model_graph(
+    d3.select("#games-per-day-svg"),
+    games_per_day_data, f1, null,
+    true /* include_average */,
+    true /* include_right_axis */,
+    true /* y_from_zero */,
+    "Games Per Day",
+    "Day",
+    "Number of Games");
+
+/********************/
+
+var num_visits_data = JSON.parse('{{ num_visits | tojson | safe}}');
+per_model_graph(
+    d3.select("#num-visits-svg"),
+    num_visits_data, f1, null,
+    true /* include_average */,
+    true /* include_right_axis */,
+    true /* y_from_zero */,
+    "Sum of visits to top move per game by Model",
+    "Model Number",
+    "Sum visits");
+
+/********************/
+
+var rating_delta_data = JSON.parse('{{ rating_delta | tojson | safe}}');
+per_model_graph(
+    d3.select("#rating-delta-svg"),
+    rating_delta_data, f1, null,
+    true /* include_average */,
+    true /* include_right_axis */,
+    false /* y_from_zero */,
+    "Rating delta from last model",
+    "Model Number",
+    "Delta Rating");
+
+/********************/
+
+var sum_unluck_data = JSON.parse('{{ sum_unluck | tojson | safe}}');
+per_model_graph(
+    d3.select("#sum-unluck-svg"),
+    sum_unluck_data, f1, null,
+    true /* include_average */,
+    false /* include_right_axis */,
+    false /* y_from_zero */,
+    "How badly soft-n messed up each game by Model",
+    "Model Number",
+    "Soft-n of all better not-played moves (see early game temperature)");
+
+/********************/
+
+  </script>
+</html>

@@ -1,0 +1,196 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html>
+  {% from "macros.html" import models_link, other_buckets, favicon_links, tip with context %}
+  <head lang="en">
+      <meta charset="UTF-8">
+      <title>Minigo Model Eval</title>
+
+      {{ favicon_links() }}
+
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/table.css') }}">
+
+      <script src="https://d3js.org/d3.v4.min.js"></script>
+      <script type="text/javascript" src="{{ url_for('static',filename='d3-tip.js') }}"></script>
+      <script type="text/javascript" src="{{ url_for('static',filename='graphs.js') }}"></script>
+
+      <style>
+        .model-graph {
+          margin: 20px;
+          width: 600px;
+          height: 600px;
+        }
+        .filter-models,
+        .model-graph,
+        .rating-desc,
+        .ratings-scatter,
+        .winrate-scatter {
+          display: inline-block;
+        }
+        .rating-desc {
+          vertical-align: top;
+          margin-top: 50px;
+        }
+        .filter-models {
+          margin-top: 10px;
+        }
+
+
+        .great-model {
+          font-weight: bold;
+          color: #151;
+        }
+
+        .scatter-text {
+          color: white;
+          font-weight: bold;
+          background: #000;
+          padding: 4px;
+          border-radius: 4px;
+        }
+
+      /* Creates a small triangle extender for the tooltip */
+        .d3-tip.s:after {
+          position: absolute;
+          width: 100%;
+          text-align: center;
+          left: 0;
+          top: -14px;
+          color: #000;
+          content: "\25B2";
+        }
+
+      </style>
+  </head>
+  <body>
+    <h1>
+      {{ models_link() }}
+      | <a href="{{ url_for('models_graphs', bucket=bucket) }}">Graphs</a>
+      | <a href="{{ url_for('figure_three', bucket=bucket) }}">Figure 3</a>
+      | Evaluation
+      {{ other_buckets('eval_graphs') }}
+    </h1>
+    <div class="ratings-scatter">
+      <svg class="model-graph" id="rating-svg"></svg>
+      <div class="rating-desc">
+        <table>
+          <tbody>
+          <tr>
+            <td>Ratings from</td>
+            <td colspan="2">{{ total_games }} games</td>
+          </tr>
+          <tr class="great-model">
+            <td>Best model</td>
+            <td>{{ best_model[0] }}</td>
+            <td>rating {{ "%.2f"|format(best_model[1]) }}</td>
+          </tr>
+          <tr>
+            <td>Worst model</td>
+            <td>{{ worst_model[0] }}</td>
+            <td>rating {{ "%.2f"|format(worst_model[1]) }}</td>
+          </tr>
+          </tbody>
+        </table>
+        <label class="filter-models"><input id="filter-models" type="checkbox" checked>
+            Filter bad models
+        </label>
+      </div>
+    </div>
+    <div class="winrate-scatter">
+      <svg class="model-graph" id="winrate-svg"></svg>
+    </div>
+    <hr>
+    {% set rows = 50 %}
+    {% set columns = (model_ratings|length - 1 + rows) // rows %}
+    {% for c in range(columns) %}
+    <table class="models-table">
+      <thead>
+        <th>Model</th>
+        <th class="tooltip">
+          Rating
+          {{ tip("See python choix and luce's choice axiom") }}
+        </th>
+        <th>Games</th>
+      </thead>
+      <tbody>
+      {% for data in model_ratings[::-1][c*rows:(c+1)*rows] %}
+      <tr {% if data[1] > great_threshold %} class="great-model" {% endif %}>
+        <td><a href="{{ url_for('model_eval',
+                                bucket=bucket,
+                                model_name=data[0]) }}">{{ data[0] }}</a></td>
+        <td>
+          {{ "%.2f"|format(data[1]) }}
+          {% if data[2] > 0.3 %} (&plusmn;{{ data[2]|round(2)}}){% endif %}
+        </td>
+        <td>{{ data[3] }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endfor %}
+  </body>
+
+  <script type="text/javascript">
+    var ratings = JSON.parse('{{ model_ratings | tojson | safe }}');
+    var model_filter = d3.select("#filter-models")
+    var rating_svg = d3.select("#rating-svg");
+
+    function plot_ratings() {
+      var checked = model_filter.node().checked;
+      var new_ratings = ratings.filter(function(r, i) {
+        if (!checked) return true;
+
+        sawBetter = false;
+        for (j = Math.max(0, i - 3); j < i; j++) {
+          if (ratings[j][1] > r[1]) {
+            sawBetter = true;
+          }
+        }
+        return !sawBetter;
+      });
+
+      rating_svg.selectAll("*").remove();
+      d3.selectAll(".d3-tip.scatter-text").remove();
+
+      rating_scatter_plot(
+          rating_svg,
+          new_ratings,
+          function(d) { return d[1]; },
+          "Bradley-Terry Exp Parameter",
+          "Model",
+          "Rating");
+    }
+
+    model_filter.on("change", plot_ratings);
+
+    plot_ratings();
+
+
+    var rating_scatter = JSON.parse('{{ older_newer_winrates | tojson | safe }}');
+    var last_model = d3.max(rating_scatter, function(d) { return d[0]; });
+    winrate_scatter_plot(
+        d3.select("#winrate-svg"),
+        rating_scatter,
+        function(d) { return d[2] == 0 ? 0 : d[1]/d[2]; },
+        function(d) { return d[4] == 0 ? 0 : d[3]/d[4]; },
+        function(d) { return Math.max(d[0], last_model - 100); },
+        "Winrate vs older and newer models",
+        "Winrate vs older models",
+        "Winrate vs newer models");
+  </script>
+</html>

@@ -1,0 +1,90 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html>
+  {% from "macros.html" import other_buckets, favicon_links, tip, cloudy_footer with context %}
+  <head lang="en">
+      <meta charset="UTF-8">
+      <title>Minigo Stats</title>
+
+      {{ favicon_links() }}
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/table.css') }}">
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
+
+      <style>
+        .model-name-col {
+          min-width: 150px;
+        }
+        th {
+          text-align: left;
+        }
+        body .models-table:last-of-type {
+          margin-bottom: 30px;
+        }
+
+        body table:first-of-type tr:first-of-type td {
+          font-weight: bold;
+          background-color: #bababa;
+        }
+
+        .tooltip:hover .tooltiptext:hover {
+            display: none;
+        }
+      </style>
+  </head>
+  <body>
+    <h1>
+        Minigo Models in {{ bucket }}
+        | <a href="{{ url_for('models_graphs', bucket=bucket, last_n=100) }}">Graphs</a>
+        | <a href="{{ url_for('figure_three', bucket=bucket) }}">Figure 3</a>
+        | <a href="{{ url_for('eval_graphs', bucket=bucket) }}">Evaluation</a>
+        {{ other_buckets() }}
+        <div class="right-nav">
+          (<a href="{{ url_for('site_nav', bucket=bucket) }}">site nav</a>)
+        </div>
+    </h1>
+    {% set rows = 30 %}
+    {% set columns = (models|length - 1 + rows) // rows %}
+    {% for c in range(columns) %}
+    <table class="models-table">
+      <thead>
+          <th>Model</th>
+          <th class="model-name-col">Name</th>
+          <th>Trained</th>
+          <th class="tooltip">Games {{ tip("Self-play Games") }}</td>
+      </thead>
+      <tbody>
+        {% for m in models[c*rows:(c+1)*rows] %}
+        <tr>
+          <td>{{m[4]}}</td>
+          <td><a href="{{ url_for('model_details', bucket=bucket, model_name=m[2]) }}">{{m[1]}}</a></td>
+          <td class="tooltip">{{m[6][0]}} {{ tip(m[6][1]) }}</td>
+          <td>
+            {{m[8]}}
+            {%- if m[9] + 30 < m[8] and m[9] != 0 %} ({{m[9]}} w/ stats){% endif -%}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endfor %}
+
+  <div>
+    <div>Last model update at {{ last_update|strftime }}</div>
+    {{ cloudy_footer() }}
+  </div>
+  </body>
+</html>

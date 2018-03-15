@@ -1,0 +1,160 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html>
+  {% from "macros.html" import models_link, favicon_links with context %}
+  <head lang="en">
+      <meta charset="UTF-8">
+      <title>Minigo Model Graphs</title>
+
+      {{ favicon_links() }}
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
+
+      <style>
+        .png-diagram,
+        svg {
+            margin: 20px;
+            width: 700px;
+            height: 700px;
+        }
+        path {
+            opacity: 0.8;
+        }
+        .data-line {
+            fill: none;
+        }
+
+        #sum-unluck-container,
+        #game-length-container,
+        #opening-container,
+        #policy-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        #length-model-select,
+        #unluck-model-select,
+        #opening-select,
+        #policy-select {
+            display: block;
+            width: 630px;
+            margin: 0 70px;
+        }
+
+        #opening-span, #policy-span {
+            position: absolute;
+            left: 20px;
+        }
+
+      </style>
+      <script src="https://d3js.org/d3.v4.min.js"></script>
+      <script type="text/javascript" src="{{ url_for('static',filename='graphs.js') }}"></script>
+  </head>
+  <body>
+    <h1>
+        {{ models_link() }}
+        | <a href="{{ url_for('models_graphs', bucket=bucket) }}">Graphs</a>
+        | Slider Graphs
+        | <a href="{{ url_for('figure_three', bucket=bucket) }}">Figure 3</a>
+        | <a href="{{ url_for('eval_graphs', bucket=bucket) }}">Evaluation</a>
+    </h1>
+    <hr>
+    <span id="opening-container">
+        <input type="range" id="opening-select" autofocus>
+        <span id="opening-span"></span>
+        <img id="opening-div-div" class="png-diagram"></img>
+    </span>
+    <span id="policy-container">
+        <input type="range" id="policy-select">
+        <span id="policy-span"></span>
+        <img id="policy-div-div" class="png-diagram"></img>
+    </span>
+
+    <span id="game-length-container">
+        <input type="range" id="length-model-select">
+        <svg id="game-length-svg"></svg>
+    </span>
+    <span id="sum-unluck-container">
+        <input type="range" id="unluck-model-select">
+        <svg id="sum-unluck-per-svg"></svg>
+    </span>
+  </body>
+  <script type="text/javascript">
+/********************/
+f0 = function(d) { return d[0]; };
+f1 = function(d) { return d[1]; };
+f2 = function(d) { return d[2]; };
+f3 = function(d) { return d[3]; };
+
+
+/********************/
+
+var sum_unluck_per_data = JSON.parse('{{ sum_unluck_per | tojson | safe }}');
+per_model_slider_graph_setup(
+    d3.select("#sum-unluck-per-svg"),
+    d3.select("#unluck-model-select"),
+    sum_unluck_per_data, f2, f3,
+    "Soft-n unluck after opening vs winrate",
+    "Soft-n unluck delta during opening",
+    "Winrate");
+
+/********************/
+
+var game_length = JSON.parse('{{ game_length | tojson | safe }}');
+per_model_slider_graph_setup(
+    d3.select("#game-length-svg"),
+    d3.select("#length-model-select"),
+    game_length, f2, f3,
+    "Game length breakdown",
+    "Number of moves in game",
+    "Number of games ending on <X> move");
+
+
+/********************/
+
+function per_slider_png_setup(img, title, slider, data, f, t_text) {
+    model_nums = d3.extent(data, function(d) { return d[0]; });
+
+    function update_slider(model_num) {
+      title.textContent = t_text + " for model " + model_num
+      img.src = f(data[model_num])
+    }
+
+    add_slider(slider, update_slider, model_nums[0], model_nums[1], model_nums[1]);
+}
+
+var png_data = JSON.parse('{{ picture_sliders | tojson | safe }}');
+
+per_slider_png_setup(
+  document.getElementById("opening-div-div"),
+  document.getElementById("opening-span"),
+  d3.select("#opening-select"),
+  png_data,
+  f1,
+  "Opening play percentage");
+
+per_slider_png_setup(
+  document.getElementById("policy-div-div"),
+  document.getElementById("policy-span"),
+  d3.select("#policy-select"),
+  png_data,
+  f2,
+  "Policy values");
+
+/********************/
+
+  </script>
+</html>
