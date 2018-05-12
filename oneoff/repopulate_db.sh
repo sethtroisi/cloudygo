@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 #
 # Copyright 2018 Google LLC
 #
@@ -14,4 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-rm -f ../instance/clouds.db; sqlite3 ../instance/clouds.db < ../schema.sql
+rm -f instance/clouds.db; sqlite3 instance/clouds.db < schema.sql

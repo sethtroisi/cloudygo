@@ -8,9 +8,20 @@ Frontend for displaying MiniGo training data.
 
 Checkout [CloudyGo.com](http://CloudyGo.com) to see a live version.
 
-Local development requires mirroring large number of sgf files and setting up
-local database. See [Setup](README.md#setup).
+For local development I suggest using
+[devel_instance.7z](https://drive.google.com/file/d/15fqzeC8qTDuuabonNwTkYRFhNXT6bMab/view?usp=sharing) to bootstrap.
 
+devel_instance.7z contains enough of MiniGo v3-9x9 and v7-19x19 data to test the UI.
+
+```
+7z x devel_instance.7z
+mv -n devel_instance instance
+./updater.py
+# Optionally uncomment #CURRENT_BUCKET = 'v3-9x9'
+# and run ./updater.py again
+FLASK_DEBUG=1 FLASK_APP="web/serve.py" flask run --host 0.0.0.0 --port 6000
+# follow instructions in SETUP so SGFS can be rendered with WGo.js
+```
 
 ### Prerequisites
 
@@ -31,13 +42,11 @@ CloudyGo.com is run by Seth Troisi, local deployment is normally tested with
 FLASK_DEBUG=1 FLASK_APP="web/serve.py" flask run --host 0.0.0.0 --port 6000
 ```
 
-## Setup
+## Full Site Setup
 
 * Some initial instructions are in [SETUP](SETUP).
 
 * [rsync-data.sh](rsync-data.sh) helps copy data from [MiniGo's Google Cloud Storage public bucket](https://console.cloud.google.com/storage/browser/minigo-pub)
-
-* Setup flask's `INSTANCE_DIR` (default `instance/`):
 
 <big><pre>
 instance/             # Created with oneoff/repopulate_db.sh from schema.sql
