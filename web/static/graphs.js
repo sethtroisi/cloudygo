@@ -264,7 +264,6 @@ function find_and_set_slider(slider, data, f1, query) {
     if (query.length > 0) {
         var index = 0;
         for (var i = 0; i < data.length; i++) {
-            console.log(i, f1(data[i]));
             if (f1(data[i]).indexOf(query) >= 0) {
                 index = i;
                 break;

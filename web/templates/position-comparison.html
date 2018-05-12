@@ -122,7 +122,7 @@
     var sgfsA = sgfs[0];
     var sgfsB = sgfs[1];
 
-    if (sgfsA[0] != modelA) {
+    if (modelA.indexOf(sgfsA[0]) == -1) {
       var tmp = sgfsA;
       sgfsA = sgfsB;
       sgfsB = tmp;
@@ -148,23 +148,23 @@
         playerA.config.markLastMove=false;
         playerA.marker.clearDefaultSytle();
         playerA.marker.switchMaker({
-            'markerNum': rA[4]
+            'markerNum': rA[5]
         });
 
         playerB.config.markLastMove=false;
         playerB.marker.clearDefaultSytle();
         playerB.marker.switchMaker({
-            'markerNum': rB[4]
+            'markerNum': rB[5]
         });
 
-        update_url_inplace("P", r[0]);
+        update_url_inplace("P", rA[0]);
     }
 
     add_slider(positionSlider, update_position, 1, sgfsA.length - 1, 1);
     find_and_set_slider(
         positionSlider,
         sgfsA,
-        function(d) { return d[0] },
+        function(d) { return Array.isArray(d) ? d[0] : d + ""; },
         '{{ request.args.get("P", "") }}');
 
   </script>
