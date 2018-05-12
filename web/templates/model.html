@@ -41,18 +41,22 @@
       </style>
   </head>
   <body>
-    {% macro rate(a, b, rounding=2) -%}
+    {%- macro rate(a, b, rounding=2) -%}
         {% if b != 0 %}
-        {{ (a / b)|round(rounding) }}
-        {% else %}
+        {%- if rounding == 0 -%}
+          {{ (a / b)|round|int }}
+        {%- else -%}
+          {{ (a / b)|round(rounding) }}
+        {%- endif -%}
+        {% else -%}
         {{ a }} / {{ b }}
-        {% endif %}
-    {%- endmacro %}
-    {% macro percentR(a, b, rounding=2) -%}
-        {% if b != 0 %}
+        {%- endif %}
+    {%- endmacro -%}
+    {%- macro percentR(a, b, rounding=2) -%}
+        {% if b != 0 -%}
         ({{ rate(100 * a, b, rounding) }}%)
-        {% endif %}
-    {%- endmacro %}
+        {%- endif %}
+    {%- endmacro -%}
     <h1>
         {{ models_link() }}
         | {{ model_link('<', prev_model) }}
@@ -117,7 +121,7 @@
           <td>{{side_stats[9]}} {{ percentR(side_stats[9], side_stats[8]) }}</td>
           <td>{{ rate(side_stats[13], side_stats[4], 3) }}</td>
           <td>{{side_stats[10]}} ({{ rate(side_stats[10], side_stats[4], 1) }} per game)</td>
-          <td>({{ rate(side_stats[11], side_stats[10], 1) }} visits top node per move)</td>
+          <td>({{ rate(side_stats[11], side_stats[10], 0) }} visits to top node per move)</td>
         </tr>
         {%- endfor %}
         <tr>

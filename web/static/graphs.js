@@ -324,7 +324,7 @@ function rating_scatter_plot(
       .direction('s')
       .html(function(d) {
           return 'Model ' + d[0] +
-                 ' ranking: ' + Math.round(100 * d[1]) / 100;
+                 ' ranking: ' + Math.round(d[1]);
       });
 
     function add_dots(x, y, funct, colorScale) {

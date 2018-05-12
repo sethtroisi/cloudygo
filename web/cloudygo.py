@@ -338,7 +338,7 @@ class CloudyGo:
         setups = {name: sgf_utils.count_moves(sgf) for name, sgf in setups}
         setups["empty"] = 0
 
-        names = sorted(names, key=lambda n:setups.get(n, 10))
+        names = sorted(names, key=lambda n:(setups.get(n, 10), name))
 
         # TODO(sethtroisi): add PV value.
 
