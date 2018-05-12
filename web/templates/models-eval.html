@@ -97,12 +97,12 @@
           <tr class="great-model">
             <td>Best model</td>
             <td>{{ best_model[0] }}</td>
-            <td>rating {{ "%.2f"|format(best_model[1]) }}</td>
+            <td>rating {{ best_model[1]|round|int }}</td>
           </tr>
           <tr>
             <td>Worst model</td>
             <td>{{ worst_model[0] }}</td>
-            <td>rating {{ "%.2f"|format(worst_model[1]) }}</td>
+            <td>rating {{ worst_model[1]|round|int }}</td>
           </tr>
           </tbody>
         </table>
@@ -123,7 +123,7 @@
         <th>Model</th>
         <th class="tooltip">
           Rating
-          {{ tip("See python choix and luce's choice axiom") }}
+          {{ tip("We use python choix to calculate bradley-terry model ratings then multiplying by 400 / ln(10) to approximate elo") }}
         </th>
         <th>Games</th>
       </thead>
@@ -134,8 +134,8 @@
                                 bucket=bucket,
                                 model_name=data[0]) }}">{{ data[0] }}</a></td>
         <td>
-          {{ "%.2f"|format(data[1]) }}
-          {% if data[2] > 0.3 %} (&plusmn;{{ data[2]|round(2)}}){% endif %}
+          {{ data[1]|round|int }}
+          {% if data[2] > 50 %} (&plusmn;{{ data[2]|round(1)}}){% endif %}
         </td>
         <td>{{ data[3] }}</td>
       </tr>

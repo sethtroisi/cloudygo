@@ -16,6 +16,7 @@
 
 import datetime
 import glob
+import math
 import os
 import re
 import time
@@ -902,10 +903,13 @@ class CloudyGo:
         hessian = choix.opt.PairwiseFcts(pairs, penalty=1).hessian(ilsr_param)
         std_err = np.sqrt(np.diagonal(np.linalg.inv(hessian)))
 
+        # Elo conversion
+        elo_mult = 400 / math.log(10)
+
         min_rating = min(ilsr_param)
         ratings = {}
         for num in model_nums:
             index = num - min_id
-            ratings[num] = (ilsr_param[index] - min_rating, std_err[index])
+            ratings[num] = (elo_mult * (ilsr_param[index] - min_rating), elo_mult * std_err[index])
 
         return ratings

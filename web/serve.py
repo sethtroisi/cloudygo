@@ -533,7 +533,7 @@ def model_eval(bucket, model_name):
         # Make models more familiar
         cur_id = e_m[0] % CloudyGo.SALT_MULT
         other_id = e_m[1] % CloudyGo.SALT_MULT
-        winrate = 100 / (1 + math.e ** (2 * e_m[2] - 2 * rating))
+        winrate = 100 / (1 + 10 ** ((e_m[2] - rating) / 400))
 
         updated.append((cur_id, other_id, winrate) + e_m[3:])
 
