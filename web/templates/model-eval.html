@@ -65,10 +65,7 @@
       <tbody>
       <tr>
         <td colspan="2" class="rating">
-          Rating {{ overall[2]|round|int }} ~=
-          {% set log10e = 0.434294 %}
-          {{ (overall[2] * log10e * 400)|int() }}
-          elo
+          Rating {{ overall[2]|round|int }}
         </td>
         <td class="tooltip">
           Uncertainty {{ overall[3]|round(1) }}
