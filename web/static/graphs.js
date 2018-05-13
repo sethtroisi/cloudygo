@@ -69,10 +69,8 @@ function add_labels(
 }
 
 
-function add_weighted_average(group, data, f1, x, y) {
+function add_weighted_average(group, data, f1, x, y, alpha=0.15) {
     var trailing_avg_data = [];
-    var alpha = 0.15;
-    var dist = 15;
     for (i = 0; i < data.length; i++) {
         var m = 1;
         var t = 0;
