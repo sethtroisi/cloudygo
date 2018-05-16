@@ -68,6 +68,7 @@
     <svg id="num-visits-svg"></svg>
     <svg id="rating-delta-svg"></svg>
     <svg id="sum-unluck-svg"></svg>
+    <svg id="win-rate-delta-svg"></svg>
   </body>
   <script type="text/javascript">
 /********************/
@@ -187,6 +188,18 @@ per_model_graph(
     "How badly soft-n messed up each game by Model",
     "Model Number",
     "Soft-n of all better not-played moves (see early game temperature)");
+
+/********************/
+var win_rate_curve_delta_data = JSON.parse('{{ win_rate_curve_delta | tojson | safe}}');
+per_model_graph(
+    d3.select("#win-rate-delta-svg"),
+    win_rate_curve_delta_data, f1, null,
+    false /* include_average */,
+    false /* include_right_axis */,
+    false /* y_from_zero */,
+    "Win rate by difference in model number",
+    "Model number delta",
+    "elo delta")
 
 /********************/
 
