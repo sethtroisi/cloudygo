@@ -39,15 +39,21 @@ class CloudyGo:
     INSTANCE_PATH = None
     DATA_DIR = None
 
+    # set to 'minigo-pub' or similiar to serve debug games from the cloud.
+    DEBUG_GAME_CLOUD_BUCKET = 'minigo-pub'
+
     DEFAULT_BUCKET = 'v7-19x19'
 
     def __init__(self, instance_path, data_dir, database, cache, pool):
         self.INSTANCE_PATH = instance_path
         self.DATA_DIR = data_dir
+
         self.db = database
         self.cache = cache
         self.pool = pool
 
+        self.last_cloud_request = 0
+        self.storage_client = None
 
     #### PATH UTILS ####
 
@@ -261,6 +267,29 @@ class CloudyGo:
         return games, game_stats
 
 
+    def __get_gs_game(self, bucket, model, filename, view_type):
+        assert 'full' in view_type, view_type
+
+        # Maybe it's worth caching these for, now just globally rate limit
+        now = time.time()
+        if now - self.last_cloud_request < 1:
+            return None
+        self.last_cloud_request = now
+
+        from google.cloud import storage
+        if not self.storage_client:
+            self.storage_client = storage.Client().bucket(
+                CloudyGo.DEBUG_GAME_CLOUD_BUCKET)
+
+        path = os.path.join(bucket, 'sgf', model, 'full', filename)
+        blob = self.storage_client.get_blob(path)
+        if not isinstance(blob, storage.Blob):
+            return None
+
+        data = blob.download_as_string().decode('utf8')
+        return data
+
+
     def get_game_data(self, bucket, model, filename, view_type):
         # Reconstruct path from filename
 
@@ -276,6 +305,11 @@ class CloudyGo:
             with open(file_path, 'r') as f:
                 data = f.read()
         else:
+            if 'full' in view_type and CloudyGo.DEBUG_GAME_CLOUD_BUCKET:
+                data = self.__get_gs_game(bucket, model, filename, view_type)
+                if data:
+                    return data, view_type
+
             # Full games get deleted after X time, fallback to clean
             if 'full' in view_type:
                 new_type = view_type.replace('full', 'clean')

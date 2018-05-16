@@ -66,10 +66,6 @@
         | <a href="{{ url_for('model_graphs', bucket=bucket, model_name=model[2]) }}">Graphs</a>
     </h1>
     <hr>
-    {% set has_stats = False %}
-    {% if model_stats is not none %}
-    {% set has_stats = True %}
-    {% endif %}
     <table>
       <thead>
         <th colspan="2">
@@ -153,16 +149,14 @@
     <hr>
     <table>
       <thead>
-        <th colspan="{{ 7 if has_stats else 5 }}">{{ games|length }}{{ " Random" if is_random else "" }} games</th>
+        <th colspan="7">{{ games|length }}{{ " Random" if is_random else "" }} games</th>
         <th class="debug-sep" colspan="5">Debug (hover headers for definition)</th>
       </thead>
       <thead>
         <th>Name</th>
         <th>Viewer</th>
         <th>Raw SGF</th>
-        {%if has_stats -%}
         <th colspan="2">Debug (commented) SGF</th>
-        {%- endif %}
         <th>Results</th>
         <th>Moves</th>
         <th class="debug-sep tooltip">
@@ -191,17 +185,13 @@
           {% set game_stat = game_stats[i] -%}
           {%- endif -%}
           <td>{{game[1]}}</td>
-          {% for type in ['clean', 'full'] if type != 'full' or has_stats -%}
-            {% if type == 'clean' or game_stat -%}
+          {% for type in ['clean', 'full'] -%}
             <td><a href="{{ url_for('game_view',
                                     bucket=bucket, model=model[2],
                                     filename=game[1], type=type) }}">SGF Viewer</a></td>
             <td><a href="{{ url_for('game_view',
                                     bucket=bucket, model=model[2],
                                     filename=game[1], type=type, raw='') }}">Raw SGF</a></td>
-            {%- else -%}
-            <td></td><td></td>
-            {%- endif -%}
           {%- endfor -%}
           <td>{{game[4]}}</td>
           <td>{{game[5]}}</td>

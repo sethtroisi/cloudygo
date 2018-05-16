@@ -159,6 +159,9 @@ def selfplay_eval_image(bucket, filename):
 
 
 @app.route('/<bucket>/<model>/game/<filename>')
+# These two paths help with copying file paths.
+@app.route('/<bucket>/<model>/clean/<filename>')
+@app.route('/<bucket>/<model>/full/<filename>')
 def game_view(bucket, model, filename):
     view_type = request.args.get('type') or 'clean'
     is_raw = get_bool_arg('raw', request.args)
