@@ -17,6 +17,7 @@
 import itertools
 import math
 import os
+import numpy as np
 import random
 import re
 import sqlite3
@@ -312,6 +313,30 @@ def models_graphs(bucket):
             1,
             model_limit)
 
+        newest_model = cloudy.get_newest_model_num(bucket) + model_range[0]
+        alternative_resign_rate = cloudy.query_db(
+            'SELECT model_id % 10000, '
+            '   black_won * -bleakest_eval_black + '
+            '   (1-black_won) * bleakest_eval_white '
+            'FROM game_stats '
+            'WHERE model_id >= ? AND model_id < ? AND black_won',
+            (max(model_range[0], newest_model - 10), newest_model))
+
+        # model, rate below which would fail
+        bad_resign_thresh = defaultdict(list)
+        for model, bleakest in alternative_resign_rate:
+            bad_resign_thresh[model].append(bleakest)
+
+        # calculate some percentages
+        for m in bad_resign_thresh:
+            bleak = sorted(bad_resign_thresh[m])
+            bad_resign_thresh[m].clear()
+            percents = [(p, round(np.percentile(bleak, 100 - p), 3))
+                for p in range(10)]
+            bad_resign_thresh[m] = percents
+            print (m, percents)
+        bad_resign_thresh = sorted(bad_resign_thresh.items())
+
         game_length_simple = cloudy.bucket_query_db(
             bucket,
             'SELECT model_id % 10000, round(1.0*num_moves/stats_games,3)',
@@ -359,7 +384,8 @@ def models_graphs(bucket):
             model_range + (model_limit,))
         rating_delta = list(reversed(rating_delta))
 
-        graphs = (win_rate, bad_resign_rate,
+        graphs = (win_rate,
+            bad_resign_rate, bad_resign_thresh,
             game_length_simple,
             num_games, games_per_day,
             num_visits,
@@ -368,7 +394,8 @@ def models_graphs(bucket):
             half_curve_rating_delta)
         cache.set(key, graphs, timeout = 10 * 60)
     else:
-        win_rate, bad_resign_rate, \
+        win_rate, \
+        bad_resign_rate, bad_resign_thresh, \
         game_length_simple, \
         num_games, games_per_day, \
         num_visits, \
@@ -377,15 +404,16 @@ def models_graphs(bucket):
         half_curve_rating_delta = graphs
 
     return render_template('models-graphs.html',
-        bucket      = bucket,
-        win_rate    = win_rate,
-        bad_resign_rate = bad_resign_rate,
+        bucket          = bucket,
+        win_rate        = win_rate,
+        bad_resign_rate   = bad_resign_rate,
+        bad_resign_thresh = bad_resign_thresh,
         game_len_simple = game_length_simple,
-        num_games   = num_games,
-        games_per_day = games_per_day,
-        num_visits  = num_visits,
-        rating_delta = rating_delta,
-        sum_unluck  = sum_unluck,
+        num_games       = num_games,
+        games_per_day   = games_per_day,
+        num_visits      = num_visits,
+        rating_delta    = rating_delta,
+        sum_unluck      = sum_unluck,
         win_rate_curve_delta = half_curve_rating_delta,
     )
 

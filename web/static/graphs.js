@@ -94,7 +94,7 @@ function add_weighted_average(group, data, f1, x, y, alpha=0.15) {
 }
 
 function per_model_graph(
-        svg, data, f1, f2,
+        svg, data, lines,
         include_average, include_right_axis, y_from_zero,
         title_text, x_text, y_text) {
 
@@ -141,8 +141,8 @@ function per_model_graph(
     var xd = d3.extent(data, function(d) { return d[0]; });
     x.domain(xd);
 
-    var yMin = d3.min([f1], func => d3.min(data, func));
-    var yMax = d3.max([f1], func => d3.max(data, func));
+    var yMin = d3.min(lines, func => d3.min(data, func));
+    var yMax = d3.max(lines, func => d3.max(data, func));
 
     var y = d3.scaleLinear()
       .range([height, 0])
@@ -152,12 +152,10 @@ function per_model_graph(
           function(d) { return d[1]; }, '#000');
     }
 
-    if (f1) {
-        add_line(data, x, y, f1, '#111');
-    }
-    if (f2) {
-        add_line(data, x, y, f2, '#151');
-    }
+    var colors = ['#111', '#151', '#115'];
+    lines.forEach(function (f1, i) {
+        add_line(data, x, y, f1, colors[i]);
+    });
 
     // Exponential moving average.
     if (f1 && include_average) {

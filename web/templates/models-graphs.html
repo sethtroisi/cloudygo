@@ -62,6 +62,7 @@
     <hr>
     <svg id="winrate-svg"></svg>
     <svg id="bad-resign-rate-svg"></svg>
+    <svg id="bad-resign-thresh-svg"></svg>
     <svg id="game-len-simple-svg"></svg>
     <svg id="num-games-svg"></svg>
     <svg id="games-per-day-svg"></svg>
@@ -74,8 +75,6 @@
 /********************/
 f0 = function(d) { return d[0]; };
 f1 = function(d) { return d[1]; };
-f2 = function(d) { return d[2]; };
-f3 = function(d) { return d[3]; };
 
 
 var winrate_data = JSON.parse('{{ win_rate | tojson | safe}}');
@@ -86,7 +85,7 @@ winrate_data = [[model_nums[0],0]]
 
 per_model_graph(
     d3.select("#winrate-svg"),
-    winrate_data,  f1, null,
+    winrate_data,  [f1],
     true /* include_average */,
     true /* include_right_axis */,
     false /* y_from_zero */,
@@ -99,7 +98,7 @@ per_model_graph(
 var resign_rate_data = JSON.parse('{{ bad_resign_rate | tojson | safe}}');
 per_model_graph(
     d3.select("#bad-resign-rate-svg"),
-    resign_rate_data, f1, null,
+    resign_rate_data, [f1],
     true /* include_average */,
     false /* include_right_axis */,
     true /* y_from_zero */,
@@ -109,10 +108,28 @@ per_model_graph(
 
 /********************/
 
+var bad_resign_thresh_data = JSON.parse('{{ bad_resign_thresh | tojson | safe}}');
+pX = function(p) { return function(d) {
+  var row = d[1].find(function(inner) { return inner[0] == p });
+  return row[1];
+}; };
+
+per_model_graph(
+    d3.select("#bad-resign-thresh-svg"),
+    bad_resign_thresh_data, [pX(5), pX(2), pX(1)],
+    false /* include_average */,
+    true /* include_right_axis */,
+    false /* y_from_zero */,
+    "Threshold for 1%, 2% and 5% Bad Resign Rate",
+    "Model Number",
+    "Resign rate for X% error")
+
+/********************/
+
 var game_len_data = JSON.parse('{{ game_len_simple | tojson | safe}}');
 per_model_graph(
     d3.select("#game-len-simple-svg"),
-    game_len_data.slice(0, -1), f1, null,
+    game_len_data.slice(0, -1), [f1],
     true /* include_average */,
     true /* include_right_axis */,
     false /* y_from_zero */,
@@ -125,7 +142,7 @@ per_model_graph(
 var num_games_data = JSON.parse('{{ num_games | tojson | safe}}');
 per_model_graph(
     d3.select("#num-games-svg"),
-    num_games_data.slice(0, -1), f1, null,
+    num_games_data.slice(0, -1), [f1],
     false /* include_average */,
     false /* include_right_axis */,
     false /* y_from_zero */,
@@ -142,7 +159,7 @@ games_per_day_data = games_per_day_data.map(function (d) {
 });
 per_model_graph(
     d3.select("#games-per-day-svg"),
-    games_per_day_data, f1, null,
+    games_per_day_data, [f1],
     true /* include_average */,
     true /* include_right_axis */,
     true /* y_from_zero */,
@@ -155,7 +172,7 @@ per_model_graph(
 var num_visits_data = JSON.parse('{{ num_visits | tojson | safe}}');
 per_model_graph(
     d3.select("#num-visits-svg"),
-    num_visits_data, f1, null,
+    num_visits_data, [f1],
     true /* include_average */,
     true /* include_right_axis */,
     true /* y_from_zero */,
@@ -168,7 +185,7 @@ per_model_graph(
 var rating_delta_data = JSON.parse('{{ rating_delta | tojson | safe}}');
 per_model_graph(
     d3.select("#rating-delta-svg"),
-    rating_delta_data, f1, null,
+    rating_delta_data, [f1],
     true /* include_average */,
     true /* include_right_axis */,
     false /* y_from_zero */,
@@ -181,7 +198,7 @@ per_model_graph(
 var sum_unluck_data = JSON.parse('{{ sum_unluck | tojson | safe}}');
 per_model_graph(
     d3.select("#sum-unluck-svg"),
-    sum_unluck_data, f1, null,
+    sum_unluck_data, [f1],
     true /* include_average */,
     false /* include_right_axis */,
     false /* y_from_zero */,
@@ -193,7 +210,7 @@ per_model_graph(
 var win_rate_curve_delta_data = JSON.parse('{{ win_rate_curve_delta | tojson | safe}}');
 per_model_graph(
     d3.select("#win-rate-delta-svg"),
-    win_rate_curve_delta_data, f1, null,
+    win_rate_curve_delta_data, [f1],
     false /* include_average */,
     false /* include_right_axis */,
     false /* y_from_zero */,
