@@ -130,7 +130,7 @@ function per_model_graph(
 
     // Scale the range of the data
     var x;
-    if (data[0][0].getDate == null) {
+    if (data.length == 0 || data[0][0].getDate == null) {
       // Consider breaking out to different function
       x = d3.scaleLinear();
     } else {
@@ -141,37 +141,34 @@ function per_model_graph(
     var xd = d3.extent(data, function(d) { return d[0]; });
     x.domain(xd);
 
-    var y1, y2;
+    var yMin = d3.min([f1], func => d3.min(data, func));
+    var yMax = d3.max([f1], func => d3.max(data, func));
+
+    var y = d3.scaleLinear()
+      .range([height, 0])
+      .domain([y_from_zero ? 0 : yMin, yMax]);
+    if (!y_from_zero) {
+      add_line([[xd[0], 0], [xd[1], 0]], x, y,
+          function(d) { return d[1]; }, '#000');
+    }
+
     if (f1) {
-        y1 = d3.scaleLinear().range([height, 0]);
-        if (y_from_zero) {
-          y1.domain([0, d3.max(data, f1)]);
-        } else {
-          y1.domain(d3.extent(data, f1));
-          add_line([[xd[0], 0], [xd[1], 0]], x, y1, f1, '#000');
-        }
-        add_line(data, x, y1, f1, '#111');
+        add_line(data, x, y, f1, '#111');
     }
     if (f2) {
-        y2 = d3.scaleLinear().range([height, 0]);
-        if (y_from_zero) {
-          y2.domain([0, d3.max(data, f2)]);
-        } else {
-          y2.domain(d3.extent(data, f2));
-        }
-        add_line(data, x, y2, f2, '#151');
+        add_line(data, x, y, f2, '#151');
     }
 
     // Exponential moving average.
     if (f1 && include_average) {
         var trailing_avg_data = add_weighted_average(
-            paths_group, data, f1, x, y1);
+            paths_group, data, f1, x, y);
     }
 
-    if (y1 || y2) {
+    if (y) {
       add_labels(
           svg, margin, height, width,
-          x, y1, include_right_axis ? y1 : y2,
+          x, y, include_right_axis ? y : null,
           x_text, y_text, title_text);
     }
 }
