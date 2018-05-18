@@ -562,29 +562,25 @@ class CloudyGo:
                     if perspective == 'all':
                         print('{} has multiple Resign rates: {}'.format(
                             raw_name, resign_rates))
-                    holdouts = []
-                    bad_resigns = -1
-                else:
-                    resign_rate = max(resign_rates.keys())
+               
+                resign_rate = min(resign_rates.keys())
+                holdouts = [game for game in wins if abs(game[14]) == 1]
+                holdout_resigns = [game for game in holdouts if '+R' in game[3]]
+                assert len(holdout_resigns) == 0, holdout_resigns
 
-                    holdouts = [game for game in wins
-                                    if abs(game[14]) > abs(resign_rate)]
-                    holdout_resigns = [game for game in holdouts if '+R' in game[3]]
-                    assert len(holdout_resigns) == 0, holdout_resigns
+                bad_resigns = 0
+                for game in holdouts:
+                    black_won = game[2]
 
-                    bad_resigns = 0
-                    for game in holdouts:
-                        black_won = game[2]
+                    black_would_resign = game[15] < resign_rate
+                    white_would_resign = game[16] < resign_rate
 
-                        black_would_resign = game[15] < resign_rate
-                        white_would_resign = game[16] < resign_rate
-
-                        if black_won:
-                            if black_would_resign:
-                                bad_resigns += 1
-                        else:
-                            if white_would_resign:
-                                bad_resigns += 1
+                    if black_won:
+                        if black_would_resign:
+                            bad_resigns += 1
+                    else:
+                        if white_would_resign:
+                            bad_resigns += 1
 
                 model_stat_inserts.append((
                     model_id, perspective,
