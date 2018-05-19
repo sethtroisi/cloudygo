@@ -475,11 +475,11 @@ class CloudyGo:
     #### PAGES ####
 
 
-    def update_models(self, bucket, partial=False):
+    def update_models(self, bucket, partial=True):
         model_filenames = glob.glob(
             os.path.join(self.model_path(bucket), '*.meta'))
 
-        existing = self.get_models(bucket)
+        existing = set(m[0] for m in self.get_models(bucket))
 
         model_inserts = []
         model_stat_inserts = []
@@ -518,15 +518,19 @@ class CloudyGo:
             assert len(model) == 11, model
             model_inserts.append(model)
 
-            if partial and any(test[0] == model_id for test in existing):
+            if partial and model_id in existing:
                 continue
 
             currently_processed = self.query_db(
                 'SELECT max(stats_games) FROM model_stats WHERE model_id = ?',
                 (model_id,))
 
+            if num_stats_games == 0:
+                continue
+
+            # Not if partial or something
             currently_processed = currently_processed[0][0] or 0
-            if num_stats_games == 0 or num_stats_games == currently_processed:
+            if partial and num_stats_games == currently_processed:
                 continue
 
             opening_name = str(model_id) + '-favorite-openings.png'
@@ -562,8 +566,9 @@ class CloudyGo:
                     if perspective == 'all':
                         print('{} has multiple Resign rates: {}'.format(
                             raw_name, resign_rates))
-               
+
                 resign_rate = min(resign_rates.keys())
+                assert resign_rate < 0, resign_rate
                 holdouts = [game for game in wins if abs(game[14]) == 1]
                 holdout_resigns = [game for game in holdouts if '+R' in game[3]]
                 assert len(holdout_resigns) == 0, holdout_resigns
@@ -572,8 +577,9 @@ class CloudyGo:
                 for game in holdouts:
                     black_won = game[2]
 
+                    # bleakest eval is generally negative for black and positive for white
                     black_would_resign = game[15] < resign_rate
-                    white_would_resign = game[16] < resign_rate
+                    white_would_resign = -game[16] < resign_rate
 
                     if black_won:
                         if black_would_resign:
@@ -600,23 +606,25 @@ class CloudyGo:
 
         cur = db.executemany(
             'DELETE FROM models WHERE model_id = ?',
-            [(model[0],) for model in model_inserts])
+            set((model[0],) for model in model_inserts))
         removed = cur.rowcount
 
         cur = db.executemany(
             'DELETE FROM model_stats WHERE model_id = ?',
-            [(model[0],) for model in model_stat_inserts])
+            set((model[0],) for model in model_stat_inserts))
         removed_stats = cur.rowcount
+
+        print('updated {}:  {} existing, {}|{} removed, {}|{} inserts'.format(
+            bucket,
+            len(existing),
+            removed, removed_stats,
+            len(model_inserts), len(model_stat_inserts)))
 
         self.insert_rows_db('models', model_inserts)
         self.insert_rows_db('model_stats', model_stat_inserts)
 
         db.commit()
 
-        print('updated:  {} existing, {}|{} removed, {}|{} inserts'.format(
-            len(existing),
-            removed, removed_stats,
-            len(model_inserts), len(model_stat_inserts)))
         return len(model_inserts) + len(model_stat_inserts)
 
 

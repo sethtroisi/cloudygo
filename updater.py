@@ -125,7 +125,7 @@ def update_models_games(cloudy, bucket):
 
     if updates > 0:
         # Sync models with new data
-        cloudy.update_models(bucket)
+        cloudy.update_models(bucket, partial=False)
     return updates
 
 
