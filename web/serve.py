@@ -103,14 +103,17 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
     # try to filter some of the rsync lines
     patterns = list(map(re.compile, [
         r'.*\[[0-9.k]*/[0-9.]*k files\]\[.*Done',
-        r'.*\[[3-9][0-9]{2}/.* files\]\[.*Done',
+        r'.*\[[1-9][0-9]{2}/.* files\]\[.*Done',
         r'Copying gs://.*/sgf/.*sgf',
         r'[0-9]{3,}it ',
         r'^.{0,3}$',
+        r'^idx \d* already processed',
+        r'.*[0-9]{2}it/s', #tqdm output
     ]))
 
     def not_boring_line(line):
-        return not any(pattern.match(line) for pattern in patterns)
+        return random.randrange(100) == 0 or \
+            all(not pattern.match(line) for pattern in patterns)
 
 
     log_files = ['cloudy-rsync-cron.log', 'cloudy-eval.log']
