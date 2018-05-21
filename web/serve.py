@@ -555,6 +555,13 @@ def eval_graphs(bucket):
 @app.route('/<bucket>/eval-model/<model_name>')
 def model_eval(bucket, model_name):
     model, model_stats = cloudy.load_model(bucket, model_name)
+    if model == None:
+      try:
+        bucket_salt = CloudyGo.bucket_salt(bucket)
+        model_id = bucket_salt + int(model_name)
+        model = [model_id]
+      except:
+        return "Unsure of model id for \"{}\"".format(model_name)
 
     eval_models = cloudy.query_db(
         'SELECT * FROM eval_models '
