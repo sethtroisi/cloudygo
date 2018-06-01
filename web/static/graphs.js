@@ -130,7 +130,7 @@ function per_model_graph(
 
     // Scale the range of the data
     var x;
-    if (data.length == 0 || data[0][0].getDate == null) {
+    if (data.length < 1 || data[0].length < 1 || data[0][0] == undefined || data[0][0].getDate == null) {
       // Consider breaking out to different function
       x = d3.scaleLinear();
     } else {

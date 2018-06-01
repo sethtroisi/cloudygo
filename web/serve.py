@@ -196,12 +196,17 @@ def pro_game_view(filename):
     base_dir_abs = os.path.abspath(base_dir)
     file_path_abs = os.path.abspath(file_path)
 
-    if not file_path_abs.startswith(base_dir_abs):
-        return 'being naughty?'
+    if not file_path_abs.startswith(base_dir_abs) or \
+       not file_path_abs.endswith('.sgf'):
+         return 'being naughty?'
 
     data = ''
     with open(file_path_abs, 'r') as f:
         data = f.read()
+
+    is_raw = get_bool_arg('raw', request.args)
+    if is_raw:
+        return sgf_utils.pretty_print_sgf(data)
 
     return render_template('game.html',
         bucket = CloudyGo.DEFAULT_BUCKET, #Any value will do
