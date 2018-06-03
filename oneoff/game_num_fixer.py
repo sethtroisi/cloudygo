@@ -66,10 +66,9 @@ print ('Game Num Fixer took: {:.1f} seconds'.format(T1 - T0))
 
 print ("\t", results[:5])
 
-for table in ('games', 'game_stats'):
-    cur = db.executemany(
-        'UPDATE ' + table + ' '
-        'SET game_num = ? WHERE game_num = ?', (results))
+cur = db.executemany(
+    'UPDATE games SET game_num = ? WHERE game_num = ?',
+    results)
 db.commit()
 
 T2 = time.time()

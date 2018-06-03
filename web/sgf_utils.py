@@ -345,7 +345,7 @@ def parse_game(game_path):
     raw_moves = list(re.finditer(r';([BW]\[[a-s]*\])(C\[([^]]*)\])', data))
     played_moves = [sgf_to_cord(board_size, move.group(1)) for move in raw_moves]
 
-    #resign, (pv_moves, pv_counts), Q, table
+    # format is: resign, (pv_moves, pv_counts), Q, table
     parsed_comments = [fully_parse_comment(move.group(2)) for move in raw_moves]
 
     move_quality = derive_move_quality(played_moves, parsed_comments)
@@ -355,6 +355,8 @@ def parse_game(game_path):
 
     # Sometimes move with equal N in 2nd position is choosen
     #assert sum(move_quality[1][30:]) == 0, game_path
+
+    has_stats = True
 
     top_move_visit_count = [parsed[1][1][0] for parsed in parsed_comments]
     number_of_visits_b = sum(top_move_visit_count[0::2])
@@ -373,6 +375,7 @@ def parse_game(game_path):
     return (black_won, result, result_margin,
             num_moves,
             early_moves, early_moves_canonical,
+            has_stats,
             number_of_visits_b, number_of_visits_w,
             number_of_visits_early_b, number_of_visits_early_w,
             unluckiness_black, unluckiness_white,

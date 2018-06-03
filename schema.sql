@@ -30,9 +30,54 @@ CREATE TABLE IF NOT EXISTS models (
   num_eval_games integer not null
 );
 
+/*
+INSERT INTO games2
+SELECT g.game_num, g.model_id, filename, g.black_won, g.result, result_margin,
+g.num_moves, early_moves, early_moves_canonical,
+1, number_of_visits_black, number_of_visits_white,
+number_of_visits_early_black, number_of_visits_early_white,
+unluckiness_black, unluckiness_white,
+resign_threshold, bleakest_eval_black, bleakest_eval_white
+FROM games g JOIN game_stats g2 ON g.game_num = g2.game_num limit 10;
+*/
+
+CREATE TABLE IF NOT EXISTS games2 (
+  game_num integer primary key,
+
+  model_id integer not null,
+  filename text not null,
+
+  black_won boolean not null,
+  result text not null,
+  result_margin float not null, /* 0 if resign for now */
+
+  num_moves integer not null,
+
+  early_moves text,
+  early_moves_canonical text,
+
+  has_stats boolean not null,
+
+  number_of_visits_black integer, /* index 10 */
+  number_of_visits_white integer,
+
+  number_of_visits_early_black integer,
+  number_of_visits_early_white integer,
+
+  unluckiness_black float,
+  unluckiness_white float,
+
+  resign_threshold float,
+  bleakest_eval_black float,
+  bleakest_eval_white float
+);
+
+
 
 CREATE TABLE IF NOT EXISTS games (
   game_num integer primary key,
+  /* TODO(sethtroisi): moving to the end would be nice */
+  /* so that games shares a common header with game_stats */
   filename text not null,
   model_id integer not null,
 
@@ -168,6 +213,7 @@ CREATE INDEX IF NOT EXISTS bucket_index ON models (bucket);
 
 CREATE INDEX IF NOT EXISTS game_model_index ON games (model_id);
 CREATE INDEX IF NOT EXISTS game_stats_model_index ON game_stats (model_id);
+CREATE INDEX IF NOT EXISTS game_TODO_model_index ON games2 (model_id);
 
 CREATE INDEX IF NOT EXISTS eval_models_model_index_1 on eval_models (model_id_1);
 CREATE INDEX IF NOT EXISTS eval_models_model_index_2 on eval_models (model_id_2);

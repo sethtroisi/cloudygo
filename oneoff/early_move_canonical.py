@@ -38,7 +38,7 @@ db.row_factory = sqlite3.Row
 cur = db.execute('SELECT model_id, bucket FROM models')
 model_buckets = dict((map(tuple, cur.fetchall())))
 
-cur = db.execute('SELECT game_num, model_id, early_moves, early_moves_canonical FROM game_stats')
+cur = db.execute('SELECT game_num, model_id, early_moves, early_moves_canonical FROM games')
 rows = list(map(tuple, cur.fetchall()))
 cur.close()
 
@@ -66,7 +66,7 @@ for game_num, model_id, raw_moves, saved_canonical in tqdm(rows, unit="game"):
 T1 = time.time()
 print ('Move canonical(ization) took: {:.1f} seconds'.format(T1 - T0))
 
-cur = db.executemany('UPDATE game_stats SET early_moves_canonical = ? WHERE game_num = ?', (results))
+cur = db.executemany('UPDATE games SET early_moves_canonical = ? WHERE game_num = ?', (results))
 db.commit()
 
 T2 = time.time()

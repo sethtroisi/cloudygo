@@ -179,28 +179,23 @@
       <tbody>
         {% for game in games -%}
         <tr>
-          {% set i = loop.index0 -%}
-          {% set game_stat = False -%}
-          {% if game_stats[i] and game_stats[i][0] == game[0] -%}
-          {% set game_stat = game_stats[i] -%}
-          {%- endif -%}
-          <td>{{game[1]}}</td>
+          <td>{{game[2]}}</td>
           {% for type in ['clean', 'full'] -%}
             <td><a href="{{ url_for('game_view',
                                     bucket=bucket, model=model[2],
-                                    filename=game[1], type=type) }}">SGF Viewer</a></td>
+                                    filename=game[2], type=type) }}">SGF Viewer</a></td>
             <td><a href="{{ url_for('game_view',
                                     bucket=bucket, model=model[2],
-                                    filename=game[1], type=type, raw='') }}">Raw SGF</a></td>
+                                    filename=game[2], type=type, raw='') }}">Raw SGF</a></td>
           {%- endfor -%}
           <td>{{game[4]}}</td>
           <td>{{game[5]}}</td>
-          {%if game_stat -%}
-          <td class="debug-sep">{{game_stat[12]|round(2)}}|{{game_stat[13]|round(2)}}</td>
-          <td>{{game_stat[10]}}|{{game_stat[11]}}</td>
-          <td>{{game_stat[8]}}|{{game_stat[9]}}</td>
-          <td>{{game_stat[15]|round(2)}}|{{game_stat[16]|round(2)}}</td>
-          <td>{{game_stat[7]}}</td>
+          {%if- game[9] -%}
+          <td class="debug-sep">{{game[14]|round(2)}}|{{game[15]|round(2)}}</td>
+          <td>{{game[12]}}|{{game[13]}}</td>
+          <td>{{game[10]}}|{{game[11]}}</td>
+          <td>{{game[17]|round(2)}}|{{game[18]|round(2)}}</td>
+          <td>{{game[8]}}</td>
           {%- endif %}
         </tr>
         {%- endfor %}

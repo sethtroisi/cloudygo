@@ -154,14 +154,6 @@ def eval_image(bucket, filename):
         cache_timeout=30*60)
 
 
-@app.route('/eval/<bucket>/selfplay/<filename>')
-def selfplay_eval_image(bucket, filename):
-    return send_file(
-        os.path.join(app.instance_path, 'eval', bucket, 'selfplay', filename),
-        mimetype='image/png',
-        cache_timeout=30*60)
-
-
 @app.route('/<bucket>/<model>/game/<filename>')
 # These two paths help with copying file paths.
 @app.route('/<bucket>/<model>/clean/<filename>')
@@ -221,30 +213,14 @@ def figure_three(bucket):
     exists = os.path.exists(os.path.join(
         app.instance_path, 'eval', bucket, 'move_acc.png'))
 
-
     return render_template('figure-three.html',
         bucket      = bucket,
         exists      = exists,
         eval_files  = [
             'move_acc.png',  'value_mse.png',
             'move_acc2.png', 'value_mse2.png',
-            'selfplay/move_acc.png',  'selfplay/value_mse.png',
-            'selfplay/move_acc2.png', 'selfplay/value_mse2.png'],
+        ],
     )
-
-
-@app.route('/<bucket>/missing-games/<model_id>')
-def missing_games(bucket, model_id):
-    missing = cloudy.bucket_query_db(
-        bucket,
-        'SELECT filename',
-        'games',
-        'WHERE (model_id % 10000) = ? AND '
-        '    game_num NOT IN (SELECT game_num FROM game_stats) ',
-        1,
-        args=(int(model_id),))
-    return 'Missing games for {} ({}): {}'.format(
-        model_id, len(missing), '<br>'.join(m[0] for m in missing))
 
 
 @app.route('/<bucket>/force-update-models')
@@ -326,7 +302,7 @@ def models_graphs(bucket):
             'SELECT model_id % 10000, '
             '   black_won * -bleakest_eval_black + '
             '   (1-black_won) * bleakest_eval_white '
-            'FROM game_stats '
+            'FROM games2 '
             'WHERE model_id >= ? AND model_id < ? AND black_won',
             (max(model_range[0], newest_model - 10), newest_model))
 
@@ -349,8 +325,6 @@ def models_graphs(bucket):
             bucket,
             'SELECT model_id % 10000, round(1.0*num_moves/stats_games,3)',
             'model_stats', 'WHERE perspective = "all"', 1, model_limit)
-            #'SELECT model_id % 10000, round(1.0*sum(num_moves)/count(*),3)',
-            #'games', '', 1, model_limit)
 
         num_games = cloudy.bucket_query_db(
             bucket,
@@ -431,11 +405,13 @@ def models_graphs_sliders(bucket):
     key = '{}/graphs-sliders'.format(bucket)
     graphs = cache.get(key)
     if graphs is None:
+        # TODO LIMIT model_id by BUCKET.
+
         # Divide by four to help avoid the 'only black can win on even moves'
         game_length = cloudy.bucket_query_db(
             bucket,
             'SELECT model_id % 10000, black_won, 4*(num_moves/4), count(*)',
-            'games', 'WHERE model_id % 10000 >= 50 ', 3, limit=20000)
+            'games2', 'WHERE model_id % 10000 >= 50 ', 3, limit=20000)
 
         sum_unluck_per = cloudy.bucket_query_db(
             bucket,
@@ -444,7 +420,7 @@ def models_graphs_sliders(bucket):
             '   round(100 * (unluckiness_black - unluckiness_white) / '
             '       (unluckiness_black + unluckiness_white), 0), '
             '   count(*) ',
-            'game_stats', '', 3, limit=20000)
+            'games2', '', 3, limit=20000)
 
         picture_sliders = []
 
@@ -639,20 +615,21 @@ def model_details(bucket, model_name):
     model_name = model[2]
     model_num = model[4]
 
-    games = cache.get(model_name)
-    if games is None:
-        games = cloudy.all_games(bucket, model_name)
-        games = [os.path.basename(game) for game in games]
+    game_names = cache.get(model_name)
+    if game_names is None:
+        game_names = cloudy.all_games(bucket, model_name)
+        game_names = list(map(os.path.basename, game_names))
 
+        # TODO always include first and last game
         if RANDOMIZE_GAMES:
-            random.shuffle(games)
+            random.shuffle(game_names)
 
-        games = games[:MAX_GAMES_ON_PAGE]
+        game_names = game_names[:MAX_GAMES_ON_PAGE]
 
         # Low cache time so that games randomize if you refresh
-        cache.set(model_name, games, timeout=60)
+        cache.set(model_name, game_names, timeout=60)
 
-    details, game_stats = cloudy.load_games(bucket, games)
+    games = cloudy.load_games(bucket, game_names)
 
     #### MIN UNLUCK ####
     unluck_by = [
@@ -664,9 +641,8 @@ def model_details(bucket, model_name):
     min_unluck = []
     for perspective, order_by in unluck_by:
         min_unluck_game = cloudy.query_db(
-            'SELECT filename, {} FROM game_stats '
-            'INNER JOIN games on game_stats.game_num = games.game_num '
-            'WHERE game_stats.model_id = ? AND games.num_moves > 70 '
+            'SELECT filename, {} FROM games2 '
+            'WHERE model_id = ? AND num_moves > 70 '
             'ORDER BY 2 ASC LIMIT 1'.format(order_by),
             (model_id,))
         if min_unluck_game:
@@ -683,8 +659,7 @@ def model_details(bucket, model_name):
         model        = model, model_stats=model_stats,
         prev_model   = model_num-1,
         next_model   = model_num+1,
-        games        = details,
-        game_stats   = game_stats,
+        games        = games,
         min_unluck   = min_unluck,
         is_random    = RANDOMIZE_GAMES,
         opening_sgf  = opening_sgf,
@@ -701,9 +676,9 @@ def model_graphs(bucket, model_name):
         return 'Model {} not found'.format(model_name)
     model_id = model[0]
 
-    # Divide by two to help avoid the 'only black can win on even moves'
+    # Divide by two to help avoid 'only black can win on even moves'
     game_length = cloudy.query_db(
-        'SELECT black_won, 2*(num_moves/2), count(*) FROM games ' +
+        'SELECT black_won, 2*(num_moves/2), count(*) FROM games2 ' +
         'WHERE model_id = ? GROUP BY 1,2 ORDER BY 1,2', (model[0],))
 
     #### OPENING RESPONSES ####
@@ -712,7 +687,7 @@ def model_graphs(bucket, model_name):
         'SELECT SUBSTR(early_moves_canonical,'
         '              0, instr(early_moves_canonical, ";")),'
         '       count(*)'
-        'FROM game_stats WHERE model_id = ? GROUP BY 1 ORDER BY 2 DESC LIMIT 16',
+        'FROM games2 WHERE model_id = ? GROUP BY 1 ORDER BY 2 DESC LIMIT 16',
         (model_id,))
 
     favorite_response = []
@@ -723,7 +698,7 @@ def model_graphs(bucket, model_name):
             'SELECT SUBSTR(early_moves_canonical, '
             '              0, ?+instr(SUBSTR(early_moves_canonical, ?, 6), ";")),'
             '       count(*) '
-            'FROM game_stats '
+            'FROM games2 '
             'WHERE model_id = ? AND num_moves > 2 AND early_moves_canonical LIKE ?'
             'GROUP BY 1 ORDER BY 2 DESC LIMIT 8',
             (len_move, len_move, model_id, black_first_move + ';%'))

@@ -71,8 +71,13 @@ class CloudyGo:
         return os.path.join(self.data_path(bucket), 'eval')
 
 
-    def all_games(self, bucket, model, debug = False):
-        game_type = 'full' if debug else 'clean'
+    def all_games(self, bucket, model, game_type='full'):
+        # NOTE: An older version of cloudygo would load games in two passes
+        # Parsing clean then full games this gave some flexibility but at
+        # the cost of overall speed now the code tries to do both parses
+        # in one pass falling back to simple_parse when debug information is
+        # not present.
+        # TODO: Support fallback to clean dir
         path = os.path.join(self.sgf_path(bucket), model, game_type)
         if not os.path.exists(path):
             return []
@@ -126,7 +131,7 @@ class CloudyGo:
 
 
     def insert_rows_db(self, table, rows):
-        assert re.match('^[a-zA-Z_]*$', table), table
+        assert re.match('^[a-zA-Z_2]*$', table), table
         if len(rows) > 0:
             values = '({})'.format(','.join(['?'] * len(rows[0])))
             query = 'INSERT INTO {} VALUES {}'.format(re.escape(table), values)
@@ -245,26 +250,16 @@ class CloudyGo:
         bucket_salt = CloudyGo.bucket_salt(bucket)
 
         games = []
-        game_stats = []
         for filename in filenames:
             game_num = CloudyGo.get_game_num(bucket_salt, filename)
+            # NOTE: if table is altered * may return unexpected order
             game = self.query_db(
-                'SELECT * FROM games WHERE game_num = ?',
+                'SELECT * FROM games2 WHERE game_num = ?',
                 (game_num,))
             if len(game) == 0:
                 continue
             games.append(game[0])
-
-            # NOTE: if table is altered * may return unexpected order
-            stats = self.query_db(
-                'SELECT * FROM game_stats WHERE game_num = ?',
-                (game_num,))
-            if len(stats) == 0:
-                game_stats.append(None)
-            else:
-                game_stats.append(stats[0])
-
-        return games, game_stats
+        return games
 
 
     def __get_gs_game(self, bucket, model, filename, view_type):
@@ -318,9 +313,8 @@ class CloudyGo:
         return data, view_type
 
 
-    def get_existing_games(self, table, model_id):
-        query = 'select game_num from {} where model_id = ?'.format(
-            re.escape(table))
+    def get_existing_games(self, model_id):
+        query = 'SELECT game_num FROM games2 WHERE model_id = ?'
         return set(record[0] for record in self.query_db(query, (model_id,)))
 
 
@@ -463,7 +457,7 @@ class CloudyGo:
             'SELECT SUBSTR(early_moves_canonical,'
             '              0, instr(early_moves_canonical, ";")),'
             '       count(*)'
-            'FROM game_stats WHERE model_id = ? '
+            'FROM games2 WHERE model_id = ? '
             'GROUP BY 1 ORDER BY 2 DESC LIMIT 16',
             (model_id,))
 
@@ -493,15 +487,13 @@ class CloudyGo:
             creation = int(os.path.getmtime(model_filename))
             training_time_m = 120
 
-            num_games = self.query_db(
-                'SELECT count(*) from games WHERE model_id = ?',
-                (model_id,))
-            num_games = num_games[0][0]
 
-            num_stats_games = self.query_db(
-                'SELECT count(*) from game_stats WHERE model_id = ?',
+            num_games = self.query_db(
+                'SELECT count(*), sum(has_stats) from games2 WHERE model_id = ?',
                 (model_id,))
-            num_stats_games = num_stats_games[0][0]
+            assert len(num_games) == 1
+            num_games, num_stats_games = num_games[0]
+            num_stats_games = num_stats_games or 0
 
             num_eval_games = self.query_db(
                 'SELECT sum(games) from eval_models '
@@ -525,10 +517,6 @@ class CloudyGo:
                 'SELECT max(stats_games) FROM model_stats WHERE model_id = ?',
                 (model_id,))
 
-            if num_stats_games == 0:
-                continue
-
-            # Not if partial or something
             currently_processed = currently_processed[0][0] or 0
             if partial and num_stats_games == currently_processed:
                 continue
@@ -543,8 +531,9 @@ class CloudyGo:
                 opening_file,
                 force_refresh=True)
 
+            # NOTE: if table is altered * may return unexpected order
             games = self.query_db(
-                'SELECT * from game_stats WHERE model_id = ?',
+                'SELECT * from games2 WHERE model_id = ?',
                 (model_id,))
 
             for perspective in ['all', 'black', 'white']:
@@ -554,32 +543,32 @@ class CloudyGo:
                 # ASSUMPTION: every game has a result
                 wins = games
                 if not is_all:
-                    wins = [game for game in games if game[2] == is_black]
+                    wins = [game for game in games if game[3] == is_black]
 
-                wins_by_resign = len([1 for game in wins if '+R' in game[3]])
-                sum_wins_result = sum(float(game[3][2:]) for game in wins
-                    if '+R' not in game[3])
+                wins_by_resign = len([1 for game in wins if '+R' in game[4]])
+                sum_wins_result = sum(float(game[4][2:]) for game in wins
+                    if '+R' not in game[4])
 
-                resign_rates = Counter(game[14] for game in wins)
+                resign_rates = Counter(game[16] for game in wins)
                 resign_rates.pop(-1, None) # remove -1 if it's present
-                if len(resign_rates) != 1:
+                if len(resign_rates) > 1:
                     if perspective == 'all':
                         print('{} has multiple Resign rates: {}'.format(
                             raw_name, resign_rates))
 
-                resign_rate = min(resign_rates.keys())
+                resign_rate = min(resign_rates.keys()) if resign_rates else -1
                 assert resign_rate < 0, resign_rate
-                holdouts = [game for game in wins if abs(game[14]) == 1]
-                holdout_resigns = [game for game in holdouts if '+R' in game[3]]
+                holdouts = [game for game in wins if abs(game[16]) == 1]
+                holdout_resigns = [game for game in holdouts if '+R' in game[4]]
                 assert len(holdout_resigns) == 0, holdout_resigns
 
                 bad_resigns = 0
                 for game in holdouts:
-                    black_won = game[2]
+                    black_won = game[3]
 
                     # bleakest eval is generally negative for black and positive for white
-                    black_would_resign = game[15] < resign_rate
-                    white_would_resign = -game[16] < resign_rate
+                    black_would_resign = game[17] < resign_rate
+                    white_would_resign = -game[18] < resign_rate
 
                     if black_won:
                         if black_would_resign:
@@ -595,10 +584,10 @@ class CloudyGo:
                     len(wins) - wins_by_resign, sum_wins_result,
                     len(holdouts), bad_resigns,
 
-                    sum(game[5] for game in wins), # num_moves
-                    sum(game[8] + game[9] for game in wins), # both sides visits
-                    sum(game[10] + game[11] for game in wins), # both sides early visits
-                    sum(game[12] + game[13] for game in wins), # both sides unluckiness
+                    sum(game[6] for game in wins), # num_moves
+                    sum(game[10] + game[11] for game in wins), # both sides visits
+                    sum(game[12] + game[13] for game in wins), # both sides early visits
+                    sum(game[14] + game[15] for game in wins), # both sides unluckiness
                     opening_sgf if is_all else '', # favorite_openings
                 ))
 
@@ -630,20 +619,13 @@ class CloudyGo:
 
     @staticmethod
     def process_game(data):
-        game_path, stats, game_num, filename, model_id = data
-        if stats:
-            result = sgf_utils.parse_game(game_path)
-            if not result: return None
-            record = (game_num, model_id,) + result
-        else:
-            result = sgf_utils.parse_game_simple(game_path)
-            if not result: return None
-            record = (game_num, filename, model_id,) + result
-
-        return record
+        game_path, game_num, filename, model_id = data
+        result = sgf_utils.parse_game(game_path)
+        if not result: return None
+        return  (game_num, model_id, filename) + result
 
 
-    def update_games(self, bucket, stats, max_inserts, min_model):
+    def update_games(self, bucket, max_inserts):
         # This is REALLY SLOW because it's potentially >1M items
         # loop by model to avoid huge globs and commits
         skipped = 0
@@ -651,28 +633,23 @@ class CloudyGo:
         results = []
 
         bucket_salt = CloudyGo.bucket_salt(bucket)
-        table = 'game_stats' if stats else 'games'
-
         for model in self.get_models(bucket):
-            if min_model > model[4]:
-                skipped += 1
-                continue
-
             # Check if directories mtime is recent, if not skip
             base = os.path.join(self.sgf_path(bucket), model[2])
             times = [0]
             for test_d in [os.path.join(base, d) for d in ('clean', 'full')]:
                 if os.path.exists(test_d):
                     times.append(os.path.getmtime(test_d))
-            if min_model == 0 and max(times) < model[5] - 86400:
+            if max(times) < model[5] - 86400:
+                skipped += 1
                 continue
 
             model_id = model[0]
-            existing = self.get_existing_games(table, model_id)
+            existing = self.get_existing_games(model_id)
 
             games_added = set()
-            games_to_process = []
-            for game_path in self.all_games(bucket, model[2], debug=stats):
+            to_process = []
+            for game_path in self.all_games(bucket, model[2]):
                 filename = os.path.basename(game_path)
                 game_num = CloudyGo.get_game_num(bucket_salt, filename)
 
@@ -681,27 +658,24 @@ class CloudyGo:
                 assert game_num not in games_added, (game_num, game_path)
                 games_added.add(game_num)
 
-                games_to_process.append(
-                    (game_path, stats, game_num, filename, model_id))
+                to_process.append((game_path, game_num, filename, model_id))
 
-                if len(games_to_process) >= max_inserts:
+                if len(to_process) >= max_inserts:
                     break
 
-            if self.pool:
-                new_games = self.pool.map(CloudyGo.process_game, games_to_process)
-            else:
-                new_games = map(CloudyGo.process_game, games_to_process)
+            mapper = self.pool.map if self.pool else map
+            new_games = mapper(CloudyGo.process_game, to_process)
 
             new_games = list(filter(None.__ne__, new_games))
             total_games = len(existing) + len(new_games)
 
-            self.insert_rows_db(table, new_games)
+            self.insert_rows_db('games2', new_games)
 
-            update_model_query = \
-                'UPDATE models SET {} = ? WHERE model_id = ?'.format(
-                        re.escape('num_stats_games' if stats else 'num_games'))
-            self.db().execute(update_model_query, (total_games, model_id,))
+            self.db().execute(
+                'UPDATE models SET num_games = ? WHERE model_id = ?',
+                (total_games, model_id,))
 
+            # TODO(sethtroisi): check if this really commits or it commit after execute
             self.db().commit()
 
             result = '{}: {} existing, {} inserts'.format(
@@ -713,8 +687,9 @@ class CloudyGo:
             results.append(result)
 
         skipped_text = 'skipped {} models'.format(skipped)
-        results.append(skipped_text)
-        return updates, '<br>'.join(reversed(results))
+        if skipped > 0:
+            print (skipped_text)
+        return updates
 
 
     def update_position_eval(self, filename, bucket, model_id, group, name):
@@ -816,10 +791,8 @@ class CloudyGo:
 
         new_evals = []
         if len(evals_to_process) > 0:
-            if self.pool:
-                new_evals = self.pool.map(CloudyGo.eval_record, evals_to_process)
-            else:
-                new_evals = map(CloudyGo.eval_record, evals_to_process)
+            mapper = self.pool.map if self.pool else map
+            new_evals = mapper(CloudyGo.eval_record, evals_to_process)
 
             broken = new_evals.count(None)
             new_evals = list(filter(None.__ne__, new_evals))

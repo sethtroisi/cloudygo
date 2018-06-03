@@ -118,14 +118,13 @@ def update_models_games(cloudy, bucket):
 
     # Note when importing a new DB consider lowing and doing multiple updates.
     inserts = 5000
-    for stats in [False, True]:
-        print ("\tupdating_games({}, {})".format(stats, inserts))
-        count, status = cloudy.update_games(bucket, stats, inserts, 0)
-        updates += count
+    print ("\tupdating_games({})".format(inserts))
+    count = cloudy.update_games(bucket, inserts)
+    updates += count
 
     if updates > 0:
         # Sync models with new data
-        cloudy.update_models(bucket, partial=False)
+        count += cloudy.update_models(bucket, partial=False)
     return updates
 
 
