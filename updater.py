@@ -35,15 +35,17 @@ DATABASE_PATH = os.path.join(INSTANCE_PATH, 'clouds.db')
 
 CURRENT_BUCKET = 'v7-19x19'
 #CURRENT_BUCKET = 'v3-9x9'
-BUCKETS = ["v3-9x9", "v5-19x19", "v7-19x19"]
+CURRENT_BUCKET = 'leela-zero-v1'
 
+# Note when importing a new DB consider lowing
+# for an initial pass to make sure everything is okayw
+MAX_INSERTS = 2000
 
 def setup():
     #### DB STUFF ####
 
     db = sqlite3.connect(DATABASE_PATH)
     db.row_factory = sqlite3.Row
-
 
     #### CloudyGo ####
 
@@ -116,10 +118,8 @@ def update_models_games(cloudy, bucket):
     if len(models) == 0:
         return 0
 
-    # Note when importing a new DB consider lowing and doing multiple updates.
-    inserts = 5000
-    print ("\tupdating_games({})".format(inserts))
-    count = cloudy.update_games(bucket, inserts)
+    print ("\tupdating_games({})".format(MAX_INSERTS))
+    count = cloudy.update_games(bucket, MAX_INSERTS)
     updates += count
 
     if updates > 0:
@@ -135,12 +135,13 @@ if __name__ == "__main__":
 
     updates = 0
 
-    if len(sys.argv) == 3 and sys.argv[1] == "models":
-        for bucket in BUCKETS:
+    if len(sys.argv) > 3 and sys.argv[1] == "models":
+        for bucket in sys.argv[3:]:
             updates += cloudy.update_models(
                 bucket,
                 partial=(sys.argv[2] != "False"))
 
+    # TODO unify the format of these if statements.
     if len(sys.argv) == 1 or "games" in sys.argv:
         updates += update_models_games(cloudy, CURRENT_BUCKET)
 
@@ -151,11 +152,14 @@ if __name__ == "__main__":
             updates += cloudy.update_eval_models(bucket)
 
     if len(sys.argv) == 1 or "position_evals" in sys.argv:
-        buckets = [CURRENT_BUCKET]
+        buckets = [CURRENT_BUCKET] + sys.argv[2:]
         for bucket in buckets:
            updates += update_position_setups(cloudy, bucket)
            for group in ["policy", "pv"]:
                 updates += update_position_eval(cloudy, bucket, group)
+
+    # Always update names
+    cloudy.update_model_names()
 
     T1 = time.time()
     delta = T1 - T0

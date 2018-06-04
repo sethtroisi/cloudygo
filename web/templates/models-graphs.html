@@ -95,9 +95,10 @@ per_model_graph(
 
 /********************/
 
+var resign_rate_svg = d3.select("#bad-resign-rate-svg");
 var resign_rate_data = JSON.parse('{{ bad_resign_rate | tojson | safe}}');
 per_model_graph(
-    d3.select("#bad-resign-rate-svg"),
+    resign_rate_svg,
     resign_rate_data, [f1],
     true /* include_average */,
     false /* include_right_axis */,
@@ -113,9 +114,10 @@ pX = function(p) { return function(d) {
   var row = d[1].find(function(inner) { return inner[0] == p });
   return row[1];
 }; };
+var bad_resign_rate_svg = d3.select("#bad-resign-thresh-svg");
 
 per_model_graph(
-    d3.select("#bad-resign-thresh-svg"),
+    bad_resign_rate_svg,
     bad_resign_thresh_data, [pX(5), pX(2), pX(1)],
     false /* include_average */,
     true /* include_right_axis */,
@@ -169,9 +171,10 @@ per_model_graph(
 
 /********************/
 
+var num_visits_svg = d3.select("#num-visits-svg");
 var num_visits_data = JSON.parse('{{ num_visits | tojson | safe}}');
 per_model_graph(
-    d3.select("#num-visits-svg"),
+    num_visits_svg,
     num_visits_data, [f1],
     true /* include_average */,
     true /* include_right_axis */,
@@ -195,9 +198,10 @@ per_model_graph(
 
 /********************/
 
+var sum_unluck_svg = d3.select("#sum-unluck-svg");
 var sum_unluck_data = JSON.parse('{{ sum_unluck | tojson | safe}}');
 per_model_graph(
-    d3.select("#sum-unluck-svg"),
+    sum_unluck_svg,
     sum_unluck_data, [f1],
     true /* include_average */,
     false /* include_right_axis */,
@@ -205,6 +209,14 @@ per_model_graph(
     "How badly soft-n messed up each game by Model",
     "Model Number",
     "Soft-n of all better not-played moves (see early game temperature)");
+
+// LEELA-HACK
+if (/leela/.test("{{bucket}}")) {
+  [resign_rate_svg, bad_resign_rate_svg,
+   num_visits_svg, sum_unluck_svg].forEach(function(svg) {
+    svg.style('display', 'none');
+  });
+}
 
 /********************/
 var win_rate_curve_delta_data = JSON.parse('{{ win_rate_curve_delta | tojson | safe}}');

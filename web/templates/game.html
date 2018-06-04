@@ -57,7 +57,7 @@
           {{ models_link() }}
           | <a href="{{ url_for('model_details', bucket=bucket, model_name=model) }}">Details</a>
           | Game
-          {% if not is_eval %}
+          {% if not is_eval and 'leela' not in bucket %}
           | <a href="{{ url_for('game_view',
                                 bucket=bucket,
                                 model=model,

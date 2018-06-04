@@ -43,6 +43,7 @@ class CloudyGo:
     DEBUG_GAME_CLOUD_BUCKET = 'minigo-pub'
 
     DEFAULT_BUCKET = 'v7-19x19'
+    LEELA_ID = 'leela-zero'
 
     def __init__(self, instance_path, data_dir, database, cache, pool):
         self.INSTANCE_PATH = instance_path
@@ -72,6 +73,10 @@ class CloudyGo:
 
 
     def all_games(self, bucket, model, game_type='full'):
+        # LEELA-HACK
+        if bucket.startswith(CloudyGo.LEELA_ID):
+            game_type = 'clean'
+
         # NOTE: An older version of cloudygo would load games in two passes
         # Parsing clean then full games this gave some flexibility but at
         # the cost of overall speed now the code tries to do both parses
@@ -164,6 +169,14 @@ class CloudyGo:
 
     @staticmethod
     def get_game_num(bucket_salt, filename):
+        # LEELA-HACK
+        if CloudyGo.LEELA_ID in filename:
+            number = filename.rsplit('-', 1)[-1]
+            assert number.endswith('.sgf')
+            # TODO(sethtroisi): these are generated from sgfsplit
+            # come up with a better scheme (hash maybe) for numbering
+            return int(number[:-4])
+
         game, name = filename.split('-', 1)
         pod = name.split('-')[-1][:-4]
 
@@ -300,7 +313,9 @@ class CloudyGo:
             with open(file_path, 'r') as f:
                 data = f.read()
         else:
-            if 'full' in view_type and CloudyGo.DEBUG_GAME_CLOUD_BUCKET:
+            if 'full' in view_type \
+                   and CloudyGo.LEELA_ID not in bucket \
+                   and CloudyGo.DEBUG_GAME_CLOUD_BUCKET:
                 data = self.__get_gs_game(bucket, model, filename, view_type)
                 if data:
                     return data, view_type
@@ -452,7 +467,7 @@ class CloudyGo:
         )
 
 
-    def get_favorite_openings(self, model_id, num_stats_games):
+    def get_favorite_openings(self, model_id, num_games):
         favorite_openings = self.query_db(
             'SELECT SUBSTR(early_moves_canonical,'
             '              0, instr(early_moves_canonical, ";")),'
@@ -461,31 +476,49 @@ class CloudyGo:
             'GROUP BY 1 ORDER BY 2 DESC LIMIT 16',
             (model_id,))
 
-        return [(move, round(100 * count / num_stats_games))
+        return [(move, round(100 * count / num_games))
             for move, count in favorite_openings
-                if 100 * count >= num_stats_games]
+                if move and num_games and 100 * count >= num_games]
 
 
     #### PAGES ####
 
 
     def update_models(self, bucket, partial=True):
-        model_filenames = glob.glob(
-            os.path.join(self.model_path(bucket), '*.meta'))
+        # LEELA-HACK
+        if bucket.startswith(CloudyGo.LEELA_ID):
+            model_glob = os.path.join(self.model_path(bucket), '[0-9a-f]*')
+        else:
+            model_glob = os.path.join(self.model_path(bucket), '*.meta')
+        model_filenames = glob.glob(model_glob)
 
-        existing = set(m[0] for m in self.get_models(bucket))
+        existing_models = self.get_models(bucket)
+        existing = set(m[0] for m in existing_models)
 
         model_inserts = []
         model_stat_inserts = []
         for model_filename in sorted(model_filenames):
             raw_name = os.path.basename(model_filename).replace('.meta', '')
 
-            model_num, model_name = raw_name.split('-', 1)
-            model_id = CloudyGo.bucket_salt(bucket) + int(model_num) # unique_id
+            # LEELA-HACK
+            if bucket.startswith(CloudyGo.LEELA_ID):
+                # Note: this is brittle but I can't think of how to get model_id
+                existing_model = [m for m in existing_models
+                    if raw_name.startswith(m[1])]
+                assert len(existing_model) == 1, (model_filename, existing_model)
+                existing_model = existing_model[0]
+
+                raw_name = raw_name[:8] # otherwise sgf loading fails
+                model_id = existing_model[0]
+                model_name = existing_model[1]
+                model_num = existing_model[4]
+            else:
+                model_num, model_name = raw_name.split('-', 1)
+                model_id = CloudyGo.bucket_salt(bucket) + int(model_num) # unique_id
 
             last_updated = int(time.time())
-            creation = int(os.path.getmtime(model_filename))
             training_time_m = 120
+            creation = int(os.path.getmtime(model_filename))
 
 
             num_games = self.query_db(
@@ -518,7 +551,7 @@ class CloudyGo:
                 (model_id,))
 
             currently_processed = currently_processed[0][0] or 0
-            if partial and num_stats_games == currently_processed:
+            if partial and num_games == currently_processed:
                 continue
 
             opening_name = str(model_id) + '-favorite-openings.png'
@@ -527,7 +560,7 @@ class CloudyGo:
             opening_sgf  = sgf_utils.board_png(
                 CloudyGo.bucket_to_board_size(bucket),
                 '', #setup
-                self.get_favorite_openings(model_id, num_stats_games),
+                self.get_favorite_openings(model_id, num_games),
                 opening_file,
                 force_refresh=True)
 
@@ -558,6 +591,7 @@ class CloudyGo:
 
                 resign_rate = min(resign_rates.keys()) if resign_rates else -1
                 assert resign_rate < 0, resign_rate
+                # TODO count leela holdouts but ignore resign problem.
                 holdouts = [game for game in wins if abs(game[16]) == 1]
                 holdout_resigns = [game for game in holdouts if '+R' in game[4]]
                 assert len(holdout_resigns) == 0, holdout_resigns
@@ -625,14 +659,34 @@ class CloudyGo:
         return  (game_num, model_id, filename) + result
 
 
+    def update_model_names(self):
+        models = self.query_db('SELECT * from models')
+        names = dict(self.query_db(
+            'SELECT model_id, name from name_to_model_id'))
+
+        inserts = []
+        for model in models:
+            model_id = model[0]
+            model_name = model[1]
+            if model_id in names:
+                assert model_name == names[model_id], (model_id, model_name)
+            else:
+                inserts.append((model_name, model_id))
+
+        if inserts:
+            self.insert_rows_db('name_to_model_id', inserts)
+            self.db().commit()
+            print ('Updated {} model names'.format(len(inserts)))
+
+
     def update_games(self, bucket, max_inserts):
         # This is REALLY SLOW because it's potentially >1M items
         # loop by model to avoid huge globs and commits
-        skipped = 0
         updates = 0
-        results = []
 
         bucket_salt = CloudyGo.bucket_salt(bucket)
+
+        skipped = []
         for model in self.get_models(bucket):
             # Check if directories mtime is recent, if not skip
             base = os.path.join(self.sgf_path(bucket), model[2])
@@ -640,9 +694,9 @@ class CloudyGo:
             for test_d in [os.path.join(base, d) for d in ('clean', 'full')]:
                 if os.path.exists(test_d):
                     times.append(os.path.getmtime(test_d))
-            if max(times) < model[5] - 86400:
-                skipped += 1
-                continue
+            #if max(times) < model[5] - 86400:
+            #    skipped.append(model[4])
+            #    continue
 
             model_id = model[0]
             existing = self.get_existing_games(model_id)
@@ -678,16 +732,20 @@ class CloudyGo:
             # TODO(sethtroisi): check if this really commits or it commit after execute
             self.db().commit()
 
-            result = '{}: {} existing, {} inserts'.format(
-                model[2], len(existing), len(new_games))
+            result = '{}-{}: {} existing, {} inserts'.format(
+                model[4], model[1], len(existing), len(new_games))
             if len(new_games):
                 print (result)
 
             updates += len(new_games)
-            results.append(result)
 
-        skipped_text = 'skipped {} models'.format(skipped)
-        if skipped > 0:
+        # TODO(sethtroisi): clean this up with util function.
+        skipped_text = 'skipped {} models ({}{}{})'.format(
+            len(skipped),
+            ", ".join(map(str, skipped[:5])),
+            " ... " * (len(skipped) > 10),
+            ", ".join(map(str, skipped[5:][-5:])))
+        if len(skipped) > 0:
             print (skipped_text)
         return updates
 

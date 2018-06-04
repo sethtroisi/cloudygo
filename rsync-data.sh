@@ -102,7 +102,7 @@ if [[ ! -z $MODELS ]]; then
     echo "Syncing model files from $cloud_path, at $(date)"
 
     dest=$(readlink -f "$DEST/$RUN/models")
-    gsutil -m rsync "$cloud_path" "$dest"
+    gsutil rsync "$cloud_path" "$dest"
     exit 0;
 fi
 

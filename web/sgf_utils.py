@@ -342,11 +342,16 @@ def parse_game(game_path):
 
     result_margin = float(result.split('+')[1]) if ('+R' not in result) else 0
 
-    raw_moves = list(re.finditer(r';([BW]\[[a-s]*\])(C\[([^]]*)\])', data))
+    raw_moves = list(re.finditer(r';([BW]\[[a-s]*\])(C\[([^]]*)\])?', data))
     played_moves = [sgf_to_cord(board_size, move.group(1)) for move in raw_moves]
 
+    early_moves = ';'.join(played_moves[:10])
+    early_moves_canonical = canonical_moves(board_size, early_moves)
+
     # format is: resign, (pv_moves, pv_counts), Q, table
-    parsed_comments = [fully_parse_comment(move.group(2)) for move in raw_moves]
+    comments = [move.group(2) for move in raw_moves if move.group(2)]
+    assert len(comments) in (0, len(raw_moves)), game_path
+    parsed_comments = list(map(fully_parse_comment, comments))
 
     move_quality = derive_move_quality(played_moves, parsed_comments)
 
@@ -356,7 +361,7 @@ def parse_game(game_path):
     # Sometimes move with equal N in 2nd position is choosen
     #assert sum(move_quality[1][30:]) == 0, game_path
 
-    has_stats = True
+    has_stats = len(parsed_comments) > 0
 
     top_move_visit_count = [parsed[1][1][0] for parsed in parsed_comments]
     number_of_visits_b = sum(top_move_visit_count[0::2])
@@ -364,13 +369,25 @@ def parse_game(game_path):
     number_of_visits_early_b = sum(count for count in top_move_visit_count[0:29:2])
     number_of_visits_early_w = sum(count for count in top_move_visit_count[1:29:2])
 
-    resign_threshold = parsed_comments[0][0]
-    assert resign_threshold is not None
-    bleakest_eval_black = min(parsed[2][0] for parsed in parsed_comments[0::2])
-    bleakest_eval_white = max(parsed[2][0] for parsed in parsed_comments[1::2])
+    # LEELA-HACK
+    if 'leela-zero' in game_path:
+        # TODO determine resign_threshold from comment
+        resign_rate = re.findall(r' -r ([0-9]*) ', data)
+        assert len(resign_rate) <= 1, (game_path, resign_rate)
+        if resign_rate:
+            # Otherwise "holdout_resign" assert gets thrown
+            resign_threshold = -0.999 + 0.01 * int(resign_rate[0])
+        else:
+            resign_threshold = -0.99
 
-    early_moves = ';'.join(played_moves[:10])
-    early_moves_canonical = canonical_moves(board_size, early_moves)
+        bleakest_eval_black = 1 if black_won else -1
+        bleakest_eval_white = -1 if black_won else 1
+    else:
+        resign_threshold = parsed_comments[0][0]
+        assert resign_threshold is not None
+
+        bleakest_eval_black = min(parsed[2][0] for parsed in parsed_comments[0::2])
+        bleakest_eval_white = max(parsed[2][0] for parsed in parsed_comments[1::2])
 
     return (black_won, result, result_margin,
             num_moves,

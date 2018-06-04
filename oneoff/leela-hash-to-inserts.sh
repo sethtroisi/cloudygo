@@ -19,11 +19,6 @@ bucket="leela-zero-v1"
 
 cd "instance/data/$bucket" || cd "../instance/data/$bucket" || exit 2;
 
-# Generate model numbers from zero-sjeng.org
-
-#curl http://zero.sjeng.org > zero-sjeng-org.html
-#ls import/ | cut -d- -f2 | sed 's#_\(slow\|fast\)##' | sort -u | xargs -I {} sh -c 'num=$(grep -m 1 "{}" zero-sjeng-org.html | sed "s#<tr><td>\([0-9]*\)</td>.*#\1#"); [ ! -z "$num" ] && echo "$(('$bucket_hash' * 1000000 + $num)),{},{},'$bucket',$num,0,0,0,0,0,0"' | sort -n | tee inserts.csv
-
 echo
 echo ".mode csv"
 echo ".import instance/data/$bucket/inserts.csv models"

@@ -102,6 +102,8 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
 
     # try to filter some of the rsync lines
     patterns = list(map(re.compile, [
+        # >1k, > 100, or 0 file all get filtered
+        r'.*\[[0-9.k]* files\]', # Not started just counting how many
         r'.*\[[0-9.k]*/[0-9.]*k files\]\[.*Done',
         r'.*\[[1-9][0-9]{2}/.* files\]\[.*Done',
         r'Copying gs://.*/sgf/.*sgf',
@@ -112,7 +114,7 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
     ]))
 
     def not_boring_line(line):
-        return random.randrange(100) == 0 or \
+        return random.randrange(150) == 0 or \
             all(not pattern.match(line) for pattern in patterns)
 
 
@@ -223,21 +225,6 @@ def figure_three(bucket):
     )
 
 
-@app.route('/<bucket>/force-update-models')
-def update_models(bucket):
-    return cloudy.update_models(bucket)
-
-
-@app.route('/<bucket>/force-update-games')
-def update_games(bucket):
-    stats = get_bool_arg('stats', request.args)
-    max_inserts = int(request.args.get('n', MAX_INSERTS))
-    min_model = int(request.args.get('min_model', 0))
-
-    count, status = cloudy.update_games(bucket, stats, max_inserts, min_model)
-    return status
-
-
 @app.route('/site-nav')
 @app.route('/<bucket>/site-nav')
 def site_nav(bucket=CloudyGo.DEFAULT_BUCKET):
@@ -286,7 +273,7 @@ def models_graphs(bucket):
     if graphs is None:
         win_rate = cloudy.bucket_query_db(
             bucket,
-            'SELECT model_id % 10000, round(1.0*wins/stats_games,3)',
+            'SELECT model_id % 10000, round(1.0*wins/num_games,3)',
             'model_stats', 'WHERE perspective = "black"', 1, model_limit)
 
         bad_resign_rate = cloudy.bucket_query_db(
@@ -318,12 +305,11 @@ def models_graphs(bucket):
             percents = [(p, round(np.percentile(bleak, 100 - p), 3))
                 for p in range(10)]
             bad_resign_thresh[m] = percents
-            print (m, percents)
         bad_resign_thresh = sorted(bad_resign_thresh.items())
 
         game_length_simple = cloudy.bucket_query_db(
             bucket,
-            'SELECT model_id % 10000, round(1.0*num_moves/stats_games,3)',
+            'SELECT model_id % 10000, round(1.0*num_moves/num_games,3)',
             'model_stats', 'WHERE perspective = "all"', 1, model_limit)
 
         num_games = cloudy.bucket_query_db(
@@ -692,6 +678,9 @@ def model_graphs(bucket, model_name):
 
     favorite_response = []
     for black_first_move, opening_count in favorite_openings:
+        if not black_first_move:
+            continue
+
         # Pass is 5 long and messes up the indexeing on 5+...
         len_move = len(black_first_move) + 2
         response = cloudy.query_db(
