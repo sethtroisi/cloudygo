@@ -27,6 +27,7 @@ import choix
 import numpy as np
 
 from . import sgf_utils
+from . import utils
 
 
 class CloudyGo:
@@ -520,7 +521,6 @@ class CloudyGo:
             training_time_m = 120
             creation = int(os.path.getmtime(model_filename))
 
-
             num_games = self.query_db(
                 'SELECT count(*), sum(has_stats) from games2 WHERE model_id = ?',
                 (model_id,))
@@ -729,7 +729,6 @@ class CloudyGo:
                 'UPDATE models SET num_games = ? WHERE model_id = ?',
                 (total_games, model_id,))
 
-            # TODO(sethtroisi): check if this really commits or it commit after execute
             self.db().commit()
 
             result = '{}-{}: {} existing, {} inserts'.format(
@@ -739,12 +738,7 @@ class CloudyGo:
 
             updates += len(new_games)
 
-        # TODO(sethtroisi): clean this up with util function.
-        skipped_text = 'skipped {} models ({}{}{})'.format(
-            len(skipped),
-            ", ".join(map(str, skipped[:5])),
-            " ... " * (len(skipped) > 10),
-            ", ".join(map(str, skipped[5:][-5:])))
+        skipped_text = 'skipped {} models ({})'.format(utils.list_preview(skipped))
         if len(skipped) > 0:
             print (skipped_text)
         return updates

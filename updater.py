@@ -39,7 +39,7 @@ CURRENT_BUCKET = 'leela-zero-v1'
 
 # Note when importing a new DB consider lowing
 # for an initial pass to make sure everything is okayw
-MAX_INSERTS = 2000
+MAX_INSERTS = 10000
 
 def setup():
     #### DB STUFF ####

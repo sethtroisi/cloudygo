@@ -391,8 +391,6 @@ def models_graphs_sliders(bucket):
     key = '{}/graphs-sliders'.format(bucket)
     graphs = cache.get(key)
     if graphs is None:
-        # TODO LIMIT model_id by BUCKET.
-
         # Divide by four to help avoid the 'only black can win on even moves'
         game_length = cloudy.bucket_query_db(
             bucket,
@@ -422,7 +420,6 @@ def models_graphs_sliders(bucket):
                 url_for('.opening_image', filename=opening),
                 url_for('.opening_image', filename=policy)
             ))
-
 
         graphs = (game_length, sum_unluck_per, picture_sliders)
         cache.set(key, graphs, timeout = 10 * 60)
@@ -604,13 +601,13 @@ def model_details(bucket, model_name):
     game_names = cache.get(model_name)
     if game_names is None:
         game_names = cloudy.all_games(bucket, model_name)
-        game_names = list(map(os.path.basename, game_names))
+        game_names = sorted(list(map(os.path.basename, game_names)))
 
-        # TODO always include first and last game
+        always_include = games_names[:2] + game_names[-2:]
         if RANDOMIZE_GAMES:
             random.shuffle(game_names)
 
-        game_names = game_names[:MAX_GAMES_ON_PAGE]
+        game_names = always_include + game_names[:MAX_GAMES_ON_PAGE-4]
 
         # Low cache time so that games randomize if you refresh
         cache.set(model_name, game_names, timeout=60)
@@ -655,8 +652,6 @@ def model_details(bucket, model_name):
 
 @app.route('/<bucket>/graphs/<model_name>')
 def model_graphs(bucket, model_name):
-    # TODO(sethtroisi): cache something here
-
     model, model_stats = cloudy.load_model(bucket, model_name)
     if model is None:
         return 'Model {} not found'.format(model_name)
