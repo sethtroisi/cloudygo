@@ -312,22 +312,32 @@ def derive_move_quality(played_moves, parsed_comments):
     return visits, unluckness
 
 
-def parse_game_simple(game_path, data=None):
+def parse_game_simple(game_path, data=None, include_players=False):
     if data is None:
         data = read_game_data(game_path)
         if data is None:
             return None
 
-    match = re.search(r'RE\[([wWbB][^]]+)\]', data);
+    match = re.search(r'RE\[([wWbB][^]]+)\]', data)
     if not match:
+        # This is a known issue, ignore these games
         if 'RE[None]' in data:
-            # print('Broken RE[None] game', game_path)
             return None
     assert match, game_path
 
     result = match.group(1).upper()
     black_won = 'B' in result
+
     moves = data.count(';') - 1
+
+    if include_players:
+        PB = re.search(r'PB\[([^\]]*)\]', data)
+        PB = PB.group(1) if PB else ""
+
+        PW = re.search(r'PW\[([^\]]*)\]', data)
+        PW = PW.group(1) if PW else ""
+        return black_won, result, moves, PB, PW
+
     return black_won, result, moves
 
 
@@ -338,6 +348,7 @@ def parse_game(game_path):
 
     board_size = 9 if 'SZ[9]' in data else 19
 
+    # Note: PB and PW are unused here
     black_won, result, num_moves = parse_game_simple(game_path, data)
 
     result_margin = float(result.split('+')[1]) if ('+R' not in result) else 0
@@ -355,8 +366,8 @@ def parse_game(game_path):
 
     move_quality = derive_move_quality(played_moves, parsed_comments)
 
-    unluckiness_black = round(sum(move_quality[1][:29:2]), 3)
-    unluckiness_white = round(sum(move_quality[1][1:29:2]), 3)
+    unluckiness_black = round(sum(move_quality[1][:30:2]), 3)
+    unluckiness_white = round(sum(move_quality[1][1:30:2]), 3)
 
     # Sometimes move with equal N in 2nd position is choosen
     #assert sum(move_quality[1][30:]) == 0, game_path
@@ -366,8 +377,8 @@ def parse_game(game_path):
     top_move_visit_count = [parsed[1][1][0] for parsed in parsed_comments]
     number_of_visits_b = sum(top_move_visit_count[0::2])
     number_of_visits_w = sum(top_move_visit_count[1::2])
-    number_of_visits_early_b = sum(count for count in top_move_visit_count[0:29:2])
-    number_of_visits_early_w = sum(count for count in top_move_visit_count[1:29:2])
+    number_of_visits_early_b = sum(count for count in top_move_visit_count[0:30:2])
+    number_of_visits_early_w = sum(count for count in top_move_visit_count[1:30:2])
 
     # LEELA-HACK
     if 'leela-zero' in game_path:

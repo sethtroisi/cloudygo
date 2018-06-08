@@ -16,6 +16,12 @@
 <!DOCTYPE html>
 <html>
   {% from "macros.html" import models_link, other_buckets, favicon_links, tip with context %}
+  {% macro eval_link(model, display) %}
+    <a href="{{ url_for('model_eval',
+                        bucket=bucket,
+                        model_name=model,
+                        sorted=is_sorted) }}">{{ display }}</a>
+  {% endmacro %}
   <head lang="en">
       <meta charset="UTF-8">
       <title>Minigo Model Eval</title>
@@ -85,6 +91,7 @@
       | Evaluation
       {{ other_buckets('eval_graphs') }}
     </h1>
+    {% if not is_sorted %}
     <div class="ratings-scatter">
       <svg class="model-graph" id="rating-svg"></svg>
       <div class="rating-desc">
@@ -94,15 +101,19 @@
             <td>Ratings from</td>
             <td colspan="2">{{ total_games }} games</td>
           </tr>
+
+          {% for great in top_ten_models %}
           <tr class="great-model">
-            <td>Best model</td>
-            <td>{{ best_model[0] }}</td>
-            <td>rating {{ best_model[1]|round|int }}</td>
+            <td>{{ "Best model" if loop.index0 == 0 else loop.index }}</td>
+            <td>{{ eval_link(great[0], great[0]|string + "-" + great[1]) }}</td>
+            <td>rating {{great[2]|round|int }}</td>
           </tr>
+          {% endfor %}
           <tr>
             <td>Worst model</td>
-            <td>{{ worst_model[0] }}</td>
-            <td>rating {{ worst_model[1]|round|int }}</td>
+            {% set worst_model = sorted_models[-1] %}
+            <td>{{ worst_model[0] }}-{{ worst_model[1] }}</td>
+            <td>rating {{ worst_model[2]|round|int }}</td>
           </tr>
           </tbody>
         </table>
@@ -114,9 +125,11 @@
     <div class="winrate-scatter">
       <svg class="model-graph" id="winrate-svg"></svg>
     </div>
+    {% endif %}
     <hr>
+    {% set model_list = sorted_models if is_sorted else models %}
     {% set rows = 50 %}
-    {% set columns = (model_ratings|length - 1 + rows) // rows %}
+    {% set columns = (model_list|length - 1 + rows) // rows %}
     {% for c in range(columns) %}
     <table class="models-table">
       <thead>
@@ -128,16 +141,13 @@
         <th>Games</th>
       </thead>
       <tbody>
-      {% for data in model_ratings[::-1][c*rows:(c+1)*rows] %}
-      <tr {% if data[1] > great_threshold %} class="great-model" {% endif %}>
-        <td><a href="{{ url_for('model_eval',
-                                bucket=bucket,
-                                model_name=data[0]) }}">{{ data[0] }}</a></td>
-        <td>
-          {{ data[1]|round|int }}
-          {% if data[2] > 50 %} (&plusmn;{{ data[2]|round(1)}}){% endif %}
+      {% for data in model_list[c*rows:(c+1)*rows] %}
+      <tr{% if data[2] > great_threshold %} class="great-model" {% endif %}>
+        <td>{{ eval_link(data[0], data[1] if is_sorted else data[0]) }}</a></td>
+        <td>{{ data[2]|round|int }}
+            {%- if data[3] > 50 %} (&plusmn;{{ data[3]|round(1)}}){% endif -%}
         </td>
-        <td>{{ data[3] }}</td>
+        <td>{{ data[4] }}</td>
       </tr>
       {% endfor %}
       </tbody>
@@ -145,8 +155,10 @@
     {% endfor %}
   </body>
 
+  {% if not is_sorted %}
   <script type="text/javascript">
-    var ratings = JSON.parse('{{ model_ratings | tojson | safe }}');
+    {# Have to reverse models so that filter works #}
+    var ratings = JSON.parse('{{ models[::-1] | tojson | safe }}');
     var model_filter = d3.select("#filter-models")
     var rating_svg = d3.select("#rating-svg");
 
@@ -157,7 +169,7 @@
 
         sawBetter = false;
         for (j = Math.max(0, i - 3); j < i; j++) {
-          if (ratings[j][1] > r[1]) {
+          if (ratings[j][2] > r[2]) {
             sawBetter = true;
           }
         }
@@ -170,7 +182,7 @@
       rating_scatter_plot(
           rating_svg,
           new_ratings,
-          function(d) { return d[1]; },
+          function(d) { return d[2]; },
           "Rating",
           "Model",
           "Rating (elo like)");
@@ -193,4 +205,5 @@
         "Winrate vs older models",
         "Winrate vs newer models");
   </script>
+  {% endif %}
 </html>

@@ -34,12 +34,11 @@ LOCAL_DATA_DIR = os.path.join(INSTANCE_PATH, 'data')
 DATABASE_PATH = os.path.join(INSTANCE_PATH, 'clouds.db')
 
 CURRENT_BUCKET = 'v7-19x19'
-#CURRENT_BUCKET = 'v3-9x9'
-CURRENT_BUCKET = 'leela-zero-v1'
+#CURRENT_BUCKET = 'leela-zero-v1'
 
 # Note when importing a new DB consider lowing
 # for an initial pass to make sure everything is okayw
-MAX_INSERTS = 10000
+MAX_INSERTS = 20000
 
 def setup():
     #### DB STUFF ####
@@ -62,18 +61,19 @@ def setup():
 
 
 def update_position_eval(cloudy, bucket, group):
-    eval_paths = glob.glob(os.path.join(INSTANCE_PATH, group, bucket, '*'))
+    position_paths = glob.glob(os.path.join(INSTANCE_PATH, group, bucket, '*'))
 
     models = cloudy.get_models(bucket)
     model_ids = { model[4] : model[0] for model in models }
 
     print ("{}: Updating {} {} position evals ({:.2f}/model)".format(
-        bucket, group, len(eval_paths), len(eval_paths) / len(models)))
+        bucket, group, len(position_paths), len(position_paths) / len(models)))
 
     updates = 0
-    for eval_path in eval_paths:
-        assert eval_path.endswith('.csv'), eval_path
-        raw_name, model_num = os.path.basename(eval_path[:-4]).rsplit('-', 1)
+    for position_path in position_paths:
+        assert position_path.endswith('.csv'), position_path
+        position_name = os.path.basename(position_path[:-4])
+        raw_name, model_num = position_name.rsplit('-', 1)
         assert raw_name.startswith("heatmap-") or raw_name.startswith("pv-")
         name = raw_name.split('-', 1)[1]
 
@@ -81,7 +81,7 @@ def update_position_eval(cloudy, bucket, group):
         if model_id:
             # TODO(sethtroisi): Don't update every time?
             cloudy.update_position_eval(
-                eval_path, bucket, model_id, group, name)
+                position_path, bucket, model_id, group, name)
             updates += 1
 
     return updates
@@ -135,24 +135,31 @@ if __name__ == "__main__":
 
     updates = 0
 
-    if len(sys.argv) > 3 and sys.argv[1] == "models":
+    arg1 = sys.argv[1] if len(sys.argv) > 1 else ""
+    buckets = sys.argv[2:] if len(sys.argv) > 2 else [CURRENT_BUCKET]
+
+    # Note: Models are also updated in update_models_games.
+    if len(sys.argv) > 3 and arg1 == "models":
         for bucket in sys.argv[3:]:
             updates += cloudy.update_models(
                 bucket,
                 partial=(sys.argv[2] != "False"))
 
-    # TODO unify the format of these if statements.
-    if len(sys.argv) == 1 or "games" in sys.argv:
-        updates += update_models_games(cloudy, CURRENT_BUCKET)
+    if len(sys.argv) > 2 and arg1 == "dir_eval":
+        for bucket in buckets:
+            updates += cloudy.update_eval_games(bucket, standalone=True)
+            updates += cloudy.update_eval_models(bucket)
 
-    if len(sys.argv) == 1 or "eval_games" == sys.argv[1]:
-        buckets = [CURRENT_BUCKET] + sys.argv[2:]
+    if len(sys.argv) == 1 or arg1 == "games":
+        for bucket in buckets:
+            updates += update_models_games(cloudy, bucket)
+
+    if len(sys.argv) == 1 or arg1 == "eval_games":
         for bucket in buckets:
             updates += cloudy.update_eval_games(bucket)
             updates += cloudy.update_eval_models(bucket)
 
-    if len(sys.argv) == 1 or "position_evals" in sys.argv:
-        buckets = [CURRENT_BUCKET] + sys.argv[2:]
+    if len(sys.argv) == 1 or arg1 == "position_evals":
         for bucket in buckets:
            updates += update_position_setups(cloudy, bucket)
            for group in ["policy", "pv"]:
@@ -163,5 +170,5 @@ if __name__ == "__main__":
 
     T1 = time.time()
     delta = T1 - T0
-    print ("Updater took: {:.1f} seconds for {} updates = {:.1f}/second".format(
+    print ("Updater took: {:.1f}s for {} updates = {:.1f}/s".format(
         delta, updates, updates / delta))

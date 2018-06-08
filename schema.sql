@@ -125,13 +125,16 @@ CREATE TABLE IF NOT EXISTS eval_models (
 
 
 CREATE TABLE IF NOT EXISTS eval_games (
-  /* time _ model_1 _ model_2 _ number */
-  /* model_1 plays white is most games */
+  /**
+   * Minigo games are of the form:
+   *    time _ white-model _ black-model _ number
+   */
+
   eval_num integer not null,
   filename text not null,
 
-  model_id_1 integer not null,
-  model_id_2 integer,
+  model_id_1 integer not null, /* black */
+  model_id_2 integer not null, /* white */
 
   black_won boolean,
   result text,

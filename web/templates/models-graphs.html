@@ -145,7 +145,7 @@ var num_games_data = JSON.parse('{{ num_games | tojson | safe}}');
 per_model_graph(
     d3.select("#num-games-svg"),
     num_games_data.slice(0, -1), [f1],
-    false /* include_average */,
+    true  /* include_average */,
     false /* include_right_axis */,
     false /* y_from_zero */,
     "Number of games (processed) by Model",

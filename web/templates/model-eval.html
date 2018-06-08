@@ -32,7 +32,7 @@
           font-weight: bold;
         }
         .game-link-column {
-          display: block;
+          width: 70%;
         }
       </style>
   </head>
@@ -104,22 +104,29 @@
       {% for data in model_games[::-1] %}
         <tr>
           <td>
-            <a href="{{ url_for('model_eval', bucket=bucket, model_name=data[1]) }}">
-              {{ data[1] }}</a>
-            {% if 49 > data[2] -%}(Strong){%- endif %}
+            <a href="{{ url_for('model_eval',
+                                bucket=bucket,
+                                model_name=data[1],
+                                sorted=is_sorted) }}">
+              {{ data[2] if is_sorted else data[1] }}</a>
+            {% if 49 > data[3] -%}(Strong){%- endif %}
           </td>
-          <td>{{ WLR(data[6], data[5], 0) }}</td>
-          <td>{{ WLR(data[8], data[7], 0) }}</td>
-          <td>{{ WLR(data[6] + data[8], data[5] + data[7], 1) }}</td>
-          <td>{{ data[2]|round(1)  }}% </td>
+          <td>{{ WLR(data[7], data[6], 0) }}</td>
+          <td>{{ WLR(data[9], data[8], 0) }}</td>
+          <td>{{ WLR(data[7] + data[9], data[6] + data[8], 1) }}</td>
+          <td>{{ data[3]|round(1)  }}% </td>
           <td class="game-link-column">
+            {% set count = namespace(displayed=0) %}
             {% for eval_game in eval_games %}
               {% if eval_game[0] == data[1] or eval_game[1] == data[1] %}
-              <a href="{{ url_for('game_view',
-                                  bucket=bucket,
-                                  model=data[0],
-                                  filename=eval_game[2],
-                                  type='eval') }}">{{ loop.index }}</a>,
+                {% set count.displayed = count.displayed + 1 %}
+                {% if count.displayed <= 100 %}
+                  <a href="{{ url_for('game_view',
+                                      bucket=bucket,
+                                      model=data[0],
+                                      filename=eval_game[2],
+                                      type='eval') }}">{{loop.index }}</a>,
+                {% endif %}
               {% endif %}
             {% endfor %}
           </td>

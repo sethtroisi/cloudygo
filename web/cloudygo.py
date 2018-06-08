@@ -16,6 +16,7 @@
 
 import datetime
 import glob
+import hashlib
 import math
 import os
 import re
@@ -32,9 +33,12 @@ from . import utils
 
 class CloudyGo:
     SALT_MULT = 10 ** 6
+
     GAME_TIME_MOD = 10 ** 8 # Most of a year in seconds
-    GAME_POD_MULT = 10 ** 8
+    GAME_POD_MULT = 10 ** 8 # Large enough for 6 hexdecimal characters
     GAME_BUCKET_MULT = 10 ** 3
+
+    DIR_EVAL_START = 2500 # offset from SALT_MULT to start
 
     # set by __init__ but treated as constant
     INSTANCE_PATH = None
@@ -75,7 +79,7 @@ class CloudyGo:
 
     def all_games(self, bucket, model, game_type='full'):
         # LEELA-HACK
-        if bucket.startswith(CloudyGo.LEELA_ID):
+        if CloudyGo.LEELA_ID in bucket:
             game_type = 'clean'
 
         # NOTE: An older version of cloudygo would load games in two passes
@@ -187,9 +191,8 @@ class CloudyGo:
         assert pod_num < CloudyGo.GAME_POD_MULT
         game_num = game_num * CloudyGo.GAME_POD_MULT + pod_num
 
-        bucket_num, rem = divmod(bucket_salt, CloudyGo.SALT_MULT)
-        assert bucket_num < CloudyGo.GAME_BUCKET_MULT, bucket_salt
-        assert rem == 0, bucket_salt
+        assert bucket_salt % CloudyGo.SALT_MULT == 0, bucket_salt
+        bucket_num = bucket_salt // CloudyGo.SALT_MULT
         game_num = game_num * CloudyGo.GAME_BUCKET_MULT + bucket_num
 
         return game_num
@@ -197,22 +200,31 @@ class CloudyGo:
 
     @staticmethod
     def get_eval_parts(filename):
-        # 1519793529-000366-immune-elk-vs-000333-hot-pika-0.sgf
         assert filename.endswith('.sgf'), filename
-        parts = re.split(r'[._-]+', filename)
-        nums = [int(part) for part in parts if part.isnumeric()]
-        assert len(nums) == 4, '{} => {}'.format(filename, parts)
-        return nums
 
+        # TODO(sethtroisi): What is a better way to determine if this is part
+        # of a run (e.g. LZ, MG) or a test eval dir?
 
-    @staticmethod
-    def get_eval_num(filename):
-        parts = CloudyGo.get_eval_parts(filename)
-        sep = 1000
-        return parts[0] * sep ** 3 + \
-               parts[1] * sep ** 2 + \
-               parts[2] * sep ** 1 + \
-               parts[3]
+        # MG: 1527290396-000241-archer-vs-000262-ship-long-0.sgf
+        # LZ: 000002-88-fast-vs-18-fast-202.sgf
+        is_run = re.match(
+            r'^[0-9]+-[0-9]+-[a-z-]+-vs-[0-9]+-[a-z-]+-[0-9]+\.sgf$',
+            filename)
+
+        if is_run:
+            # make sure no dir_eval games end up here
+            raw = re.split(r'[._-]+', filename)
+            nums = [int(part) for part in raw if part.isnumeric()]
+            assert len(nums) == 4, '{} => {}'.format(filename, raw)
+            SEP = 1000
+            assert max(nums[1:]) < SEP, nums
+            multed = sum(num * SEP ** i for i, num in enumerate(nums[::-1]))
+            return [multed, nums[1], nums[2]]
+
+        MAX_EVAL_NUM = 2 ** 60
+        num = int(hashlib.md5(filename.encode()).hexdigest(), 16)
+        return [num % MAX_EVAL_NUM, 0, 0]
+
 
     @staticmethod
     def time_stamp_age(mtime):
@@ -302,12 +314,19 @@ class CloudyGo:
     def get_game_data(self, bucket, model, filename, view_type):
         # Reconstruct path from filename
 
-        public_path = os.path.join(model, view_type, filename)
-        file_path = os.path.join(self.sgf_path(bucket), public_path)
-
+        base_path = os.path.join(self.sgf_path(bucket), model)
         if view_type == 'eval':
-            file_path = os.path.join(
-                self.data_path(bucket), view_type, filename)
+            base_path = os.path.join(self.data_path(bucket))
+
+        file_path = os.path.join(base_path, view_type, filename)
+
+        base_dir_abs = os.path.abspath(base_path)
+        file_path_abs = os.path.abspath(file_path)
+        if not file_path_abs.startswith(base_dir_abs) or \
+           not file_path_abs.endswith('.sgf'):
+            return 'being naughty?'
+
+        print (file_path)
 
         data = ''
         if os.path.exists(file_path):
@@ -487,7 +506,7 @@ class CloudyGo:
 
     def update_models(self, bucket, partial=True):
         # LEELA-HACK
-        if bucket.startswith(CloudyGo.LEELA_ID):
+        if CloudyGo.LEELA_ID in bucket:
             model_glob = os.path.join(self.model_path(bucket), '[0-9a-f]*')
         else:
             model_glob = os.path.join(self.model_path(bucket), '*.meta')
@@ -502,7 +521,7 @@ class CloudyGo:
             raw_name = os.path.basename(model_filename).replace('.meta', '')
 
             # LEELA-HACK
-            if bucket.startswith(CloudyGo.LEELA_ID):
+            if CloudyGo.LEELA_ID in bucket:
                 # Note: this is brittle but I can't think of how to get model_id
                 existing_model = [m for m in existing_models
                     if raw_name.startswith(m[1])]
@@ -584,7 +603,7 @@ class CloudyGo:
 
                 resign_rates = Counter(game[16] for game in wins)
                 resign_rates.pop(-1, None) # remove -1 if it's present
-                if len(resign_rates) > 1:
+                if len(resign_rates) > 1 and CloudyGo.LEELA_ID not in bucket:
                     if perspective == 'all':
                         print('{} has multiple Resign rates: {}'.format(
                             raw_name, resign_rates))
@@ -662,7 +681,7 @@ class CloudyGo:
     def update_model_names(self):
         models = self.query_db('SELECT * from models')
         names = dict(self.query_db(
-            'SELECT model_id, name from name_to_model_id'))
+            'SELECT model_id, name FROM name_to_model_id'))
 
         inserts = []
         for model in models:
@@ -694,9 +713,9 @@ class CloudyGo:
             for test_d in [os.path.join(base, d) for d in ('clean', 'full')]:
                 if os.path.exists(test_d):
                     times.append(os.path.getmtime(test_d))
-            #if max(times) < model[5] - 86400:
-            #    skipped.append(model[4])
-            #    continue
+            if max(times) < model[5] - 86400:
+                skipped.append(model[4])
+                continue
 
             model_id = model[0]
             existing = self.get_existing_games(model_id)
@@ -738,9 +757,9 @@ class CloudyGo:
 
             updates += len(new_games)
 
-        skipped_text = 'skipped {} models ({})'.format(utils.list_preview(skipped))
         if len(skipped) > 0:
-            print (skipped_text)
+            print ('skipped {}, {}'.format(
+                len(skipped), utils.list_preview(skipped)))
         return updates
 
 
@@ -807,15 +826,61 @@ class CloudyGo:
 
 
     @staticmethod
-    def eval_record(data):
+    def process_eval(data):
         eval_path, filename, eval_num, model_id_1, model_id_2 = data
-        result = sgf_utils.parse_game_simple(eval_path)
+        result = sgf_utils.parse_game_simple(eval_path, include_players=True)
         if not result: return None
         return (eval_num, filename, model_id_1, model_id_2) + result
 
 
+    @staticmethod
+    def sanitize_player_name(name):
+        # See oneoff/leela-all-to-dirs.sh
+        name = re.sub(r'Leela\s*Zero\s*([0-9](\.[0-9]+)*)?\s+(networks)?\s*', '', name)
+        name = re.sub(r'([0-9a-f]{8})[0-9a-f]{56}', r'\1', name)
+        return name
+
+
+    def process_eval_names(self, bucket, eval_records):
+        model_range = CloudyGo.bucket_model_range(bucket)
+        bucket_salt = model_range[0]
+        name_to_num = dict(self.query_db(
+            'SELECT name, model_id FROM name_to_model_id '
+            'WHERE model_id >= ? AND model_id < ?',
+             model_range))
+
+        new_names = []
+        def get_or_add_name(name):
+            name = CloudyGo.sanitize_player_name(name)
+
+            if name in name_to_num:
+                return name_to_num[name]
+
+            keys = set(name_to_num.values())
+            first_eval_model = bucket_salt + CloudyGo.DIR_EVAL_START
+            for test_id in range(first_eval_model, model_range[1]):
+                if test_id not in keys:
+                    name_to_num[name] = test_id
+                    new_names.append((name, test_id))
+                    return test_id
+            assert False
+
+        new_evals = []
+        for eval_record in eval_records:
+            record = list(eval_record[:-2])
+            if bucket_salt == record[2] == record[3]:
+                PB, PW = eval_record[-2:]
+                record[2] = get_or_add_name(PB)
+                record[3] = get_or_add_name(PW)
+
+            new_evals.append(tuple(record))
+
+        return new_evals, new_names
+
+
     def update_eval_games(self, bucket):
-        if not os.path.exists(self.eval_path(bucket)):
+        eval_dir = self.eval_path(bucket)
+        if not os.path.exists(eval_dir):
             return 0
 
         bucket_salt = CloudyGo.bucket_salt(bucket)
@@ -823,28 +888,33 @@ class CloudyGo:
         existing = self.get_existing_eval_games(bucket)
         evals_to_process = []
 
-        eval_games = glob.glob(os.path.join(self.eval_path(bucket), '*.sgf'))
+        # TODO convince andrew to store these by YYYY-MM-DD, and walk dirs
+        eval_games = glob.glob(os.path.join(eval_dir, '*.sgf'))
+
         # sort by newest first
         eval_games = sorted(eval_games, reverse=True)
+        print ("Found {} eval games".format(len(eval_games)))
         for eval_path in eval_games:
             filename = os.path.basename(eval_path)
-            eval_num = CloudyGo.get_eval_num(filename)
 
+            eval_num, m1, m2 = CloudyGo.get_eval_parts(filename)
             if eval_num in existing: continue
 
-            eval_parts = CloudyGo.get_eval_parts(filename)
+            # Minigo eval games have white before black
+            white_model = bucket_salt + m1
+            black_model = bucket_salt + m2
 
             evals_to_process.append(
                 (eval_path,
                  filename,
                  eval_num,
-                 bucket_salt + eval_parts[1],
-                 bucket_salt + eval_parts[2]))
+                 black_model,
+                 white_model))
 
         new_evals = []
         if len(evals_to_process) > 0:
             mapper = self.pool.map if self.pool else map
-            new_evals = mapper(CloudyGo.eval_record, evals_to_process)
+            new_evals = mapper(CloudyGo.process_eval, evals_to_process)
 
             broken = new_evals.count(None)
             new_evals = list(filter(None.__ne__, new_evals))
@@ -852,8 +922,16 @@ class CloudyGo:
             if broken > 10:
                 print ("{} Broken games".format(broken))
 
-            self.insert_rows_db('eval_games', new_evals)
-            self.db().commit()
+            # Post-process PB/PW to model_id (when filename is ambiguous)
+            new_evals, new_names = self.process_eval_names(bucket, new_evals)
+
+            if new_names:
+                self.insert_rows_db('name_to_model_id', new_names)
+
+            if new_evals:
+                self.insert_rows_db('eval_games', new_evals)
+                self.db().commit()
+
 
         print('eval_games: {} existing, {} inserts'.format(
             len(existing), len(new_evals)))
@@ -894,10 +972,8 @@ class CloudyGo:
             if played_black == black_won:
                 record[1 if played_black else 3] += 1
 
-
         for d in eval_games:
-            # TODO(sethtroisi): remove assumption white was first player
-            white, black, black_won = d
+            black, white, black_won = d
 
             # Update by model
             increment_record(model_evals[(white, 0)], False, black_won)
@@ -942,22 +1018,24 @@ class CloudyGo:
 
     @staticmethod
     def get_eval_ratings(model_nums, eval_games):
-        min_id = min(model_nums)
-        max_id = max(model_nums)
+        # Map model_nums to a contigious range.
+        ordered = sorted(set(model_nums))
+        new_num = {}
+        for i, m in enumerate(ordered):
+            new_num[m] = i
 
         def ilsr_data(eval_game):
-            # TODO actually parse PW and PB
             p1, p2, black_won = eval_game
-            p1 -= min_id
-            p2 -= min_id
-            assert 0 <= p1 <= 1000
-            assert 0 <= p2 <= 1000
+            p1 = new_num[p1]
+            p2 = new_num[p2]
+            assert 0 <= p1 <= 3000
+            assert 0 <= p2 <= 3000
 
-            return (p2, p1) if black_won else (p1, p2)
+            return (p1, p2) if black_won else (p2, p1)
 
         pairs = list(map(ilsr_data, eval_games))
         ilsr_param = choix.ilsr_pairwise(
-                max_id - min_id + 1,
+                len(ordered) + 1,
                 pairs,
                 alpha=0.0001,
                 max_iter=200)
@@ -971,8 +1049,7 @@ class CloudyGo:
 
         min_rating = min(ilsr_param)
         ratings = {}
-        for num in model_nums:
-            index = num - min_id
-            ratings[num] = (elo_mult * (ilsr_param[index] - min_rating), elo_mult * std_err[index])
+        for model, param, err in zip(ordered, ilsr_param, std_err):
+            ratings[model] = (elo_mult * (param - min_rating), elo_mult * err)
 
         return ratings

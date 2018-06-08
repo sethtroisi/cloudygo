@@ -83,7 +83,7 @@ function add_weighted_average(group, data, f1, x, y, alpha=0.15) {
 
     var line = d3.line()
         .x(function(d) { return x(d[0]); })
-        .y(function(d) { return y(f1(d)); });
+        .y(function(d) { return y(d[1]); });
 
     group.append('path')
         .data([trailing_avg_data])
@@ -317,7 +317,7 @@ function rating_scatter_plot(
       .direction('s')
       .html(function(d) {
           return 'Model ' + d[0] +
-                 ' ranking: ' + Math.round(d[1]);
+                 ' ranking: ' + Math.round(f1(d));
       });
 
     function add_dots(x, y, funct, colorScale) {
@@ -363,7 +363,7 @@ function rating_scatter_plot(
 
     var trailing_avg_data = add_weighted_average(
         graph_group,
-        data.filter(function(d) { return d[0] > 20 }),
+        data.filter(function(d) { return d[0] > 10 }),
         f1, x, y1);
 
     add_labels(

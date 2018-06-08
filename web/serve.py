@@ -16,6 +16,7 @@
 
 import itertools
 import math
+import operator
 import os
 import numpy as np
 import random
@@ -192,7 +193,7 @@ def pro_game_view(filename):
 
     if not file_path_abs.startswith(base_dir_abs) or \
        not file_path_abs.endswith('.sgf'):
-         return 'being naughty?'
+        return 'being naughty?'
 
     data = ''
     with open(file_path_abs, 'r') as f:
@@ -250,7 +251,8 @@ def models_details(bucket=CloudyGo.DEFAULT_BUCKET):
 
     models = [list(m) for m in models]
 
-    last_update=max((m[5] for m in models), default=0)
+    last_update = max((m[5] for m in models), default=0)
+    total_games = sum((m[8] for m in models))
     for m in models:
         # creation timestamp
         m[6] = CloudyGo.time_stamp_age(m[6])
@@ -260,12 +262,13 @@ def models_details(bucket=CloudyGo.DEFAULT_BUCKET):
         bucket=bucket,
         models=models,
         last_update=last_update,
+        total_games=total_games,
     )
 
 
 @app.route('/<bucket>/graphs')
 def models_graphs(bucket):
-    model_limit = int(request.args.get('last_n', 500))
+    model_limit = int(request.args.get('last_n', 100))
     model_range = CloudyGo.bucket_model_range(bucket)
 
     key = '{}/graphs/{}'.format(bucket, model_limit)
@@ -470,22 +473,47 @@ def models_evolution(bucket):
 
 @app.route('/<bucket>/eval-graphs')
 def eval_graphs(bucket):
+    is_sorted = get_bool_arg('sorted', request.args)
+
     model_range = CloudyGo.bucket_model_range(bucket)
     bucket_salt = CloudyGo.bucket_salt(bucket)
 
     eval_models = cloudy.query_db(
         'SELECT * FROM eval_models '
-        'WHERE model_id_1 >= ? and model_id_1 < ? and '
-        '   model_id_2 = 0 and games >= 10 ',
+        'WHERE model_id_1 >= ? AND model_id_1 < ? AND '
+        '      model_id_2 = 0  AND games >= 10 '
+        'ORDER BY model_id_1 desc',
         model_range)
-    # Drop model_id_2 and subtract bucket_salt
-    eval_models = [(d[0] - bucket_salt,) + d[2:] for d in eval_models]
 
-    total_games = sum(e_m[4] for e_m in eval_models)
+    total_games = sum(m[5] for m in eval_models)
 
-    if len(eval_models) < 5:
+    if len(eval_models) < 2:
         return render_template('models-eval-empty.html',
             bucket = bucket, total_games = total_games)
+
+    num_to_name = dict(cloudy.query_db(
+            'SELECT model_id,name FROM name_to_model_id '
+            'WHERE model_id >= ? AND model_id < ?',
+             model_range))
+
+    # Replace model_id_2 with name
+    def eval_model_transform(m):
+        model_id = m[0]
+        num  = model_id - bucket_salt
+        name = num_to_name.get(model_id, num)
+        return (num, name) + m[2:]
+
+    eval_models = list(map(eval_model_transform, eval_models))
+
+    # If directory has auto-names then it's a dir_eval and not a run_eval
+    max_model_id = max((m[0] for m in eval_models), default=0)
+    is_sorted = is_sorted or max_model_id >= CloudyGo.DIR_EVAL_START
+
+    sort_by_rank = operator.itemgetter(2)
+    eval_models_by_rank = sorted(eval_models, key=sort_by_rank, reverse=True)
+
+    top_ten_models = eval_models_by_rank[:10]
+    top_ten_threshold = top_ten_models[:10][-1][2]
 
     older_newer_winrates = cloudy.query_db(
         'SELECT model_id_1 % 10000, '
@@ -498,21 +526,17 @@ def eval_graphs(bucket):
         'GROUP BY 1 ORDER BY 1 asc',
         model_range)
 
-    top_ten_threshold = 0.5
-    if len(eval_models) > 10:
-        top_ten_threshold = sorted([e_m[1] for e_m in eval_models])[-10]
-
-    worst_model = min(eval_models, key=lambda p: p[1], default=(0, 0))
-    best_model = max(eval_models, key=lambda p: p[1], default=(0, 0))
-
     return render_template('models-eval.html',
         bucket           = bucket,
-        model_ratings    = sorted(eval_models),
-        older_newer_winrates = older_newer_winrates,
+        is_sorted        = is_sorted,
         total_games      = total_games,
-        best_model       = best_model,
-        worst_model      = worst_model,
-        great_threshold  = top_ten_threshold
+
+        models           = eval_models,
+        sorted_models    = eval_models_by_rank,
+        top_ten_models   = top_ten_models,
+        great_threshold  = top_ten_threshold,
+
+        older_newer_winrates = older_newer_winrates,
     )
 
 
@@ -527,9 +551,16 @@ def model_eval(bucket, model_name):
       except:
         return "Unsure of model id for \"{}\"".format(model_name)
 
+    is_sorted = get_bool_arg('sorted', request.args)
+
+    model_range = CloudyGo.bucket_model_range(bucket)
+    num_to_name = dict(cloudy.query_db(
+            'SELECT model_id,name FROM name_to_model_id '
+            'WHERE model_id >= ? AND model_id < ?',
+             model_range))
+
     eval_models = cloudy.query_db(
-        'SELECT * FROM eval_models '
-        'WHERE model_id_1 = ?',
+        'SELECT * FROM eval_models WHERE model_id_1 = ?',
         (model[0],))
     total_games = sum(e_m[2] for e_m in eval_models)
 
@@ -551,10 +582,11 @@ def model_eval(bucket, model_name):
         # Make models more familiar
         cur_id = e_m[0] % CloudyGo.SALT_MULT
         other_id = e_m[1] % CloudyGo.SALT_MULT
+        other_name = num_to_name.get(e_m[1], other_id)
         rating_diff = 2 * (e_m[2] - rating)
         winrate = 100 / (1 + 10 ** (rating_diff / 400))
 
-        updated.append((cur_id, other_id, winrate) + e_m[3:])
+        updated.append((cur_id, other_id, other_name, winrate) + e_m[3:])
 
         # e_m[2] is average rating (of ours + theirs)
         if e_m[2] > rating:
@@ -573,14 +605,17 @@ def model_eval(bucket, model_name):
         'WHERE model_id_1 = ? or model_id_2 = ?',
         (model[0],model[0]))
 
+    sort_by = operator.itemgetter(3 if is_sorted else 0)
+
     return render_template('model-eval.html',
         bucket         = bucket,
+        is_sorted      = is_sorted,
         total_games    = total_games,
         overall        = overall,
         played_better  = played_better,
         later_models   = later_models,
         earlier_models = earlier_models,
-        model_games    = updated,
+        model_games    = sorted(updated, key=sort_by),
         eval_games     = eval_games,
     )
 
@@ -603,11 +638,13 @@ def model_details(bucket, model_name):
         game_names = cloudy.all_games(bucket, model_name)
         game_names = sorted(list(map(os.path.basename, game_names)))
 
-        always_include = games_names[:2] + game_names[-2:]
+        always_include = game_names[:2] + game_names[-2:]
         if RANDOMIZE_GAMES:
             random.shuffle(game_names)
 
-        game_names = always_include + game_names[:MAX_GAMES_ON_PAGE-4]
+        # always_include might be useful for debugging. To avoid confusion the
+        # four games are placed out of the way at the end of the list
+        game_names = game_names[:MAX_GAMES_ON_PAGE-4] + always_include
 
         # Low cache time so that games randomize if you refresh
         cache.set(model_name, game_names, timeout=60)
