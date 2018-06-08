@@ -38,13 +38,14 @@ db.row_factory = sqlite3.Row
 cur = db.execute('SELECT model_id, bucket FROM models')
 model_buckets = dict((map(tuple, cur.fetchall())))
 
-cur = db.execute('SELECT game_num, model_id, early_moves, early_moves_canonical FROM games')
+cur = db.execute(
+    'SELECT game_num, model_id, early_moves, early_moves_canonical FROM games2')
 rows = list(map(tuple, cur.fetchall()))
 cur.close()
 
 ####
 
-print ('Got {} games'.format(len(rows)))
+print('Got {} games'.format(len(rows)))
 equal = 0
 mismatch = 0
 results = []
@@ -64,15 +65,15 @@ for game_num, model_id, raw_moves, saved_canonical in tqdm(rows, unit="game"):
         results.append((canonical, game_num))
 
 T1 = time.time()
-print ('Move canonical(ization) took: {:.1f} seconds'.format(T1 - T0))
+print('Move canonical(ization) took: {:.1f} seconds'.format(T1 - T0))
 
-cur = db.executemany('UPDATE games SET early_moves_canonical = ? WHERE game_num = ?', (results))
+cur = db.executemany(
+    'UPDATE games SET early_moves_canonical = ? WHERE game_num = ?',
+    (results))
 db.commit()
 
 T2 = time.time()
 
-print ('{} rows updated, {} canonical is same as raw, {} mismatch'.format(
+print('{} rows updated, {} canonical is same as raw, {} mismatch'.format(
     cur.rowcount, equal, mismatch))
-print ('Update took: {:.1f} seconds'.format(T2 - T1))
-
-
+print('Update took: {:.1f} seconds'.format(T2 - T1))

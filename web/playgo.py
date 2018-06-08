@@ -47,7 +47,7 @@ MAX_INSERTS = 5000
 
 #### DB STUFF ####
 
-#def get_db():
+# def get_db():
 #    db = getattr(g, '_database', None)
 #    if db is None:
 #        db = g._database = sqlite3.connect(DATABASE_PATH)
@@ -56,14 +56,14 @@ MAX_INSERTS = 5000
 
 
 #@app.teardown_appcontext
-#def close_connection(exception):
+# def close_connection(exception):
 #    db = getattr(g, '_database', None)
 #    if db is not None:
 #        db.close()
 
 
 #print('Setting up Cloudy')
-#cloudy = CloudyGo(
+# cloudy = CloudyGo(
 #    app.instance_path,
 #    LOCAL_DATA_DIR,
 #    get_db,
@@ -78,6 +78,7 @@ def get_bool_arg(name, args):
     return value not in ('f', 'false')
 
 #### PAGES ####
+
 
 @app.route('/<bucket>/play-cloudygo', methods=['GET'])
 def play_cloudygo(bucket):
@@ -105,7 +106,7 @@ def play_cloudygo(bucket):
         assert len(current_votes) > 0
         top_move, votes = max(current_votes.items(), key=lambda kv: kv[1])
         # TODO log this or something
-        print (top_move, 'with', votes, 'votes')
+        print(top_move, 'with', votes, 'votes')
         # TODO deal with pass / resign
 
         if top_move == 'pass':
@@ -122,7 +123,7 @@ def play_cloudygo(bucket):
         # TODO please no more bad code
 
         with open(current_game, 'w') as temp:
-            print ('writing:', game_sgf)
+            print('writing:', game_sgf)
             temp.write(game_sgf + '\n')
 
         # Clear all current move state
@@ -151,11 +152,11 @@ def play_cloudygo(bucket):
     # TODO history of games
 
     return render_template('play-cloudygo.html',
-        bucket       = bucket,
-        model_name   = model_name,
-        game_sgf     = game_sgf,
-        poll_options = poll_options,
-    )
+                           bucket=bucket,
+                           model_name=model_name,
+                           game_sgf=game_sgf,
+                           poll_options=poll_options,
+                           )
 
 
 @app.route('/<bucket>/play-cloudygo-submit', methods=['POST'])
@@ -169,10 +170,10 @@ def vote_play_cloudygo(bucket):
     if voted_for:
         return 'Voted recently (for {}), wait ~5s'.format(voted_for)
     else:
-        cache.set(key, move_vote, timeout = 6)
+        cache.set(key, move_vote, timeout=6)
 
     # Save this in an atomic synconous thread safe data structure
-    cache.add('play-cloudygo-game', {}, timeout = 0)
+    cache.add('play-cloudygo-game', {}, timeout=0)
     current_votes = cache.get('play-cloudygo-game')
     votes = current_votes.get(move_vote, 0)
     current_votes[move_vote] = votes + 1
@@ -183,5 +184,3 @@ def vote_play_cloudygo(bucket):
     cache.set('play-cloudygo-vote-last', time.time() + 5, timeout=0)
 
     return redirect(url_for('.play_cloudygo', bucket=bucket))
-
-

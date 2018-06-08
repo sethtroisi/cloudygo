@@ -22,13 +22,13 @@ from collections import defaultdict
 from subprocess import Popen, check_output, PIPE, STDOUT
 
 timestamp = "000000" if len(sys.argv) < 2 else sys.argv[1]
-offset    = 0        if len(sys.argv) < 3 else int(sys.argv[2])
+offset = 0 if len(sys.argv) < 3 else int(sys.argv[2])
 
-# Runs from leelaz/v1/ directory and renames import/[0-9]*_[0-9]*.sgf to B_W_<num+offset>
+# renames import/[0-9]*_[0-9]*.sgf to B_W_<num+offset>
 
 # TODO how to derive imperically (i.e. import cloudygo)
-#bucket_hash=15
-#ls import/ | cut -d- -f2 | sort -u | sed 's/^0*//' | xargs -I {} sh -c 'echo "$(('$bucket_hash' * 1000000 + {})),{},{},'$bucket',{},0,0,0,0,0,0' | sort -n | tee inserts.csv
+# bucket_hash=15
+# ls import/ | cut -d- -f2 | sort -u | sed 's/^0*//' | xargs -I {} sh -c 'echo "$(('$bucket_hash' * 1000000 + {})),{},{},'$bucket',{},0,0,0,0,0,0' | sort -n | tee inserts.csv
 
 p1 = Popen(["find", "import", "-iname", "*sgf"], stdout=PIPE, stderr=STDOUT)
 players = check_output(
@@ -52,7 +52,6 @@ assert 2 * len(file_parts) == len(lines)
 for f, (b, w) in file_parts.items():
     name = os.path.basename(f)
     dirname = os.path.dirname(f)
-    print (name)
     matchup, game = map(int, name.replace(".sgf", "").split("_"))
 
     game_num = game + offset
@@ -61,6 +60,5 @@ for f, (b, w) in file_parts.items():
     new_path = os.path.join(dirname, new_name)
     os.rename(f, new_path)
 
-print (".mode csv")
-print (".import instance/data/$bucket/inserts.csv models")
-
+print(".mode csv")
+print(".import instance/data/$bucket/inserts.csv models")

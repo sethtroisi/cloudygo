@@ -22,20 +22,19 @@ from collections import defaultdict
 from subprocess import Popen, check_output, PIPE, STDOUT
 
 timestamp = "000000" if len(sys.argv) < 2 else sys.argv[1]
-offset    = 0        if len(sys.argv) < 3 else int(sys.argv[2])
+offset = 0 if len(sys.argv) < 3 else int(sys.argv[2])
 
 # Runs from leelaz/v1/ directory and renames import/ games to B_W_<num+offset>
 
 
 p1 = Popen(["find", "import", "-iname", "*sgf"], stdout=PIPE, stderr=STDOUT)
-players = check_output(
-    shlex.split('xargs grep -o "\(Black\|White\) \([0-9a-f]\{8\}\(_fast\|_slow\)\) Leela Zero"'),
-    stdin=p1.stdout,
-    stderr=PIPE)
+
+command = 'xargs grep -o "\(Black\|White\) \([0-9a-f]\{8\}\(_fast\|_slow\)\) Leela Zero"'
+players = check_output(shlex.split(command, stdin=p1.stdout, stderr=PIPE)
 
 
 lines = players.strip().split("\n")
-print (len(lines))
+print("Found {} lines".format(len(lines)))
 
 file_parts = defaultdict(lambda: ["", ""])
 for line in lines:
@@ -61,4 +60,3 @@ for f, (b, w) in file_parts.items():
     os.rename(f, new_path)
 
 # rename 's#000-([0-9]*)-([0-9]*)#001-$2-$1#' *.sgf
-

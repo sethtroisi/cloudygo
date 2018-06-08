@@ -34,11 +34,11 @@ from . import utils
 class CloudyGo:
     SALT_MULT = 10 ** 6
 
-    GAME_TIME_MOD = 10 ** 8 # Most of a year in seconds
-    GAME_POD_MULT = 10 ** 8 # Large enough for 6 hexdecimal characters
+    GAME_TIME_MOD = 10 ** 8  # Most of a year in seconds
+    GAME_POD_MULT = 10 ** 8  # Large enough for 6 hexdecimal characters
     GAME_BUCKET_MULT = 10 ** 3
 
-    DIR_EVAL_START = 2500 # offset from SALT_MULT to start
+    DIR_EVAL_START = 2500  # offset from SALT_MULT to start
 
     # set by __init__ but treated as constant
     INSTANCE_PATH = None
@@ -63,7 +63,6 @@ class CloudyGo:
 
     #### PATH UTILS ####
 
-
     def data_path(self, bucket):
         return '{}/{}'.format(self.DATA_DIR, bucket)
 
@@ -75,7 +74,6 @@ class CloudyGo:
 
     def eval_path(self, bucket):
         return os.path.join(self.data_path(bucket), 'eval')
-
 
     def all_games(self, bucket, model, game_type='full'):
         # LEELA-HACK
@@ -93,16 +91,13 @@ class CloudyGo:
             return []
         return glob.glob(os.path.join(path, '*.sgf'))
 
-
     #### db STUFF ####
-
 
     def query_db(self, query, args=()):
         cur = self.db().execute(query, args)
         rv = cur.fetchall()
         cur.close()
         return list(map(tuple, rv))
-
 
     @staticmethod
     def bucket_condition(bucket):
@@ -111,11 +106,10 @@ class CloudyGo:
         return ' model_id >= {} AND model_id < {} '.format(
             min_model, min_model + CloudyGo.SALT_MULT)
 
-
     def bucket_query_db(
             self, bucket,
             select, table, where,
-            group_count, limit = 1000, args=()):
+            group_count, limit=1000, args=()):
         '''Build a sql query
 
         select is in the form 'SELECT field % something, stat'
@@ -139,7 +133,6 @@ class CloudyGo:
 
         return list(reversed(self.query_db(query, args)))
 
-
     def insert_rows_db(self, table, rows):
         assert re.match('^[a-zA-Z_2]*$', table), table
         if len(rows) > 0:
@@ -147,30 +140,24 @@ class CloudyGo:
             query = 'INSERT INTO {} VALUES {}'.format(re.escape(table), values)
             self.db().executemany(query, rows)
 
-
     #### MORE UTILS ####
-
 
     @staticmethod
     def bucket_to_board_size(bucket):
         return 9 if '9x9' in bucket else 19
 
-
     @staticmethod
     def consistent_hash(string):
         return zlib.adler32(string.encode('utf-8'))
-
 
     @staticmethod
     def bucket_salt(bucket):
         return CloudyGo.SALT_MULT * (CloudyGo.consistent_hash(bucket) % 100)
 
-
     @staticmethod
     def bucket_model_range(bucket):
         bucket_salt = CloudyGo.bucket_salt(bucket)
         return (bucket_salt, bucket_salt + CloudyGo.SALT_MULT)
-
 
     @staticmethod
     def get_game_num(bucket_salt, filename):
@@ -196,7 +183,6 @@ class CloudyGo:
         game_num = game_num * CloudyGo.GAME_BUCKET_MULT + bucket_num
 
         return game_num
-
 
     @staticmethod
     def get_eval_parts(filename):
@@ -225,7 +211,6 @@ class CloudyGo:
         num = int(hashlib.md5(filename.encode()).hexdigest(), 16)
         return [num % MAX_EVAL_NUM, 0, 0]
 
-
     @staticmethod
     def time_stamp_age(mtime):
         now = datetime.datetime.now()
@@ -239,12 +224,10 @@ class CloudyGo:
             (deltaDays if delta.days > 0 else '') + deltaHours
         ]
 
-
     def get_models(self, bucket):
         return self.query_db(
             'SELECT * FROM models WHERE bucket = ?',
             (bucket,))
-
 
     def get_newest_model_num(self, bucket):
         model_nums = self.query_db(
@@ -252,7 +235,6 @@ class CloudyGo:
             (bucket,))
         assert len(model_nums) > 0, model_nums
         return model_nums[0][0]
-
 
     def load_model(self, bucket, model_name):
         model = self.query_db(
@@ -271,7 +253,6 @@ class CloudyGo:
             stats if len(stats) > 0 else None
         )
 
-
     def load_games(self, bucket, filenames):
         bucket_salt = CloudyGo.bucket_salt(bucket)
 
@@ -286,7 +267,6 @@ class CloudyGo:
                 continue
             games.append(game[0])
         return games
-
 
     def __get_gs_game(self, bucket, model, filename, view_type):
         assert 'full' in view_type, view_type
@@ -310,7 +290,6 @@ class CloudyGo:
         data = blob.download_as_string().decode('utf8')
         return data
 
-
     def get_game_data(self, bucket, model, filename, view_type):
         # Reconstruct path from filename
 
@@ -326,7 +305,7 @@ class CloudyGo:
            not file_path_abs.endswith('.sgf'):
             return 'being naughty?'
 
-        print (file_path)
+        print(file_path)
 
         data = ''
         if os.path.exists(file_path):
@@ -334,8 +313,8 @@ class CloudyGo:
                 data = f.read()
         else:
             if 'full' in view_type \
-                   and CloudyGo.LEELA_ID not in bucket \
-                   and CloudyGo.DEBUG_GAME_CLOUD_BUCKET:
+                    and CloudyGo.LEELA_ID not in bucket \
+                    and CloudyGo.DEBUG_GAME_CLOUD_BUCKET:
                 data = self.__get_gs_game(bucket, model, filename, view_type)
                 if data:
                     return data, view_type
@@ -347,45 +326,43 @@ class CloudyGo:
 
         return data, view_type
 
-
     def get_existing_games(self, model_id):
         query = 'SELECT game_num FROM games2 WHERE model_id = ?'
         return set(record[0] for record in self.query_db(query, (model_id,)))
 
-
     def get_existing_eval_games(self, bucket):
         model_range = CloudyGo.bucket_model_range(bucket)
         query = ('SELECT eval_num '
-                'FROM eval_games '
-                'WHERE model_id_1 >= ? and model_id_1 < ?')
+                 'FROM eval_games '
+                 'WHERE model_id_1 >= ? and model_id_1 < ?')
         records = self.query_db(query, model_range)
         return set(r[0] for r in records)
-
 
     def get_position_sgfs(self, bucket, model_ids=None):
         bucket_salt = CloudyGo.bucket_salt(bucket)
 
         # Single model_id, two model_ids, all model_ids
         where = 'WHERE cord = -2 AND model_id >= ? AND model_id < ?'
-        args  = (bucket_salt + 10, bucket_salt + CloudyGo.SALT_MULT)
+        args = (bucket_salt + 10, bucket_salt + CloudyGo.SALT_MULT)
 
         if model_ids == None:
             pass
         elif len(model_ids) == 1:
-            args  = (model_ids[0], model_ids[0] + 1)
+            args = (model_ids[0], model_ids[0] + 1)
         elif len(model_ids) == 2:
             where = 'WHERE cord = -2 AND (model_id == ? or model_id == ?)'
-            args  = (model_ids[0], model_ids[1])
+            args = (model_ids[0], model_ids[1])
         else:
             assert False, model_ids
 
         sgfs = self.query_db(
             'SELECT model_id, name, type, sgf, round(value,3) '
-            'FROM position_eval_part ' + \
+            'FROM position_eval_part ' +
             where,
             args)
 
-        arranged = defaultdict(lambda:defaultdict(lambda: defaultdict(lambda:('', 0))))
+        arranged = defaultdict(lambda: defaultdict(
+            lambda: defaultdict(lambda: ('', 0))))
         count = 0
         names = set()
         for model_id, name, group, sgf, value in sgfs:
@@ -401,7 +378,7 @@ class CloudyGo:
         setups = {name: sgf_utils.count_moves(sgf) for name, sgf in setups}
         setups["empty"] = 0
 
-        names = sorted(names, key=lambda n:(setups.get(n, 10), name))
+        names = sorted(names, key=lambda n: (setups.get(n, 10), name))
 
         # TODO(sethtroisi): add PV value.
 
@@ -419,7 +396,6 @@ class CloudyGo:
 
         return count, data
 
-
     def get_position_eval(self, bucket, model_id, group, name):
         sgf = self.query_db(
             'SELECT sgf '
@@ -429,7 +405,6 @@ class CloudyGo:
         assert len(sgf) <= 1, (bucket, model_id, group, name)
         if len(sgf) == 1:
             return sgf[0][0]
-
 
     def render_position_eval(
             self, bucket, model_id,
@@ -455,7 +430,7 @@ class CloudyGo:
         position_nodes = []
         for q, (cord, policy, n) in enumerate(data, 1):
             if 0 <= cord < board_size*board_size and (n > 0 or policy > cutoff):
-                j,i = divmod(cord, board_size)
+                j, i = divmod(cord, board_size)
                 value = q if n > 0 else round(100 * policy, 1)
 
                 position_nodes.append((
@@ -486,7 +461,6 @@ class CloudyGo:
             is_pv=is_pv,
         )
 
-
     def get_favorite_openings(self, model_id, num_games):
         favorite_openings = self.query_db(
             'SELECT SUBSTR(early_moves_canonical,'
@@ -497,12 +471,10 @@ class CloudyGo:
             (model_id,))
 
         return [(move, round(100 * count / num_games))
-            for move, count in favorite_openings
+                for move, count in favorite_openings
                 if move and num_games and 100 * count >= num_games]
 
-
     #### PAGES ####
-
 
     def update_models(self, bucket, partial=True):
         # LEELA-HACK
@@ -523,18 +495,18 @@ class CloudyGo:
             # LEELA-HACK
             if CloudyGo.LEELA_ID in bucket:
                 # Note: this is brittle but I can't think of how to get model_id
-                existing_model = [m for m in existing_models
-                    if raw_name.startswith(m[1])]
-                assert len(existing_model) == 1, (model_filename, existing_model)
+                existing = [m for m in existing_models
+                            if raw_name.startswith(m[1])]
+                assert len(existing_model) == 1, (model_filename, existing)
                 existing_model = existing_model[0]
 
-                raw_name = raw_name[:8] # otherwise sgf loading fails
-                model_id = existing_model[0]
-                model_name = existing_model[1]
-                model_num = existing_model[4]
+                raw_name = raw_name[:8]  # otherwise sgf loading fails
+                model_id = existing[0]
+                model_name = existing[1]
+                model_num = existing[4]
             else:
                 model_num, model_name = raw_name.split('-', 1)
-                model_id = CloudyGo.bucket_salt(bucket) + int(model_num) # unique_id
+                model_id = CloudyGo.bucket_salt(bucket) + int(model_num)
 
             last_updated = int(time.time())
             training_time_m = 120
@@ -576,9 +548,9 @@ class CloudyGo:
             opening_name = str(model_id) + '-favorite-openings.png'
             opening_file = os.path.join(
                 self.INSTANCE_PATH, 'openings', opening_name)
-            opening_sgf  = sgf_utils.board_png(
+            opening_sgf = sgf_utils.board_png(
                 CloudyGo.bucket_to_board_size(bucket),
-                '', #setup
+                '',  # setup
                 self.get_favorite_openings(model_id, num_games),
                 opening_file,
                 force_refresh=True)
@@ -599,10 +571,10 @@ class CloudyGo:
 
                 wins_by_resign = len([1 for game in wins if '+R' in game[4]])
                 sum_wins_result = sum(float(game[4][2:]) for game in wins
-                    if '+R' not in game[4])
+                                      if '+R' not in game[4])
 
                 resign_rates = Counter(game[16] for game in wins)
-                resign_rates.pop(-1, None) # remove -1 if it's present
+                resign_rates.pop(-1, None)  # remove -1 if it's present
                 if len(resign_rates) > 1 and CloudyGo.LEELA_ID not in bucket:
                     if perspective == 'all':
                         print('{} has multiple Resign rates: {}'.format(
@@ -612,7 +584,8 @@ class CloudyGo:
                 assert resign_rate < 0, resign_rate
                 # TODO count leela holdouts but ignore resign problem.
                 holdouts = [game for game in wins if abs(game[16]) == 1]
-                holdout_resigns = [game for game in holdouts if '+R' in game[4]]
+                holdout_resigns = [
+                    game for game in holdouts if '+R' in game[4]]
                 assert len(holdout_resigns) == 0, holdout_resigns
 
                 bad_resigns = 0
@@ -637,11 +610,14 @@ class CloudyGo:
                     len(wins) - wins_by_resign, sum_wins_result,
                     len(holdouts), bad_resigns,
 
-                    sum(game[6] for game in wins), # num_moves
-                    sum(game[10] + game[11] for game in wins), # both sides visits
-                    sum(game[12] + game[13] for game in wins), # both sides early visits
-                    sum(game[14] + game[15] for game in wins), # both sides unluckiness
-                    opening_sgf if is_all else '', # favorite_openings
+                    sum(game[6] for game in wins),  # num_moves
+                    sum(game[10] + game[11]
+                        for game in wins),  # both sides visits
+                    sum(game[12] + game[13]
+                        for game in wins),  # both sides early visits
+                    sum(game[14] + game[15]
+                        for game in wins),  # both sides unluckiness
+                    opening_sgf if is_all else '',  # favorite_openings
                 ))
 
         db = self.db()
@@ -669,14 +645,13 @@ class CloudyGo:
 
         return len(model_inserts) + len(model_stat_inserts)
 
-
     @staticmethod
     def process_game(data):
         game_path, game_num, filename, model_id = data
         result = sgf_utils.parse_game(game_path)
-        if not result: return None
-        return  (game_num, model_id, filename) + result
-
+        if not result:
+            return None
+        return (game_num, model_id, filename) + result
 
     def update_model_names(self):
         models = self.query_db('SELECT * from models')
@@ -695,8 +670,7 @@ class CloudyGo:
         if inserts:
             self.insert_rows_db('name_to_model_id', inserts)
             self.db().commit()
-            print ('Updated {} model names'.format(len(inserts)))
-
+            print('Updated {} model names'.format(len(inserts)))
 
     def update_games(self, bucket, max_inserts):
         # This is REALLY SLOW because it's potentially >1M items
@@ -726,7 +700,8 @@ class CloudyGo:
                 filename = os.path.basename(game_path)
                 game_num = CloudyGo.get_game_num(bucket_salt, filename)
 
-                if game_num in existing: continue
+                if game_num in existing:
+                    continue
 
                 assert game_num not in games_added, (game_num, game_path)
                 games_added.add(game_num)
@@ -753,15 +728,14 @@ class CloudyGo:
             result = '{}-{}: {} existing, {} inserts'.format(
                 model[4], model[1], len(existing), len(new_games))
             if len(new_games):
-                print (result)
+                print(result)
 
             updates += len(new_games)
 
         if len(skipped) > 0:
-            print ('skipped {}, {}'.format(
+            print('skipped {}, {}'.format(
                 len(skipped), utils.list_preview(skipped)))
         return updates
-
 
     def update_position_eval(self, filename, bucket, model_id, group, name):
         board_size = CloudyGo.bucket_to_board_size(bucket)
@@ -784,10 +758,11 @@ class CloudyGo:
 
                 render = (name == 'empty' and group == 'policy')
                 filename = '-'.join([str(model_id), group, name + '.png'])
-                filepath = os.path.join(self.INSTANCE_PATH, 'openings', filename)
+                filepath = os.path.join(
+                    self.INSTANCE_PATH, 'openings', filename)
 
                 data = [(cord, float(policy), 0)
-                    for cord, policy in enumerate(values)]
+                        for cord, policy in enumerate(values)]
 
                 sgf = self.render_position_eval(
                     bucket, model_id,
@@ -808,7 +783,7 @@ class CloudyGo:
                         # Playing at a previous location (AKA fighting a ko)
                         continue
                     cords.add(cord)
-                    data.append( (cord, 0, count) )
+                    data.append((cord, 0, count))
 
                 sgf = self.render_position_eval(
                     bucket, model_id, group, name, data)
@@ -824,22 +799,21 @@ class CloudyGo:
             self.insert_rows_db('position_eval_part', [insert])
             self.db().commit()
 
-
     @staticmethod
     def process_eval(data):
         eval_path, filename, eval_num, model_id_1, model_id_2 = data
         result = sgf_utils.parse_game_simple(eval_path, include_players=True)
-        if not result: return None
+        if not result:
+            return None
         return (eval_num, filename, model_id_1, model_id_2) + result
-
 
     @staticmethod
     def sanitize_player_name(name):
         # See oneoff/leela-all-to-dirs.sh
-        name = re.sub(r'Leela\s*Zero\s*([0-9](\.[0-9]+)*)?\s+(networks)?\s*', '', name)
+        name = re.sub(
+            r'Leela\s*Zero\s*([0-9](\.[0-9]+)*)?\s+(networks)?\s*', '', name)
         name = re.sub(r'([0-9a-f]{8})[0-9a-f]{56}', r'\1', name)
         return name
-
 
     def process_eval_names(self, bucket, eval_records):
         model_range = CloudyGo.bucket_model_range(bucket)
@@ -847,9 +821,10 @@ class CloudyGo:
         name_to_num = dict(self.query_db(
             'SELECT name, model_id FROM name_to_model_id '
             'WHERE model_id >= ? AND model_id < ?',
-             model_range))
+            model_range))
 
         new_names = []
+
         def get_or_add_name(name):
             name = CloudyGo.sanitize_player_name(name)
 
@@ -877,7 +852,6 @@ class CloudyGo:
 
         return new_evals, new_names
 
-
     def update_eval_games(self, bucket):
         eval_dir = self.eval_path(bucket)
         if not os.path.exists(eval_dir):
@@ -893,12 +867,13 @@ class CloudyGo:
 
         # sort by newest first
         eval_games = sorted(eval_games, reverse=True)
-        print ("Found {} eval games".format(len(eval_games)))
+        print("Found {} eval games".format(len(eval_games)))
         for eval_path in eval_games:
             filename = os.path.basename(eval_path)
 
             eval_num, m1, m2 = CloudyGo.get_eval_parts(filename)
-            if eval_num in existing: continue
+            if eval_num in existing:
+                continue
 
             # Minigo eval games have white before black
             white_model = bucket_salt + m1
@@ -920,7 +895,7 @@ class CloudyGo:
             new_evals = list(filter(None.__ne__, new_evals))
 
             if broken > 10:
-                print ("{} Broken games".format(broken))
+                print("{} Broken games".format(broken))
 
             # Post-process PB/PW to model_id (when filename is ambiguous)
             new_evals, new_names = self.process_eval_names(bucket, new_evals)
@@ -932,11 +907,9 @@ class CloudyGo:
                 self.insert_rows_db('eval_games', new_evals)
                 self.db().commit()
 
-
         print('eval_games: {} existing, {} inserts'.format(
             len(existing), len(new_evals)))
         return len(new_evals)
-
 
     def update_eval_models(self, bucket):
         model_range = CloudyGo.bucket_model_range(bucket)
@@ -965,7 +938,7 @@ class CloudyGo:
             max(model_nums, default=-1)))
 
         # black games, black wins,    white games, white wins
-        model_evals = defaultdict(lambda : [0,0,0,0])
+        model_evals = defaultdict(lambda: [0, 0, 0, 0])
 
         def increment_record(record, played_black, black_won):
             record[0 if played_black else 2] += 1
@@ -1015,7 +988,6 @@ class CloudyGo:
 
         return len(records)
 
-
     @staticmethod
     def get_eval_ratings(model_nums, eval_games):
         # Map model_nums to a contigious range.
@@ -1035,10 +1007,10 @@ class CloudyGo:
 
         pairs = list(map(ilsr_data, eval_games))
         ilsr_param = choix.ilsr_pairwise(
-                len(ordered) + 1,
-                pairs,
-                alpha=0.0001,
-                max_iter=200)
+            len(ordered) + 1,
+            pairs,
+            alpha=0.0001,
+            max_iter=200)
 
         # TODO(sethtroisi): What should penalty be?
         hessian = choix.opt.PairwiseFcts(pairs, penalty=1).hessian(ilsr_param)

@@ -40,6 +40,7 @@ CURRENT_BUCKET = 'v7-19x19'
 # for an initial pass to make sure everything is okayw
 MAX_INSERTS = 20000
 
+
 def setup():
     #### DB STUFF ####
 
@@ -54,7 +55,7 @@ def setup():
         INSTANCE_PATH,
         LOCAL_DATA_DIR,
         lambda: db,
-        None, # cache
+        None,  # cache
         Pool(3)
     )
     return cloudy
@@ -64,9 +65,9 @@ def update_position_eval(cloudy, bucket, group):
     position_paths = glob.glob(os.path.join(INSTANCE_PATH, group, bucket, '*'))
 
     models = cloudy.get_models(bucket)
-    model_ids = { model[4] : model[0] for model in models }
+    model_ids = {model[4]: model[0] for model in models}
 
-    print ("{}: Updating {} {} position evals ({:.2f}/model)".format(
+    print("{}: Updating {} {} position evals ({:.2f}/model)".format(
         bucket, group, len(position_paths), len(position_paths) / len(models)))
 
     updates = 0
@@ -85,6 +86,7 @@ def update_position_eval(cloudy, bucket, group):
             updates += 1
 
     return updates
+
 
 def update_position_setups(cloudy, bucket):
     # Refresh the policy/pv setups in db
@@ -108,8 +110,8 @@ def update_position_setups(cloudy, bucket):
 
 
 def update_models_games(cloudy, bucket):
-    updates = 0;
-    print ("{}: Updating Models and Games".format(bucket))
+    updates = 0
+    print("{}: Updating Models and Games".format(bucket))
 
     # Setup models if they don't exist
     cloudy.update_models(bucket, partial=True)
@@ -118,7 +120,7 @@ def update_models_games(cloudy, bucket):
     if len(models) == 0:
         return 0
 
-    print ("\tupdating_games({})".format(MAX_INSERTS))
+    print("\tupdating_games({})".format(MAX_INSERTS))
     count = cloudy.update_games(bucket, MAX_INSERTS)
     updates += count
 
@@ -145,11 +147,6 @@ if __name__ == "__main__":
                 bucket,
                 partial=(sys.argv[2] != "False"))
 
-    if len(sys.argv) > 2 and arg1 == "dir_eval":
-        for bucket in buckets:
-            updates += cloudy.update_eval_games(bucket, standalone=True)
-            updates += cloudy.update_eval_models(bucket)
-
     if len(sys.argv) == 1 or arg1 == "games":
         for bucket in buckets:
             updates += update_models_games(cloudy, bucket)
@@ -161,8 +158,8 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 1 or arg1 == "position_evals":
         for bucket in buckets:
-           updates += update_position_setups(cloudy, bucket)
-           for group in ["policy", "pv"]:
+            updates += update_position_setups(cloudy, bucket)
+            for group in ["policy", "pv"]:
                 updates += update_position_eval(cloudy, bucket, group)
 
     # Always update names
@@ -170,5 +167,5 @@ if __name__ == "__main__":
 
     T1 = time.time()
     delta = T1 - T0
-    print ("Updater took: {:.1f}s for {} updates = {:.1f}/s".format(
+    print("Updater took: {:.1f}s for {} updates = {:.1f}/s".format(
         delta, updates, updates / delta))

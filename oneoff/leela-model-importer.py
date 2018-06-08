@@ -37,7 +37,7 @@ with open(INSERTS, 'w') as inserts:
         # check if we can find num in the model table
         match = re.search('<tr><td>{}</td>.*</tr>'.format(num), data)
         if not match:
-            print ('Did not find {} stopping'.format(num))
+            print('Did not find {} stopping'.format(num))
             break
 
         parts = match.group().replace('</td>', '').split('<td>')

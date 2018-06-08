@@ -51,6 +51,7 @@ MAX_INSERTS = 5000
 
 #### DB STUFF ####
 
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
@@ -72,22 +73,25 @@ cloudy = CloudyGo(
     LOCAL_DATA_DIR,
     get_db,
     cache,
-    None, # multiprocessing pool
+    None,  # multiprocessing pool
 )
 
 #### UTILS ####
+
 
 def get_bool_arg(name, args):
     value = args.get(name, 'false').lower()
     return value not in ('f', 'false')
 
+
 @app.template_filter('strftime')
 def _jinja2_filter_strftime(time, fmt=None):
     date = datetime.fromtimestamp(int(time))
-    tformat='%Y-%m-%d %H:%M'
+    tformat = '%Y-%m-%d %H:%M'
     return date.strftime(tformat)
 
 #### PAGES ####
+
 
 @app.route('/213-secret-site-nav')
 @app.route('/<bucket>/213-secret-site-nav')
@@ -105,27 +109,26 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
     # try to filter some of the rsync lines
     patterns = list(map(re.compile, [
         # >1k, > 100, or 0 file all get filtered
-        r'.*\[[0-9.k]* files\]', # Not started just counting how many
+        r'.*\[[0-9.k]* files\]',  # Not started just counting how many
         r'.*\[[0-9.k]*/[0-9.]*k files\]\[.*Done',
         r'.*\[[1-9][0-9]{2}/.* files\]\[.*Done',
         r'Copying gs://.*/sgf/.*sgf',
         r'[0-9]{3,}it ',
         r'^.{0,3}$',
         r'^idx \d* already processed',
-        r'.*[0-9]{2}it/s', #tqdm output
+        r'.*[0-9]{2}it/s',  # tqdm output
     ]))
 
     def not_boring_line(line):
         return random.randrange(150) == 0 or \
             all(not pattern.match(line) for pattern in patterns)
 
-
     log_files = ['cloudy-rsync-cron.log', 'cloudy-eval.log']
     log_datas = []
     for log in log_files:
         log_filename = os.path.join(app.instance_path, 'debug', log)
         if not os.path.exists(log_filename):
-            print ("log: {} does not exist".format(log_filename))
+            print("log: {} does not exist".format(log_filename))
             continue
 
         log_data = ''
@@ -137,8 +140,8 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
 
     return render_template(
         'secret-site-nav.html',
-        logs        = log_datas,
-        secret_vars = secret_vars,
+        logs=log_datas,
+        secret_vars=secret_vars,
     )
 
 
@@ -175,12 +178,12 @@ def game_view(bucket, model, filename):
     render_sorry = game_view != view_type
 
     return render_template('game.html',
-        bucket = bucket,
-        model  = model,
-        data   = data,
-        filename = filename,
-        render_sorry = render_sorry,
-    )
+                           bucket=bucket,
+                           model=model,
+                           data=data,
+                           filename=filename,
+                           render_sorry=render_sorry,
+                           )
 
 
 @app.route('/secret-pro-games/<path:filename>')
@@ -205,11 +208,11 @@ def pro_game_view(filename):
         return sgf_utils.pretty_print_sgf(data)
 
     return render_template('game.html',
-        bucket = CloudyGo.DEFAULT_BUCKET, #Any value will do
-        model  = '100',      # needs some value
-        data   = data,
-        filename = filename,
-    )
+                           bucket=CloudyGo.DEFAULT_BUCKET,  # Any value will do
+                           model='100',      # needs some value
+                           data=data,
+                           filename=filename,
+                           )
 
 
 @app.route('/<bucket>/figure-three')
@@ -231,26 +234,26 @@ def figure_three(bucket):
         fig3_data = []
         try:
             fig3_json = json.loads(fig3_json)
-            for k,v in fig3_json["num"].items():
+            for k, v in fig3_json["num"].items():
                 acc = fig3_json["acc"][k]
                 mse = fig3_json["mse"][k]
-                fig3_data.append((v,acc,mse))
+                fig3_data.append((v, acc, mse))
         except Exception as e:
-            print ("Error parsing fig3 json:", e)
+            print("Error parsing fig3 json:", e)
 
         fig3_data.sort()
 
-        cache.set(key, fig3_data, timeout = 5 * 60)
+        cache.set(key, fig3_data, timeout=5 * 60)
 
     return render_template('figure-three.html',
-        bucket      = bucket,
-        exists      = exists,
-        fig3_data   = fig3_data,
-        eval_files  = [
-            'move_acc.png',  'value_mse.png',
-            'move_acc2.png', 'value_mse2.png',
-        ],
-    )
+                           bucket=bucket,
+                           exists=exists,
+                           fig3_data=fig3_data,
+                           eval_files=[
+                               'move_acc.png',  'value_mse.png',
+                               'move_acc2.png', 'value_mse2.png',
+                           ],
+                           )
 
 
 @app.route('/site-nav')
@@ -333,7 +336,7 @@ def models_graphs(bucket):
             bleak = sorted(bad_resign_thresh[m])
             bad_resign_thresh[m].clear()
             percents = [(p, round(np.percentile(bleak, 100 - p), 3))
-                for p in range(10)]
+                        for p in range(10)]
             bad_resign_thresh[m] = percents
         bad_resign_thresh = sorted(bad_resign_thresh.items())
 
@@ -383,37 +386,37 @@ def models_graphs(bucket):
         rating_delta = list(reversed(rating_delta))
 
         graphs = (win_rate,
-            bad_resign_rate, bad_resign_thresh,
-            game_length_simple,
-            num_games, games_per_day,
-            num_visits,
-            rating_delta,
-            sum_unluck,
-            half_curve_rating_delta)
-        cache.set(key, graphs, timeout = 10 * 60)
+                  bad_resign_rate, bad_resign_thresh,
+                  game_length_simple,
+                  num_games, games_per_day,
+                  num_visits,
+                  rating_delta,
+                  sum_unluck,
+                  half_curve_rating_delta)
+        cache.set(key, graphs, timeout=10 * 60)
     else:
         win_rate, \
-        bad_resign_rate, bad_resign_thresh, \
-        game_length_simple, \
-        num_games, games_per_day, \
-        num_visits, \
-        rating_delta, \
-        sum_unluck, \
-        half_curve_rating_delta = graphs
+            bad_resign_rate, bad_resign_thresh, \
+            game_length_simple, \
+            num_games, games_per_day, \
+            num_visits, \
+            rating_delta, \
+            sum_unluck, \
+            half_curve_rating_delta = graphs
 
     return render_template('models-graphs.html',
-        bucket          = bucket,
-        win_rate        = win_rate,
-        bad_resign_rate   = bad_resign_rate,
-        bad_resign_thresh = bad_resign_thresh,
-        game_len_simple = game_length_simple,
-        num_games       = num_games,
-        games_per_day   = games_per_day,
-        num_visits      = num_visits,
-        rating_delta    = rating_delta,
-        sum_unluck      = sum_unluck,
-        win_rate_curve_delta = half_curve_rating_delta,
-    )
+                           bucket=bucket,
+                           win_rate=win_rate,
+                           bad_resign_rate=bad_resign_rate,
+                           bad_resign_thresh=bad_resign_thresh,
+                           game_len_simple=game_length_simple,
+                           num_games=num_games,
+                           games_per_day=games_per_day,
+                           num_visits=num_visits,
+                           rating_delta=rating_delta,
+                           sum_unluck=sum_unluck,
+                           win_rate_curve_delta=half_curve_rating_delta,
+                           )
 
 
 @app.route('/<bucket>/graphs-sliders')
@@ -442,8 +445,8 @@ def models_graphs_sliders(bucket):
         models = sorted(cloudy.get_models(bucket))
         for model in models:
             model_id = str(model[0])
-            opening  = model_id+'-favorite-openings.png'
-            policy   = model_id+'-policy-empty.png'
+            opening = model_id+'-favorite-openings.png'
+            policy = model_id+'-policy-empty.png'
 
             picture_sliders.append((
                 model[0] % CloudyGo.SALT_MULT,
@@ -452,16 +455,16 @@ def models_graphs_sliders(bucket):
             ))
 
         graphs = (game_length, sum_unluck_per, picture_sliders)
-        cache.set(key, graphs, timeout = 10 * 60)
+        cache.set(key, graphs, timeout=10 * 60)
     else:
         game_length, sum_unluck_per, picture_sliders = graphs
 
     return render_template('models-graphs-sliders.html',
-        bucket          = bucket,
-        game_length     = game_length,
-        sum_unluck_per  = sum_unluck_per,
-        picture_sliders = picture_sliders,
-    )
+                           bucket=bucket,
+                           game_length=game_length,
+                           sum_unluck_per=sum_unluck_per,
+                           picture_sliders=picture_sliders,
+                           )
 
 
 @app.route('/<bucket>/model_comparison/policy/<model_name_a>/<model_name_b>')
@@ -479,12 +482,12 @@ def position_comparison(bucket, model_name_a, model_name_b):
     count, data = cloudy.get_position_sgfs(bucket, [model_a[0], model_b[0]])
 
     return render_template('position-comparison.html',
-        bucket   = bucket,
-        model_a  = model_a,
-        model_b  = model_b,
-        group    = group,
-        sgfs     = data,
-    )
+                           bucket=bucket,
+                           model_a=model_a,
+                           model_b=model_b,
+                           group=group,
+                           sgfs=data,
+                           )
 
 
 @app.route('/<bucket>/models_evolution/')
@@ -492,10 +495,10 @@ def models_evolution(bucket):
     count, sgfs = cloudy.get_position_sgfs(bucket)
 
     return render_template('position-evolution.html',
-        bucket   = bucket,
-        sgfs     = sgfs,
-        count    = count,
-    )
+                           bucket=bucket,
+                           sgfs=sgfs,
+                           count=count,
+                           )
 
 
 @app.route('/<bucket>/eval-graphs')
@@ -516,17 +519,17 @@ def eval_graphs(bucket):
 
     if len(eval_models) < 2:
         return render_template('models-eval-empty.html',
-            bucket = bucket, total_games = total_games)
+                               bucket=bucket, total_games=total_games)
 
     num_to_name = dict(cloudy.query_db(
-            'SELECT model_id,name FROM name_to_model_id '
-            'WHERE model_id >= ? AND model_id < ?',
-             model_range))
+        'SELECT model_id,name FROM name_to_model_id '
+        'WHERE model_id >= ? AND model_id < ?',
+        model_range))
 
     # Replace model_id_2 with name
     def eval_model_transform(m):
         model_id = m[0]
-        num  = model_id - bucket_salt
+        num = model_id - bucket_salt
         name = num_to_name.get(model_id, num)
         return (num, name) + m[2:]
 
@@ -554,37 +557,37 @@ def eval_graphs(bucket):
         model_range)
 
     return render_template('models-eval.html',
-        bucket           = bucket,
-        is_sorted        = is_sorted,
-        total_games      = total_games,
+                           bucket=bucket,
+                           is_sorted=is_sorted,
+                           total_games=total_games,
 
-        models           = eval_models,
-        sorted_models    = eval_models_by_rank,
-        top_ten_models   = top_ten_models,
-        great_threshold  = top_ten_threshold,
+                           models=eval_models,
+                           sorted_models=eval_models_by_rank,
+                           top_ten_models=top_ten_models,
+                           great_threshold=top_ten_threshold,
 
-        older_newer_winrates = older_newer_winrates,
-    )
+                           older_newer_winrates=older_newer_winrates,
+                           )
 
 
 @app.route('/<bucket>/eval-model/<model_name>')
 def model_eval(bucket, model_name):
     model, model_stats = cloudy.load_model(bucket, model_name)
     if model == None:
-      try:
-        bucket_salt = CloudyGo.bucket_salt(bucket)
-        model_id = bucket_salt + int(model_name)
-        model = [model_id]
-      except:
-        return "Unsure of model id for \"{}\"".format(model_name)
+        try:
+            bucket_salt = CloudyGo.bucket_salt(bucket)
+            model_id = bucket_salt + int(model_name)
+            model = [model_id]
+        except:
+            return "Unsure of model id for \"{}\"".format(model_name)
 
     is_sorted = get_bool_arg('sorted', request.args)
 
     model_range = CloudyGo.bucket_model_range(bucket)
     num_to_name = dict(cloudy.query_db(
-            'SELECT model_id,name FROM name_to_model_id '
-            'WHERE model_id >= ? AND model_id < ?',
-             model_range))
+        'SELECT model_id,name FROM name_to_model_id '
+        'WHERE model_id >= ? AND model_id < ?',
+        model_range))
 
     eval_models = cloudy.query_db(
         'SELECT * FROM eval_models WHERE model_id_1 = ?',
@@ -630,21 +633,21 @@ def model_eval(bucket, model_name):
         'SELECT model_id_1 % 10000, model_id_2 % 10000, filename '
         'FROM eval_games '
         'WHERE model_id_1 = ? or model_id_2 = ?',
-        (model[0],model[0]))
+        (model[0], model[0]))
 
     sort_by = operator.itemgetter(3 if is_sorted else 0)
 
     return render_template('model-eval.html',
-        bucket         = bucket,
-        is_sorted      = is_sorted,
-        total_games    = total_games,
-        overall        = overall,
-        played_better  = played_better,
-        later_models   = later_models,
-        earlier_models = earlier_models,
-        model_games    = sorted(updated, key=sort_by),
-        eval_games     = eval_games,
-    )
+                           bucket=bucket,
+                           is_sorted=is_sorted,
+                           total_games=total_games,
+                           overall=overall,
+                           played_better=played_better,
+                           later_models=later_models,
+                           earlier_models=earlier_models,
+                           model_games=sorted(updated, key=sort_by),
+                           eval_games=eval_games,
+                           )
 
 
 # Supports full name (0000102-monarch as well as 102)
@@ -702,16 +705,16 @@ def model_details(bucket, model_name):
     policy_sgf = cloudy.get_position_eval(bucket, model_id, 'policy', 'empty')
 
     return render_template('model.html',
-        bucket       = bucket,
-        model        = model, model_stats=model_stats,
-        prev_model   = model_num-1,
-        next_model   = model_num+1,
-        games        = games,
-        min_unluck   = min_unluck,
-        is_random    = RANDOMIZE_GAMES,
-        opening_sgf  = opening_sgf,
-        policy_sgf   = policy_sgf,
-    )
+                           bucket=bucket,
+                           model=model, model_stats=model_stats,
+                           prev_model=model_num-1,
+                           next_model=model_num+1,
+                           games=games,
+                           min_unluck=min_unluck,
+                           is_random=RANDOMIZE_GAMES,
+                           opening_sgf=opening_sgf,
+                           policy_sgf=policy_sgf,
+                           )
 
 
 @app.route('/<bucket>/graphs/<model_name>')
@@ -772,13 +775,13 @@ def model_graphs(bucket, model_name):
         sgfs = sgfs[0][1:]
 
     return render_template('model-graphs.html',
-        bucket      = bucket,
-        model       = model,
-        model_stats = model_stats,
-        game_length = game_length,
-        opening_responses = favorite_response,
-        position_sgfs = sgfs,
-    )
+                           bucket=bucket,
+                           model=model,
+                           model_stats=model_stats,
+                           game_length=game_length,
+                           opening_responses=favorite_response,
+                           position_sgfs=sgfs,
+                           )
 
 
 @app.route('/<bucket>/json/missing-ratings.json')
@@ -788,7 +791,7 @@ def ratings_json(bucket):
     model_range = CloudyGo.bucket_model_range(bucket)
     models = cloudy.get_newest_model_num(bucket)
 
-    pairs = defaultdict(lambda : defaultdict(int))
+    pairs = defaultdict(lambda: defaultdict(int))
 
     data = cloudy.query_db(
         'SELECT model_id_1 % 10000, model_id_2 % 10000, games '
@@ -855,4 +858,3 @@ def ratings(bucket):
         '      model_id_1 >= ? AND model_id_1 < ?',
         model_range)
     return str(ratings)
-

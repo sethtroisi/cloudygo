@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys; sys.path.insert(0, '.')
+import sys
+sys.path.insert(0, '.')
 
 import os
 import sqlite3
@@ -37,7 +38,7 @@ db.row_factory = sqlite3.Row
 
 cur = db.execute('SELECT model_id, bucket FROM models')
 model_buckets = dict((map(tuple, cur.fetchall())))
-bucket_salts = {k:CloudyGo.bucket_salt(v) for k, v in model_buckets.items()}
+bucket_salts = {k: CloudyGo.bucket_salt(v) for k, v in model_buckets.items()}
 
 T0 = time.time()
 
@@ -47,7 +48,7 @@ cur.close()
 
 ####
 
-print ('Got {} games'.format(len(rows)))
+print('Got {} games'.format(len(rows)))
 equal = 0
 mismatch = 0
 results = []
@@ -62,9 +63,9 @@ for game_num, filename, model_id in tqdm(rows, unit="game"):
         equal += 1
 
 T1 = time.time()
-print ('Game Num Fixer took: {:.1f} seconds'.format(T1 - T0))
+print('Game Num Fixer took: {:.1f} seconds'.format(T1 - T0))
 
-print ("\t", results[:5])
+print("\t", results[:5])
 
 cur = db.executemany(
     'UPDATE games SET game_num = ? WHERE game_num = ?',
@@ -73,6 +74,6 @@ db.commit()
 
 T2 = time.time()
 
-print ('{} rows updated, {} canonical is same as raw, {} mismatch'.format(
+print('{} rows updated, {} canonical is same as raw, {} mismatch'.format(
     cur.rowcount, equal, mismatch))
-print ('Update took: {:.1f} seconds'.format(T2 - T1))
+print('Update took: {:.1f} seconds'.format(T2 - T1))

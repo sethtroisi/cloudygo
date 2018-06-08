@@ -24,6 +24,7 @@ def chunk(l, n):
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
+
 def cord_to_ij(board_size, move):
     if move == 'pass':
         return board_size, 0
@@ -49,7 +50,7 @@ def cord_to_sgf(board_size, cord):
 
     index1 = ord(cord[0].upper()) - ord('A')
     if index1 > 8:
-        index1 -= 1;
+        index1 -= 1
 
     index2 = int(cord[1:])
 
@@ -64,7 +65,7 @@ def sgf_to_cord(board_size, move):
     if len(move) == 3:
         return 'pass'
 
-    assert len(move) == 5, move # expects B[dc]
+    assert len(move) == 5, move  # expects B[dc]
     index1 = ord(move[2]) - ord('a')
     index2 = ord(move[3]) - ord('a')
 
@@ -82,8 +83,8 @@ def pretty_print_sgf(data):
     LINE_LEN = 100
     return '<br>'.join(
         '<br>'.join(line[i:i+LINE_LEN]
-            for i in range(0, len(line), LINE_LEN))
-                for line in data.split('\n'))
+                    for i in range(0, len(line), LINE_LEN))
+        for line in data.split('\n'))
 
 
 def commented_squares(board_size, setup, data, include_move, is_pv):
@@ -112,7 +113,7 @@ def board_png(board_size, setup, data, filename=None,
         if force_refresh or not os.path.exists(filename):
             # Consider a better caching scheme.
             p = Popen(['sgftopng', filename, '-coord', '-nonrs'],
-                stdout=PIPE, stdin=PIPE, stderr=STDOUT)
+                      stdout=PIPE, stdin=PIPE, stderr=STDOUT)
             sgf_to_png_stdout = p.communicate(input=sgf.encode('utf-8'))[0]
     return sgf
 
@@ -125,11 +126,14 @@ def rotate(board_size, ij, rot):
     i, j = ij
 
     # vertical flip
-    if rot & 1: i, j = board_size - 1 - i, j
+    if rot & 1:
+        i, j = board_size - 1 - i, j
     # rotate counterclockwise
-    if rot & 2: i, j = board_size - 1 - j, i
+    if rot & 2:
+        i, j = board_size - 1 - j, i
     # rotate 180
-    if rot & 4: i, j = board_size - 1 - i, board_size - 1 - j
+    if rot & 4:
+        i, j = board_size - 1 - i, board_size - 1 - j
     return i, j
 
 
@@ -195,6 +199,7 @@ def canonical_moves(board_size, moves):
                 rot))
 
     return ';'.join(map(rotated, move_list))
+
 
 def canonical_sgf(board_size, sgf):
     if not sgf:
@@ -263,12 +268,12 @@ def fully_parse_comment(comment):
 
     # return a minified table of things we use
     header_len = 10
-    table = [[tokens[0], tokens[6], tokens[7]] ]
+    table = [[tokens[0], tokens[6], tokens[7]]]
     for row in range(header_len, len(tokens), header_len):
         table.append((tokens[row+0], int(tokens[row+6]), float(tokens[row+7])))
 
     #table = list(chunk(tokens, header_len))
-    #for row in table[1:]:
+    # for row in table[1:]:
     #    for i, v in enumerate(row[1:], 1):
     #        row[i] = float(v)
 
@@ -293,15 +298,16 @@ def derive_move_quality(played_moves, parsed_comments):
             sum_soft_n_better += row[visit_index+1]
         else:
             # TODO(sethtroisi): discuss if frequency here is bad
-            #print ('Missing {} move saw {} of soft-n'.format(
+            # print ('Missing {} move saw {} of soft-n'.format(
             #    played, sum_soft_n_better))
             pass
 
         # seems to happen with equal visit count
-        #if move_num > 30 and sum_soft_n_better > 0:
+        # if move_num > 30 and sum_soft_n_better > 0:
         #    print(move_num, played, [row[0] for row in comment_data[3][1:]])
 
-        all_visits_seen = sum([row[visit_index] for row in comment_data[3][1:]])
+        all_visits_seen = sum([row[visit_index]
+                               for row in comment_data[3][1:]])
         #print (played, visits_played, sum_soft_n_better, all_visits_seen)
 
         # TODO(sethtroisi): if not found, maybe add half of remaining soft-n
@@ -354,7 +360,8 @@ def parse_game(game_path):
     result_margin = float(result.split('+')[1]) if ('+R' not in result) else 0
 
     raw_moves = list(re.finditer(r';([BW]\[[a-s]*\])(C\[([^]]*)\])?', data))
-    played_moves = [sgf_to_cord(board_size, move.group(1)) for move in raw_moves]
+    played_moves = [sgf_to_cord(board_size, move.group(1))
+                    for move in raw_moves]
 
     early_moves = ';'.join(played_moves[:10])
     early_moves_canonical = canonical_moves(board_size, early_moves)
@@ -377,8 +384,10 @@ def parse_game(game_path):
     top_move_visit_count = [parsed[1][1][0] for parsed in parsed_comments]
     number_of_visits_b = sum(top_move_visit_count[0::2])
     number_of_visits_w = sum(top_move_visit_count[1::2])
-    number_of_visits_early_b = sum(count for count in top_move_visit_count[0:30:2])
-    number_of_visits_early_w = sum(count for count in top_move_visit_count[1:30:2])
+    number_of_visits_early_b = sum(
+        count for count in top_move_visit_count[0:30:2])
+    number_of_visits_early_w = sum(
+        count for count in top_move_visit_count[1:30:2])
 
     # LEELA-HACK
     if 'leela-zero' in game_path:
@@ -397,8 +406,10 @@ def parse_game(game_path):
         resign_threshold = parsed_comments[0][0]
         assert resign_threshold is not None
 
-        bleakest_eval_black = min(parsed[2][0] for parsed in parsed_comments[0::2])
-        bleakest_eval_white = max(parsed[2][0] for parsed in parsed_comments[1::2])
+        bleakest_eval_black = min(parsed[2][0]
+                                  for parsed in parsed_comments[0::2])
+        bleakest_eval_white = max(parsed[2][0]
+                                  for parsed in parsed_comments[1::2])
 
     return (black_won, result, result_margin,
             num_moves,
@@ -408,4 +419,3 @@ def parse_game(game_path):
             number_of_visits_early_b, number_of_visits_early_w,
             unluckiness_black, unluckiness_white,
             resign_threshold, bleakest_eval_black, bleakest_eval_white)
-
