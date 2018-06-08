@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import itertools
+import json
 import math
 import operator
 import os
@@ -213,12 +214,38 @@ def pro_game_view(filename):
 
 @app.route('/<bucket>/figure-three')
 def figure_three(bucket):
-    exists = os.path.exists(os.path.join(
-        app.instance_path, 'eval', bucket, 'move_acc.png'))
+    eval_path = os.path.join(app.instance_path, 'eval', bucket)
+    exists = os.path.exists(os.path.join(eval_path, 'move_acc.png'))
+
+    # This is a longtime request from andrew.
+    key = '{}/fig3-json'.format(bucket)
+    fig3_data = cache.get(key)
+    if fig3_data is None:
+        fig3_json = '{"acc":{"0":0.01}, "mse":{"0":0.25}, "num":{"0":1}}'
+
+        json_file = os.path.join(eval_path, "fig3.json")
+        if os.path.exists(json_file):
+            with open(json_file, "r") as f:
+                fig3_json = f.read()
+
+        fig3_data = []
+        try:
+            fig3_json = json.loads(fig3_json)
+            for k,v in fig3_json["num"].items():
+                acc = fig3_json["acc"][k]
+                mse = fig3_json["mse"][k]
+                fig3_data.append((v,acc,mse))
+        except Exception as e:
+            print ("Error parsing fig3 json:", e)
+
+        fig3_data.sort()
+
+        cache.set(key, fig3_data, timeout = 5 * 60)
 
     return render_template('figure-three.html',
         bucket      = bucket,
         exists      = exists,
+        fig3_data   = fig3_data,
         eval_files  = [
             'move_acc.png',  'value_mse.png',
             'move_acc2.png', 'value_mse2.png',

@@ -158,9 +158,9 @@ function per_model_graph(
     });
 
     // Exponential moving average.
-    if (f1 && include_average) {
+    if (lines.length && include_average) {
         var trailing_avg_data = add_weighted_average(
-            paths_group, data, f1, x, y);
+            paths_group, data, lines[0], x, y);
     }
 
     if (y) {
