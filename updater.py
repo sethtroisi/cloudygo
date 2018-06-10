@@ -34,6 +34,8 @@ LOCAL_DATA_DIR = os.path.join(INSTANCE_PATH, 'data')
 DATABASE_PATH = os.path.join(INSTANCE_PATH, 'clouds.db')
 
 CURRENT_BUCKET = 'v7-19x19'
+#CURRENT_BUCKET = 'v5-19x19'
+#CURRENT_BUCKET = 'v3-9x9'
 #CURRENT_BUCKET = 'leela-zero-v1'
 
 # Note when importing a new DB consider lowing

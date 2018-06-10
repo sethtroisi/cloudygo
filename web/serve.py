@@ -530,7 +530,7 @@ def eval_graphs(bucket):
     def eval_model_transform(m):
         model_id = m[0]
         num = model_id - bucket_salt
-        name = num_to_name.get(model_id, num)
+        name = num_to_name.get(model_id, str(num))
         return (num, name) + m[2:]
 
     eval_models = list(map(eval_model_transform, eval_models))

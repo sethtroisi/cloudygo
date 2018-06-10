@@ -9,13 +9,14 @@ Frontend for displaying MiniGo training data.
 Checkout [CloudyGo.com](http://CloudyGo.com) to see a live version.
 
 For local development I suggest using
-[devel_instance.7z](https://drive.google.com/file/d/15fqzeC8qTDuuabonNwTkYRFhNXT6bMab/view?usp=sharing) to bootstrap.
+[devel_instance.7z](https://drive.google.com/file/d/1IwvvSLpKnrzNQUX6XaRaAQ5KXkjn9rrG/view?usp=sharing) to bootstrap.
 
 devel_instance.7z contains enough of MiniGo v3-9x9 and v7-19x19 data to test the UI.
 
 ```
 7z x devel_instance.7z
 mv -n devel_instance instance
+./oneoff/repopulate_db.sh
 ./updater.py
 # Optionally uncomment #CURRENT_BUCKET = 'v3-9x9'
 # and run ./updater.py again
