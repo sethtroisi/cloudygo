@@ -111,7 +111,7 @@ if [[ ! -z $EVALS ]]; then
     echo "Syncing eval files from $cloud_path, at $(date)"
 
     dest=$(readlink -f "$DEST/$RUN/eval")
-    gsutil -m rsync "$cloud_path" "$dest"
+    gsutil -m rsync -r "$cloud_path" "$dest"
     exit 0;
 fi
 

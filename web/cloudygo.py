@@ -305,8 +305,6 @@ class CloudyGo:
            not file_path_abs.endswith('.sgf'):
             return 'being naughty?'
 
-        print(file_path)
-
         data = ''
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
@@ -862,13 +860,16 @@ class CloudyGo:
         existing = self.get_existing_eval_games(bucket)
         evals_to_process = []
 
-        # TODO convince andrew to store these by YYYY-MM-DD, and walk dirs
-        eval_games = glob.glob(os.path.join(eval_dir, '*.sgf'))
+        eval_games = glob.glob(
+            os.path.join(eval_dir, '**', '*.sgf'),
+            recursive=True)
 
         # sort by newest first
         eval_games = sorted(eval_games, reverse=True)
         print("Found {} eval games".format(len(eval_games)))
         for eval_path in eval_games:
+            # Note, we want to keep the YYYY-MM-DD folder part
+            partial_path = eval_path.replace(eval_dir + '/', '')
             filename = os.path.basename(eval_path)
 
             eval_num, m1, m2 = CloudyGo.get_eval_parts(filename)
@@ -881,7 +882,7 @@ class CloudyGo:
 
             evals_to_process.append(
                 (eval_path,
-                 filename,
+                 partial_path,
                  eval_num,
                  black_model,
                  white_model))

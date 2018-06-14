@@ -160,6 +160,9 @@ def eval_image(bucket, filename):
         mimetype='image/png',
         cache_timeout=30*60)
 
+@app.route('/<bucket>/<model>/eval/<path:filename>')
+def eval_view(bucket, model, filename):
+    return game_view(bucket, model, filename)
 
 @app.route('/<bucket>/<model>/game/<filename>')
 # These two paths help with copying file paths.

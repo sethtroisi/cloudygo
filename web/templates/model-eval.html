@@ -121,7 +121,7 @@
               {% if eval_game[0] == data[1] or eval_game[1] == data[1] %}
                 {% set count.displayed = count.displayed + 1 %}
                 {% if count.displayed <= 100 %}
-                  <a href="{{ url_for('game_view',
+                  <a href="{{ url_for('eval_view',
                                       bucket=bucket,
                                       model=data[0],
                                       filename=eval_game[2],
