@@ -276,16 +276,18 @@ def models_details(bucket=CloudyGo.DEFAULT_BUCKET):
     # Limit to top ~120 interesting models
     models = sorted(cloudy.get_models(bucket))[::-1]
 
+    total_games = sum((m[8] for m in models))
+
     if len(models) > 120:
         trim_count = len(models) - 120
         skippable = sorted(m[0] for m in models if m[0] % 10 != 0)
         to_skip = set(skippable[:trim_count])
         models = [m for m in models if m[0] not in to_skip]
 
+    # Convert tuples to mutable lists (so that timestamps can be datified).
     models = [list(m) for m in models]
 
     last_update = max((m[5] for m in models), default=0)
-    total_games = sum((m[8] for m in models))
     for m in models:
         # creation timestamp
         m[6] = CloudyGo.time_stamp_age(m[6])

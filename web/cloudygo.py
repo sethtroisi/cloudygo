@@ -866,7 +866,6 @@ class CloudyGo:
 
         # sort by newest first
         eval_games = sorted(eval_games, reverse=True)
-        print("Found {} eval games".format(len(eval_games)))
         for eval_path in eval_games:
             # Note, we want to keep the YYYY-MM-DD folder part
             partial_path = eval_path.replace(eval_dir + '/', '')
@@ -908,8 +907,8 @@ class CloudyGo:
                 self.insert_rows_db('eval_games', new_evals)
                 self.db().commit()
 
-        print('eval_games: {} existing, {} inserts'.format(
-            len(existing), len(new_evals)))
+            print('eval_games: {} existing, {} inserts'.format(
+                len(existing), len(new_evals)))
         return len(new_evals)
 
     def update_eval_models(self, bucket):

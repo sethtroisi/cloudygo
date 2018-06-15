@@ -110,8 +110,18 @@ if [[ ! -z $EVALS ]]; then
     cloud_path="$base_cloud_path""sgf/eval"
     echo "Syncing eval files from $cloud_path, at $(date)"
 
+    # also try syncing a couple of date folders
+    TODAY=$(date +"%Y-%m-%d")
+    YESTERDAY=$(date --date=yesterday +"%Y-%m-%d")
+    TOMORROW=$(date --date=tomorrow +"%Y-%m-%d")
+
     dest=$(readlink -f "$DEST/$RUN/eval")
-    gsutil -m rsync -r "$cloud_path" "$dest"
+    #gsutil -m rsync -r "$cloud_path" "$dest"
+
+    mkdir -p "$dest/$TODAY" "$dest/$YESTERDAY" "$dest/$TOMORROW"
+    gsutil -m rsync -r "$cloud_path/$TODAY" "$dest/$TODAY"
+    gsutil -m rsync -r "$cloud_path/$YESTERDAY" "$dest/$YESTERDAY"
+    gsutil -m rsync -r "$cloud_path/$TOMORROW" "$dest/$TOMORROW"
     exit 0;
 fi
 
