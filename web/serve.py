@@ -606,7 +606,7 @@ def model_eval(bucket, model_name):
     eval_models.remove(overall)
     overall = list(overall)
     overall[0] %= CloudyGo.SALT_MULT
-
+    overall[1] = num_to_name.get(model[0], overall[0])
     rating = overall[2]
 
     updated = []
@@ -619,9 +619,8 @@ def model_eval(bucket, model_name):
         other_id = e_m[1] % CloudyGo.SALT_MULT
         other_name = num_to_name.get(e_m[1], other_id)
         rating_diff = 2 * (e_m[2] - rating)
-        winrate = 100 / (1 + 10 ** (rating_diff / 400))
 
-        updated.append((cur_id, other_id, other_name, winrate) + e_m[3:])
+        updated.append((cur_id, other_id, other_name, rating_diff) + e_m[3:])
 
         # e_m[2] is average rating (of ours + theirs)
         if e_m[2] > rating:
@@ -646,6 +645,7 @@ def model_eval(bucket, model_name):
                            bucket=bucket,
                            is_sorted=is_sorted,
                            total_games=total_games,
+                           model=model,
                            overall=overall,
                            played_better=played_better,
                            later_models=later_models,

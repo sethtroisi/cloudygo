@@ -111,9 +111,9 @@
           {% endfor %}
           <tr>
             <td>Worst model</td>
-            {% set worst_model = sorted_models[-1] %}
-            <td>{{ worst_model[0] }}-{{ worst_model[1] }}</td>
-            <td>rating {{ worst_model[2]|round|int }}</td>
+            {% set worst = sorted_models[-1] %}
+            <td>{{ eval_link(worst[0], worst[0]|string + "-" + worst[1]) }}</td>
+            <td>rating {{ worst[2]|round|int }}</td>
           </tr>
           </tbody>
         </table>
