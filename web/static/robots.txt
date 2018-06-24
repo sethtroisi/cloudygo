@@ -2,6 +2,7 @@ User-agent: *
 Disallow: */game/*
 Disallow: */full/*
 Disallow: */clean/*
+Disallow: */openings/*
 
 User-agent: MauiBot
 Disallow: /

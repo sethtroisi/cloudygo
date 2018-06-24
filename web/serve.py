@@ -147,8 +147,12 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
 
 @app.route('/openings/<filename>')
 def opening_image(filename):
+    path = os.path.join(app.instance_path, 'openings', filename)
+    if not os.path.exists(path):
+        return ""
+
     return send_file(
-        os.path.join(app.instance_path, 'openings', filename),
+        path,
         mimetype='image/png',
         cache_timeout=60*60)
 
