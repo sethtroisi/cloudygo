@@ -652,14 +652,12 @@ class CloudyGo:
         return (game_num, model_id, filename) + result
 
     def update_model_names(self):
-        models = self.query_db('SELECT * from models')
+        models = self.query_db('SELECT model_id, raw_name from models')
         names = dict(self.query_db(
             'SELECT model_id, name FROM name_to_model_id'))
 
         inserts = []
-        for model in models:
-            model_id = model[0]
-            model_name = model[1]
+        for model_id, model_name in models:
             if model_id in names:
                 assert model_name == names[model_id], (model_id, model_name)
             else:
@@ -975,9 +973,11 @@ class CloudyGo:
             ])
 
         # Delete old eval_models and add new eval games
-        self.db().execute(
+        cur = self.db().execute(
             'DELETE FROM eval_models WHERE model_id_1 >= ? AND model_id_1 < ?',
             model_range)
+        removed = cur.rowcount
+
         self.insert_rows_db('eval_models', records)
         self.db().commit()
 
@@ -986,7 +986,7 @@ class CloudyGo:
             [(k[0], d[0] + d[2]) for k, d in model_evals.items() if k[1] == 0])
         self.db().commit()
 
-        return len(records)
+        return len(records) - removed
 
     @staticmethod
     def get_eval_ratings(model_nums, eval_games):
@@ -1007,13 +1007,12 @@ class CloudyGo:
 
         pairs = list(map(ilsr_data, eval_games))
         ilsr_param = choix.ilsr_pairwise(
-            len(ordered) + 1,
+            len(ordered),
             pairs,
             alpha=0.0001,
             max_iter=200)
 
-        # TODO(sethtroisi): What should penalty be?
-        hessian = choix.opt.PairwiseFcts(pairs, penalty=1).hessian(ilsr_param)
+        hessian = choix.opt.PairwiseFcts(pairs, penalty=.1).hessian(ilsr_param)
         std_err = np.sqrt(np.diagonal(np.linalg.inv(hessian)))
 
         # Elo conversion
