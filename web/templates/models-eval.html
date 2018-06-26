@@ -14,7 +14,7 @@
   limitations under the License.
 -->
 <!DOCTYPE html>
-<html>
+<html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
   {% from "macros.html" import models_link, other_buckets, favicon_links, tip with context %}
   {% macro eval_link(model, display) %}
     <a href="{{ url_for('model_eval',
@@ -24,6 +24,8 @@
   {% endmacro %}
   <head lang="en">
       <meta charset="UTF-8">
+      <meta http-equiv="Content-Language" content="en">
+
       <title>Minigo Model Eval</title>
 
       {{ favicon_links() }}
@@ -105,14 +107,14 @@
           {% for great in top_ten_models %}
           <tr class="great-model">
             <td>{{ "Best model" if loop.index0 == 0 else loop.index }}</td>
-            <td>{{ eval_link(great[0], great[0]|string + "-" + great[1]) }}</td>
+            <td>{{ eval_link(great[0], great[1]) }}</td>
             <td>rating {{great[2]|round|int }}</td>
           </tr>
           {% endfor %}
           <tr>
             <td>Worst model</td>
             {% set worst = sorted_models[-1] %}
-            <td>{{ eval_link(worst[0], worst[0]|string + "-" + worst[1]) }}</td>
+            <td>{{ eval_link(worst[0], worst[1]) }}</td>
             <td>rating {{ worst[2]|round|int }}</td>
           </tr>
           </tbody>
