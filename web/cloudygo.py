@@ -827,6 +827,9 @@ class CloudyGo:
             if name in name_to_num:
                 return name_to_num[name]
 
+            if re.match(r'[0-9]{6}-([a-zA-Z-]+)', name):
+                return int(name.split('-', 1)[0])
+
             keys = set(name_to_num.values())
             first_eval_model = bucket_salt + CloudyGo.DIR_EVAL_START
             for test_id in range(first_eval_model, model_range[1]):
