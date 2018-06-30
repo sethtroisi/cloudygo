@@ -166,6 +166,7 @@ if __name__ == "__main__":
 
     # Always update names
     cloudy.update_model_names()
+    cloudy.update_bucket_ranges(buckets)
 
     T1 = time.time()
     delta = T1 - T0

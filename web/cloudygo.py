@@ -668,6 +668,19 @@ class CloudyGo:
             self.db().commit()
             print('Updated {} model names'.format(len(inserts)))
 
+    def update_bucket_ranges(self, bucket_names):
+        buckets = self.query_db('SELECT bucket from bucket_model_range')
+        buckets = set([b[0] for b in buckets])
+
+        for bucket in bucket_names:
+            if bucket not in buckets:
+                model_range = CloudyGo.bucket_model_range(bucket)
+                print("Adding {} => {}".format(bucket, model_range))
+                self.insert_rows_db(
+                    'bucket_model_range',
+                    [(bucket,) + model_range])
+                self.db().commit()
+
     def update_games(self, bucket, max_inserts):
         # This is REALLY SLOW because it's potentially >1M items
         # loop by model to avoid huge globs and commits
