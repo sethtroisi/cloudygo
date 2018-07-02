@@ -143,10 +143,11 @@ function per_model_graph(
 
     var yMin = d3.min(lines, func => d3.min(data, func));
     var yMax = d3.max(lines, func => d3.max(data, func));
+    var yDiff = yMax - yMin;
 
     var y = d3.scaleLinear()
       .range([height, 0])
-      .domain([y_from_zero ? 0 : yMin, yMax]);
+      .domain([y_from_zero ? 0 : yMin - 0.02 * yDiff, yMax + 0.02 * yDiff]);
     if (!y_from_zero) {
       add_line([[xd[0], 0], [xd[1], 0]], x, y,
           function(d) { return d[1]; }, '#000');

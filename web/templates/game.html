@@ -21,13 +21,19 @@
     <meta name="viewport" content="width=device-width" />
     <meta http-equiv="Content-Language" content="en">
     <title>Minigo Game viewer</title>
+
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+
     <script type="text/javascript" src="/static/wgo/wgo.min.js"></script>
     <script type="text/javascript" src="/static/wgo/wgo.player.min.js"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='graphs.js') }}"></script>
+
     <link type="text/css" href="/static/wgo/wgo.player.css" rel="stylesheet" />
     <link media="only screen and (max-width: 480px)" type="text/css"
           href="{{ url_for('static',filename='styles/wgo-mobile.css') }}"
           rel="stylesheet" />
-    {% set is_full = (request.args.get("type", "") == "full") or force_full %}
+
+    {% set is_full = (request.args.get("type", "") == "full") or player_evals %}
     {% set is_eval =  request.args.get("type", "") == "eval" %}
     {%if is_full %}
     <style>
@@ -46,6 +52,18 @@
           text-align: center;
           margin: 10px;
           font-weight: bold;
+        }
+        #eval-graph {
+          margin: 20px;
+          width: 800px;
+          height: 200px;
+        }
+        .data-line {
+          fill: none;
+          stroke-width: 2px;
+        }
+        .centered {
+          text-align: center;
         }
     </style>
     {% endif %}
@@ -80,7 +98,7 @@
     {% endif %}
     <div data-wgo="{{ data }}"
          {%- if 'M' in request.args -%} data-wgo-move="{{ request.args['M'] }}" {%- endif -%}
-         style="width: {{ 1200 if is_full else 900 }}px">
+         style="width: {{ 1000 if is_full else 800 }}px">
       Sorry, your browser doesn't support WGo.js.
       <a href="{{ url_for('game_view',
                           bucket=bucket,
@@ -89,5 +107,23 @@
                           raw="",
                           type=request.args['type']) }}">Download SGF file directly</a>
     </div>
+    <div class="centered">
+      <svg id="eval-graph"></svg>
+    </div>
   </body>
+  <script type="text/javascript">
+    var game_data = JSON.parse('{{ player_evals | tojson | safe}}');
+    if (game_data.length > 0) {
+      per_model_graph(
+          d3.select("#eval-graph"),
+          game_data,
+          [function(d) { return d[1]; }, function(d) { return d[2]; }],
+          false /* include_average */,
+          true /* include_right_axis */,
+          false /* y_from_zero */,
+          "Estimated Winrate by Black/White",
+          "Turn",
+          "Winrate");
+    }
+  </script>
 </html>

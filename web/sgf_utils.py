@@ -238,6 +238,7 @@ def fully_parse_comment(comment):
     # SLOW!
 
     # comment format is:
+    # <OPTIONAL model_name>
     # <Q root>\n
     # PV_move_1 (visits_1) ==> PV_move_2 (visits_2) ... ==> Q:<Q>\n
     # move: action Q U P P-Dir N soft-N p-delta p-rel
@@ -253,6 +254,10 @@ def fully_parse_comment(comment):
         resign = float(tokens[2])
         tokens = tokens[3:]
 
+    if not re.match(r'^-?[01].[0-9]*$', tokens[0]):
+        # Assume it's model name and drop for now
+        tokens = tokens[1:]
+
     Q_0 = float(tokens.pop(0))
 
     pv_count = tokens.count('==>')
@@ -264,7 +269,7 @@ def fully_parse_comment(comment):
 
     q_header = tokens.pop(0)
     assert q_header == 'Q', '{}, {}'.format(q_header, tokens)
-    Q_1 = float(tokens.pop(0))
+    Q_PV = float(tokens.pop(0))
 
     # return a minified table of things we use
     header_len = 10
@@ -277,7 +282,7 @@ def fully_parse_comment(comment):
     #    for i, v in enumerate(row[1:], 1):
     #        row[i] = float(v)
 
-    return resign, (pv_moves, pv_counts), (Q_0, Q_1), table
+    return resign, (pv_moves, pv_counts), (Q_0, Q_PV), table
 
 
 def derive_move_quality(played_moves, parsed_comments):
@@ -347,6 +352,17 @@ def parse_game_simple(game_path, data=None, include_players=False):
     return black_won, result, moves
 
 
+def raw_game_data(data):
+    raw_moves = list(re.finditer(r';([BW]\[[a-s]*\])(C\[([^]]*)\])?', data))
+
+    # format is: resign, (pv_moves, pv_counts), (Q0, Qpv), table
+    comments = [move.group(2) for move in raw_moves if move.group(2)]
+    assert len(comments) in (0, len(raw_moves)), game_path
+    parsed_comments = list(map(fully_parse_comment, comments))
+
+    return raw_moves, parsed_comments
+
+
 def parse_game(game_path):
     data = read_game_data(game_path)
     if data is None:
@@ -359,17 +375,13 @@ def parse_game(game_path):
 
     result_margin = float(result.split('+')[1]) if ('+R' not in result) else 0
 
-    raw_moves = list(re.finditer(r';([BW]\[[a-s]*\])(C\[([^]]*)\])?', data))
+    raw_moves, parsed_comments = raw_game_data(data)
     played_moves = [sgf_to_cord(board_size, move.group(1))
                     for move in raw_moves]
 
     early_moves = ';'.join(played_moves[:10])
     early_moves_canonical = canonical_moves(board_size, early_moves)
 
-    # format is: resign, (pv_moves, pv_counts), Q, table
-    comments = [move.group(2) for move in raw_moves if move.group(2)]
-    assert len(comments) in (0, len(raw_moves)), game_path
-    parsed_comments = list(map(fully_parse_comment, comments))
 
     move_quality = derive_move_quality(played_moves, parsed_comments)
 

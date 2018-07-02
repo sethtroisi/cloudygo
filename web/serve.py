@@ -166,20 +166,17 @@ def eval_image(bucket, filename):
 
 @app.route('/<bucket>/<model>/eval/<path:filename>')
 def eval_view(bucket, model, filename):
-    # HACK: we'd like all eval games to be full in the future
-    is_full_eval = 'cc-evaluator' in filename
     return game_view(
         bucket,
         model,
         filename,
-        force_full=is_full_eval,
     )
 
 @app.route('/<bucket>/<model>/game/<filename>')
 # These two paths help with copying file paths.
 @app.route('/<bucket>/<model>/clean/<filename>')
 @app.route('/<bucket>/<model>/full/<filename>')
-def game_view(bucket, model, filename, force_full=False):
+def game_view(bucket, model, filename):
     view_type = request.args.get('type') or 'clean'
     is_raw = get_bool_arg('raw', request.args)
 
@@ -191,13 +188,30 @@ def game_view(bucket, model, filename, force_full=False):
 
     render_sorry = game_view != view_type
 
+    # HACK: we'd like all eval games to be full in the future
+    is_full_eval = 'cc-evaluator' in filename
+
+    # 3200 = 500 * 'B[aa];'
+    player_evals = []
+    if len(data) > 3200:
+        try:
+            _, comments = sgf_utils.raw_game_data(data)
+            evals = [comment[2][0] for comment in comments]
+            for m, (b_eval, w_eval) in enumerate(zip(evals[::2], evals[1::2])):
+                player_evals.append((2 * m, b_eval, w_eval))
+        except Exception as e:
+            print("Failed to eval parse:", filename)
+            print(e)
+            pass
+
     return render_template(
         'game.html',
         bucket=bucket,
         model=model,
         data=data,
+        player_evals=player_evals,
         filename=filename,
-        force_full=force_full,
+        force_full=is_full_eval or len(player_evals) > 0,
         render_sorry=render_sorry,
     )
 
