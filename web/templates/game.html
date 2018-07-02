@@ -27,8 +27,8 @@
     <link media="only screen and (max-width: 480px)" type="text/css"
           href="{{ url_for('static',filename='styles/wgo-mobile.css') }}"
           rel="stylesheet" />
-    {% set is_full = request.args.get("type", "") == "full" %}
-    {% set is_eval = request.args.get("type", "") == "eval" %}
+    {% set is_full = (request.args.get("type", "") == "full") or force_full %}
+    {% set is_eval =  request.args.get("type", "") == "eval" %}
     {%if is_full %}
     <style>
         .wgo-twocols .wgo-player-center {
@@ -56,6 +56,13 @@
       <h2>
           {{ models_link() }}
           | <a href="{{ url_for('model_details', bucket=bucket, model_name=model) }}">Details</a>
+          {% if is_eval %}
+          | <a href="{{ url_for('eval_graphs', bucket=bucket) }}">Evaluations</a>
+          | <a href="{{ url_for('model_eval',
+                        bucket=bucket,
+                        model_name=model,
+                        sorted=is_sorted) }}">{{ model }}</a>
+          {% endif %}
           | Game
           {% if not is_eval and 'leela' not in bucket %}
           | <a href="{{ url_for('game_view',

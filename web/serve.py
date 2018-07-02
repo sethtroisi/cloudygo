@@ -166,13 +166,20 @@ def eval_image(bucket, filename):
 
 @app.route('/<bucket>/<model>/eval/<path:filename>')
 def eval_view(bucket, model, filename):
-    return game_view(bucket, model, filename)
+    # HACK: we'd like all eval games to be full in the future
+    is_full_eval = 'cc-evaluator' in filename
+    return game_view(
+        bucket,
+        model,
+        filename,
+        force_full=is_full_eval,
+    )
 
 @app.route('/<bucket>/<model>/game/<filename>')
 # These two paths help with copying file paths.
 @app.route('/<bucket>/<model>/clean/<filename>')
 @app.route('/<bucket>/<model>/full/<filename>')
-def game_view(bucket, model, filename):
+def game_view(bucket, model, filename, force_full=False):
     view_type = request.args.get('type') or 'clean'
     is_raw = get_bool_arg('raw', request.args)
 
@@ -184,13 +191,15 @@ def game_view(bucket, model, filename):
 
     render_sorry = game_view != view_type
 
-    return render_template('game.html',
-                           bucket=bucket,
-                           model=model,
-                           data=data,
-                           filename=filename,
-                           render_sorry=render_sorry,
-                           )
+    return render_template(
+        'game.html',
+        bucket=bucket,
+        model=model,
+        data=data,
+        filename=filename,
+        force_full=force_full,
+        render_sorry=render_sorry,
+    )
 
 
 @app.route('/secret-pro-games/<path:filename>')

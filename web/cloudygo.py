@@ -840,7 +840,9 @@ class CloudyGo:
             if name in name_to_num:
                 return name_to_num[name]
 
-            if re.match(r'[0-9]{6}-([a-zA-Z-]+)', name):
+            # HACK: figure out how to plumb is_sorted here
+            if (bucket.startswith('v') and
+                re.match(r'[0-9]{6}-([a-zA-Z-]+)', name)):
                 return bucket_salt + int(name.split('-', 1)[0])
 
             keys = set(name_to_num.values())
