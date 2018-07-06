@@ -63,6 +63,7 @@
       | <a href="{{ url_for('model_details', bucket=bucket, model_name=overall[0]) }}"
         >{{ overall[1] if is_sorted else model[2] }}</a>
     </h1>
+    <hr>
     <table class="models-table overall">
       <tbody>
       <tr>
@@ -89,7 +90,6 @@
       </tr>
       </tbody>
     </table>
-    <hr>
     <table class="models-table">
       <thead>
         <th>VS</th>

@@ -29,7 +29,7 @@
 {%- endmacro %}
 
 {% macro models_link() -%}
-  <a href="{{ url_for('models_details', bucket=bucket) }}">Minigo Models in {{bucket}}</a>
+  <a href="{{ url_for('models_details', bucket=bucket) }}">{{bucket}} Models</a>
 {%- endmacro %}
 
 {% macro other_buckets(page='models_details') -%}

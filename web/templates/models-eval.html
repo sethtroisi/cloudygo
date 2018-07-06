@@ -24,8 +24,8 @@
   {% endmacro %}
   <head lang="en">
       <meta charset="UTF-8">
+      <meta name="google" content="notranslate">
       <meta http-equiv="Content-Language" content="en">
-
       <title>Minigo Model Eval</title>
 
       {{ favicon_links() }}
@@ -93,6 +93,7 @@
       | Evaluation
       {{ other_buckets('eval_graphs') }}
     </h1>
+    <hr>
     {% if not is_sorted %}
     <div class="ratings-scatter">
       <svg class="model-graph" id="rating-svg"></svg>
