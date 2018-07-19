@@ -33,14 +33,15 @@ INSTANCE_PATH = os.path.join(ROOT_DIR, 'instance')
 LOCAL_DATA_DIR = os.path.join(INSTANCE_PATH, 'data')
 DATABASE_PATH = os.path.join(INSTANCE_PATH, 'clouds.db')
 
-CURRENT_BUCKET = 'v7-19x19'
+CURRENT_BUCKET = 'v9-19x19'
+#CURRENT_BUCKET = 'v7-19x19'
 #CURRENT_BUCKET = 'v5-19x19'
 #CURRENT_BUCKET = 'v3-9x9'
 #CURRENT_BUCKET = 'leela-zero-v1'
 
 # Note when importing a new DB consider lowing
 # for an initial pass to make sure everything is okayw
-MAX_INSERTS = 20000
+MAX_INSERTS = 50000
 
 
 def setup():
@@ -111,7 +112,7 @@ def update_position_setups(cloudy, bucket):
     return len(position_setups)
 
 
-def update_models_games(cloudy, bucket):
+def update_games(cloudy, bucket):
     updates = 0
     print("{}: Updating Models and Games".format(bucket))
 
@@ -142,7 +143,7 @@ if __name__ == "__main__":
     arg1 = sys.argv[1] if len(sys.argv) > 1 else ""
     buckets = sys.argv[2:] if len(sys.argv) > 2 else [CURRENT_BUCKET]
 
-    # Note: Models are also updated in update_models_games.
+    # Note: Models are also updated in update_games.
     if len(sys.argv) > 3 and arg1 == "models":
         for bucket in sys.argv[3:]:
             updates += cloudy.update_models(
@@ -151,7 +152,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 1 or arg1 == "games":
         for bucket in buckets:
-            updates += update_models_games(cloudy, bucket)
+            updates += update_games(cloudy, bucket)
 
     if len(sys.argv) == 1 or arg1 == "eval_games":
         for bucket in buckets:
