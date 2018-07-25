@@ -34,7 +34,7 @@
 
 {% macro other_buckets(page='models_details') -%}
   <div class="right-nav">(
-  {%- for other_bucket in ['v7-19x19', 'v5-19x19', 'v3-9x9', 'leela-zero-v1'] -%}
+  {%- for other_bucket in ['v9-19x19', 'v7-19x19', 'v5-19x19', 'v3-9x9', 'leela-zero-v1'] -%}
     {%- if bucket != other_bucket -%}
       <a href="{{ url_for(page, bucket=other_bucket) }}">{{other_bucket}}</a>&nbsp;
     {%- endif -%}

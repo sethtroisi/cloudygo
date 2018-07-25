@@ -238,6 +238,7 @@ def fully_parse_comment(comment):
     # SLOW!
 
     # comment format is:
+    # <OPTIONAL resign rate>
     # <OPTIONAL model_name>
     # <Q root>\n
     # PV_move_1 (visits_1) ==> PV_move_2 (visits_2) ... ==> Q:<Q>\n
@@ -254,9 +255,17 @@ def fully_parse_comment(comment):
         resign = float(tokens[2])
         tokens = tokens[3:]
 
+    model = ""
     if not re.match(r'^-?[01].[0-9]*$', tokens[0]):
         # Assume it's model name and drop for now
-        tokens = tokens[1:]
+        raw_model = tokens.pop(0)
+        if raw_model == 'models':
+            # TODO: assert tokens[0] == 'gs'
+            while tokens[0] == 'gs':
+                temp = tokens.pop(0)
+                temp = tokens.pop(0)
+                model = os.path.basename(temp)
+                assert model.startswith('model.ckpt'), model
 
     Q_0 = float(tokens.pop(0))
 
@@ -282,7 +291,7 @@ def fully_parse_comment(comment):
     #    for i, v in enumerate(row[1:], 1):
     #        row[i] = float(v)
 
-    return resign, (pv_moves, pv_counts), (Q_0, Q_PV), table
+    return (model, resign) , (pv_moves, pv_counts), (Q_0, Q_PV), table
 
 
 def derive_move_quality(played_moves, parsed_comments):
@@ -376,12 +385,14 @@ def parse_game(game_path):
     result_margin = float(result.split('+')[1]) if ('+R' not in result) else 0
 
     raw_moves, parsed_comments = raw_game_data(data)
+
+    model = parsed_comments[0][0][0]
+
     played_moves = [sgf_to_cord(board_size, move.group(1))
                     for move in raw_moves]
 
     early_moves = ';'.join(played_moves[:10])
     early_moves_canonical = canonical_moves(board_size, early_moves)
-
 
     move_quality = derive_move_quality(played_moves, parsed_comments)
 
@@ -401,9 +412,16 @@ def parse_game(game_path):
     number_of_visits_early_w = sum(
         count for count in top_move_visit_count[1:30:2])
 
-    # LEELA-HACK
-    if 'leela-zero' in game_path:
-        # TODO determine resign_threshold from comment
+    if has_stats:
+        resign_threshold = parsed_comments[0][0][1]
+        assert resign_threshold is not None
+
+        bleakest_eval_black = min(parsed[2][0]
+                                  for parsed in parsed_comments[0::2])
+        bleakest_eval_white = max(parsed[2][0]
+                                  for parsed in parsed_comments[1::2])
+    else:
+        # LEELA-HACK for finding resign rate.
         resign_rate = re.findall(r' -r ([0-9]*) ', data)
         assert len(resign_rate) <= 1, (game_path, resign_rate)
         if resign_rate:
@@ -414,16 +432,9 @@ def parse_game(game_path):
 
         bleakest_eval_black = 1 if black_won else -1
         bleakest_eval_white = -1 if black_won else 1
-    else:
-        resign_threshold = parsed_comments[0][0]
-        assert resign_threshold is not None
 
-        bleakest_eval_black = min(parsed[2][0]
-                                  for parsed in parsed_comments[0::2])
-        bleakest_eval_white = max(parsed[2][0]
-                                  for parsed in parsed_comments[1::2])
-
-    return (black_won, result, result_margin,
+    return (model,
+            black_won, result, result_margin,
             num_moves,
             early_moves, early_moves_canonical,
             has_stats,

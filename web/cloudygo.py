@@ -44,11 +44,18 @@ class CloudyGo:
     INSTANCE_PATH = None
     DATA_DIR = None
 
-    # set to 'minigo-pub' or similiar to serve debug games from the cloud.
+    # Set to 'minigo-pub' or similiar to serve debug games from the cloud.
     DEBUG_GAME_CLOUD_BUCKET = 'minigo-pub'
 
-    DEFAULT_BUCKET = 'v7-19x19'
+    DEFAULT_BUCKET = 'v9-19x19'
     LEELA_ID = 'leela-zero'
+
+    # NOTE: For v8 and v9 sgf folder has timestamp instead of model directories
+    # this radically complicates several parts of the update code. Those places
+    # should be documented either MINIGO_TS or MINIGO-HACK.
+    MINIGO_TS = ['v9-19x19']
+
+    MODEL_CKPT = 'model.ckpt-'
 
     def __init__(self, instance_path, data_dir, database, cache, pool):
         self.INSTANCE_PATH = instance_path
@@ -80,12 +87,28 @@ class CloudyGo:
         if CloudyGo.LEELA_ID in bucket:
             game_type = 'clean'
 
+        # MINIGO-HACK
+        if bucket in CloudyGo.MINIGO_TS:
+            model_id = self.load_model(bucket, model)[0][0]
+            query = 'SELECT filename FROM games2 WHERE model_id = ?'
+            existing = [p[0] for p in self.query_db(query, (model_id,))]
+            if len(existing) == 0:
+                return []
+
+            game_name = existing[0]
+            base_path = os.path.join(self.sgf_path(bucket), game_type)
+            for hour in os.listdir(base_path):
+                if os.path.isfile(os.path.join(base_path, hour, game_name)):
+                    return [os.path.join(base_path, hour, e) for e in existing]
+            return []
+
         # NOTE: An older version of cloudygo would load games in two passes
         # Parsing clean then full games this gave some flexibility but at
         # the cost of overall speed now the code tries to do both parses
         # in one pass falling back to simple_parse when debug information is
         # not present.
         # TODO: Support fallback to clean dir
+        # TODO: Change to look in db
         path = os.path.join(self.sgf_path(bucket), model, game_type)
         if not os.path.exists(path):
             return []
@@ -169,8 +192,22 @@ class CloudyGo:
             # come up with a better scheme (hash maybe) for numbering
             return int(number[:-4])
 
-        game, name = filename.split('-', 1)
-        pod = name.split('-')[-1][:-4]
+        # MINIGO-HACK for timestamps
+        # TODO: replace this hack with something different
+        if 'tpu-player' in filename:
+            assert filename.endswith('.sgf')
+            parts = filename[:-4].split('-')
+            game = int(parts[0])
+            pod = parts[-2]
+            pod_num = int(parts[-1])
+            assert 0 <= pod_num <= 99
+
+            # Use the more unique lower time bits.
+            game = ((game % 10000) * 100) + pod_num
+        else:
+            game, name = filename.split('-', 1)
+            pod = name.split('-')[-1][:-4]
+            pod_num = 0
 
         game_num = int(game) % CloudyGo.GAME_TIME_MOD
 
@@ -299,11 +336,22 @@ class CloudyGo:
 
         file_path = os.path.join(base_path, view_type, filename)
 
+        # MINIGO-HACK
+        if bucket in CloudyGo.MINIGO_TS and not os.path.isfile(file_path):
+            base_path = os.path.join(self.sgf_path(bucket), view_type)
+            for hour in os.listdir(base_path):
+                testing = os.path.join(base_path, hour, filename)
+                if os.path.isfile(testing):
+                    file_path = testing
+                    break
+            else:
+                return 'not found', view_type
+
         base_dir_abs = os.path.abspath(base_path)
         file_path_abs = os.path.abspath(file_path)
         if not file_path_abs.startswith(base_dir_abs) or \
            not file_path_abs.endswith('.sgf'):
-            return 'being naughty?'
+            return 'being naughty?', view_type
 
         data = ''
         if os.path.exists(file_path):
@@ -325,6 +373,7 @@ class CloudyGo:
         return data, view_type
 
     def get_existing_games(self, model_id):
+        # TODO(sethtroisi): rename table to games.
         query = 'SELECT game_num FROM games2 WHERE model_id = ?'
         return set(record[0] for record in self.query_db(query, (model_id,)))
 
@@ -646,22 +695,51 @@ class CloudyGo:
     @staticmethod
     def process_game(data):
         game_path, game_num, filename, model_id = data
-        result = sgf_utils.parse_game(game_path)
+        sgf_model, *result = sgf_utils.parse_game(game_path)
         if not result:
             return None
-        return (game_num, model_id, filename) + result
+
+        # TODO compare sgf_model with model_id
+
+        # MINIGO-HACK
+        if any(b in game_path for b in CloudyGo.MINIGO_TS):
+            model_id = sgf_model
+
+        return (game_num, model_id, filename) + tuple(result)
 
     def update_model_names(self):
-        models = self.query_db('SELECT model_id, raw_name from models')
-        names = dict(self.query_db(
-            'SELECT model_id, name FROM name_to_model_id'))
+        model_names = dict(self.query_db('SELECT model_id, raw_name from models'))
+        query = self.query_db('SELECT model_id, name FROM name_to_model_id')
+
+        names = defaultdict(set)
+        for m, n in query:
+            names[m].add(n)
 
         inserts = []
-        for model_id, model_name in models:
+        for model_id, model_name in sorted(model_names.items()):
             if model_id in names:
-                assert model_name == names[model_id], (model_id, model_name)
-            else:
-                inserts.append((model_name, model_id))
+                if model_name not in names[model_id]:
+                    inserts.append((model_name, model_id))
+                    names[model_id].add(model_name)
+
+        # MINIGO-HACK
+        for model_id, name in sorted(model_names.items()):
+            ts_model = any(model_id in range(*CloudyGo.bucket_model_range(b))
+                           for b in CloudyGo.MINIGO_TS)
+            if ts_model:
+                cur = any(n.startswith(CloudyGo.MODEL_CKPT) for n in names[m])
+                if len(name) > 3 and not cur:
+                    # VERY SLOW
+                    print ("Slow lookup of checkpoint step for", model_id, name)
+                    path = os.path.join(self.model_path(CloudyGo.MINIGO_TS), name)
+                    import tensorflow.train as tf_train
+                    ckpt = tf_train.load_checkpoint(path)
+                    step = ckpt.get_tensor('global_step')
+                    new_name = CloudyGo.MODEL_CKPT + str(step)
+                    names[model_id].add(new_name)
+
+                    inserts.append((new_name, model_id))
+                    print ("\t", model_id, name, " =>  ", new_name)
 
         if inserts:
             self.insert_rows_db('name_to_model_id', inserts)
@@ -681,69 +759,119 @@ class CloudyGo:
                     [(bucket,) + model_range])
                 self.db().commit()
 
+
+    @staticmethod
+    def _game_paths_to_to_process(
+            bucket_salt, existing, games_added,
+            model_id, game_paths, max_inserts):
+        to_process = []
+        for game_path in sorted(game_paths):
+            filename = os.path.basename(game_path)
+            game_num = CloudyGo.get_game_num(bucket_salt, filename)
+
+            if game_num in existing:
+                continue
+
+            assert game_num not in games_added, (game_num, game_path)
+            games_added.add(game_num)
+            existing.add(game_num)
+
+            to_process.append((game_path, game_num, filename, model_id))
+
+            if len(to_process) >= max_inserts:
+                break
+        return to_process
+
+
+    def _get_update_games_time_dir(self, bucket, max_inserts):
+        bucket_salt = CloudyGo.bucket_salt(bucket)
+        models = self.get_models(bucket)
+
+        query = 'SELECT game_num FROM games2 WHERE filename like "%tpu-player%"'
+        existing = set(record[0] for record in self.query_db(query))
+        print (len(existing), "existing games")
+        games_added = set()
+
+        base_dir = os.path.join(self.sgf_path(bucket), 'full')
+        time_dirs = sorted(glob.glob(os.path.join(base_dir, '*')))
+        for time_dir in time_dirs[-5:]:
+            name = os.path.basename(time_dir)
+            model_id = -1
+
+            game_paths = glob.glob(os.path.join(time_dir, '*.sgf'))
+            to_process = CloudyGo._game_paths_to_to_process(
+                bucket_salt, existing, games_added,
+                model_id, game_paths, max_inserts)
+            yield name, to_process, len(existing)
+
+
+    def _get_update_games_model(self, bucket, max_inserts):
+        bucket_salt = CloudyGo.bucket_salt(bucket)
+        games_added = set()
+        skipped = []
+        for model in self.get_models(bucket):
+            # Check if directory mtime is recent, if not skip
+            test_d = os.path.join(self.sgf_path(bucket), model[2], 'full')
+            m_time = os.path.getmtime(test_d) if os.path.exists(test_d) else 0
+            #if m_time + 86400 < model[5]:
+            #    skipped.append(model[4])
+            #    continue
+
+            name = '{}-{}'.format(model[4], model[1])
+            model_id = model[0]
+
+            existing = self.get_existing_games(model_id)
+
+            game_paths = self.all_games(bucket, model[2])
+            to_process = CloudyGo._game_paths_to_to_process(
+                bucket_salt, existing, games_added,
+                model_id, game_paths, max_inserts)
+            yield name, to_process, len(existing)
+        if len(skipped) > 0:
+            print('skipped {}, {}'.format(
+                len(skipped), utils.list_preview(skipped)))
+
+
     def update_games(self, bucket, max_inserts):
         # This is REALLY SLOW because it's potentially >1M items
         # loop by model to avoid huge globs and commits
         updates = 0
-
         bucket_salt = CloudyGo.bucket_salt(bucket)
 
-        skipped = []
-        for model in self.get_models(bucket):
-            # Check if directories mtime is recent, if not skip
-            base = os.path.join(self.sgf_path(bucket), model[2])
-            times = [0]
-            for test_d in [os.path.join(base, d) for d in ('clean', 'full')]:
-                if os.path.exists(test_d):
-                    times.append(os.path.getmtime(test_d))
-            if max(times) < model[5] - 86400:
-                skipped.append(model[4])
-                continue
+        games_source = self._get_update_games_model(bucket, max_inserts)
+        if bucket in CloudyGo.MINIGO_TS:
+            games_source = self._get_update_games_time_dir(bucket, max_inserts)
 
-            model_id = model[0]
-            existing = self.get_existing_games(model_id)
+        for model_name, to_process, len_existing in games_source:
+            if len(to_process) > 0:
+                print("About to process {} games for {}".format(
+                    len(to_process), model_name))
 
-            games_added = set()
-            to_process = []
-            for game_path in self.all_games(bucket, model[2]):
-                filename = os.path.basename(game_path)
-                game_num = CloudyGo.get_game_num(bucket_salt, filename)
+                mapper = self.pool.map if self.pool else map
+                new_games = mapper(CloudyGo.process_game, to_process)
+                new_games = list(filter(None.__ne__, new_games))
 
-                if game_num in existing:
-                    continue
+                # DARN YOU TIME BASED MODELS
+                if bucket in CloudyGo.MINIGO_TS:
+                    new_games = self.process_sgf_names(bucket, new_games)
 
-                assert game_num not in games_added, (game_num, game_path)
-                games_added.add(game_num)
+                self.insert_rows_db('games2', new_games)
 
-                to_process.append((game_path, game_num, filename, model_id))
+                if model_id > bucket_salt[0]:
+                    total_games = len_existing + len(new_games)
+                    self.db().execute(
+                         'UPDATE models SET num_games = ? WHERE model_id = ?',
+                        (total_games, model_id,))
 
-                if len(to_process) >= max_inserts:
-                    break
+                self.db().commit()
 
-            mapper = self.pool.map if self.pool else map
-            new_games = mapper(CloudyGo.process_game, to_process)
+                name = time_dir
+                result = '{}: {} existing, {} inserts'.format(
+                    name, len_existing, len(new_games))
 
-            new_games = list(filter(None.__ne__, new_games))
-            total_games = len(existing) + len(new_games)
-
-            self.insert_rows_db('games2', new_games)
-
-            self.db().execute(
-                'UPDATE models SET num_games = ? WHERE model_id = ?',
-                (total_games, model_id,))
-
-            self.db().commit()
-
-            result = '{}-{}: {} existing, {} inserts'.format(
-                model[4], model[1], len(existing), len(new_games))
-            if len(new_games):
-                print(result)
-
-            updates += len(new_games)
-
-        if len(skipped) > 0:
-            print('skipped {}, {}'.format(
-                len(skipped), utils.list_preview(skipped)))
+                if len(new_games):
+                    print(result)
+                updates += len(new_games)
         return updates
 
     def update_position_eval(self, filename, bucket, model_id, group, name):
@@ -824,15 +952,19 @@ class CloudyGo:
         name = re.sub(r'([0-9a-f]{8})[0-9a-f]{56}', r'\1', name)
         return name
 
-    def process_eval_names(self, bucket, eval_records):
+    def process_sgf_names(self, bucket, records):
         model_range = CloudyGo.bucket_model_range(bucket)
         bucket_salt = model_range[0]
         name_to_num = dict(self.query_db(
             'SELECT name, model_id FROM name_to_model_id '
             'WHERE model_id >= ? AND model_id < ?',
             model_range))
-
         new_names = []
+
+        def ckpt_num(name):
+            if name.startswith(CloudyGo.MODEL_CKPT):
+                return int(name[len(CloudyGo.MODEL_CKPT):])
+            return None
 
         def get_or_add_name(name):
             name = CloudyGo.sanitize_player_name(name)
@@ -845,8 +977,20 @@ class CloudyGo:
                 re.match(r'[0-9]{6}-([a-zA-Z-]+)', name)):
                 return bucket_salt + int(name.split('-', 1)[0])
 
-            keys = set(name_to_num.values())
+            if bucket.startswith('v') and ckpt_num(name):
+                num = ckpt_num(name)
+                previous = set(ckpt_num(other) for other in name_to_num.keys())
+                count_less = sum(1 for p in previous if p and p < num)
+                # ckpt-0 and ckpt-1 both mean 000000-bootstrap.
+                # awkwardly count_less filters ckpt-0 so the count is correct.
+                number = bucket_salt + count_less
+                name_to_num[name] = number
+                new_names.append((name, number))
+                print("get_or_add_name ckpt:", name, number)
+                return number
+
             first_eval_model = bucket_salt + CloudyGo.DIR_EVAL_START
+            keys = set(name_to_num.values())
             for test_id in range(first_eval_model, model_range[1]):
                 if test_id not in keys:
                     name_to_num[name] = test_id
@@ -854,17 +998,32 @@ class CloudyGo:
                     return test_id
             assert False
 
-        new_evals = []
-        for eval_record in eval_records:
-            record = list(eval_record[:-2])
+        new_records = []
+        for record in records:
+            # Eval records
             if bucket_salt == record[2] == record[3]:
-                PB, PW = eval_record[-2:]
-                record[2] = get_or_add_name(PB)
-                record[3] = get_or_add_name(PW)
+                new_record = list(record[:-2])
+                PB, PW = record[-2:]
+                new_record[2] = get_or_add_name(PB)
+                new_record[3] = get_or_add_name(PW)
+            elif ckpt_num(record[1]) is not None:
+                # MINIGO-HACK
+                new_record = list(record)
+                model = record[1]
+                new_record[1] = get_or_add_name(model)
+            else:
+                # Eval game that has well formed model_ids.
+                # TODO plumb is_sorted around and don't set model_ids
+                new_record = list(record[:-2])
 
-            new_evals.append(tuple(record))
+            assert new_record, record
+            new_records.append(tuple(new_record))
 
-        return new_evals, new_names
+        # NOTE: this depends on someone else calling db.commit()
+        if new_names:
+            self.insert_rows_db('name_to_model_id', new_names)
+
+        return new_records
 
     def update_eval_games(self, bucket):
         eval_dir = self.eval_path(bucket)
@@ -914,10 +1073,7 @@ class CloudyGo:
                 print("{} Broken games".format(broken))
 
             # Post-process PB/PW to model_id (when filename is ambiguous)
-            new_evals, new_names = self.process_eval_names(bucket, new_evals)
-
-            if new_names:
-                self.insert_rows_db('name_to_model_id', new_names)
+            new_evals = self.process_sgf_names(bucket, new_evals)
 
             if new_evals:
                 self.insert_rows_db('eval_games', new_evals)
