@@ -82,25 +82,17 @@ class CloudyGo:
     def eval_path(self, bucket):
         return os.path.join(self.data_path(bucket), 'eval')
 
+    def some_model_games(self, bucket, model_id, limit):
+        query = 'SELECT filename FROM games2 WHERE model_id = ? LIMIT ?'
+        return [p[0] for p in self.query_db(query, (model_id, limit))]
+
     def all_games(self, bucket, model, game_type='full'):
         # LEELA-HACK
         if CloudyGo.LEELA_ID in bucket:
             game_type = 'clean'
 
-        # MINIGO-HACK
         if bucket in CloudyGo.MINIGO_TS:
-            model_id = self.load_model(bucket, model)[0][0]
-            query = 'SELECT filename FROM games2 WHERE model_id = ?'
-            existing = [p[0] for p in self.query_db(query, (model_id,))]
-            if len(existing) == 0:
-                return []
-
-            game_name = existing[0]
-            base_path = os.path.join(self.sgf_path(bucket), game_type)
-            for hour in os.listdir(base_path):
-                if os.path.isfile(os.path.join(base_path, hour, game_name)):
-                    return [os.path.join(base_path, hour, e) for e in existing]
-            return []
+            assert False, bucket
 
         # NOTE: An older version of cloudygo would load games in two passes
         # Parsing clean then full games this gave some flexibility but at
@@ -108,7 +100,6 @@ class CloudyGo:
         # in one pass falling back to simple_parse when debug information is
         # not present.
         # TODO: Support fallback to clean dir
-        # TODO: Change to look in db
         path = os.path.join(self.sgf_path(bucket), model, game_type)
         if not os.path.exists(path):
             return []
@@ -316,7 +307,7 @@ class CloudyGo:
 
         from google.cloud import storage
         if not self.storage_client:
-            self.storage_client = storage.Client().bucket(
+            self.storage_client = storage.Client(project="minigo-pub").bucket(
                 CloudyGo.DEBUG_GAME_CLOUD_BUCKET)
 
         path = os.path.join(bucket, 'sgf', model, 'full', filename)
@@ -324,6 +315,7 @@ class CloudyGo:
         if not isinstance(blob, storage.Blob):
             return None
 
+        print ("Found via Debug", filename)
         data = blob.download_as_string().decode('utf8')
         return data
 
@@ -724,22 +716,27 @@ class CloudyGo:
 
         # MINIGO-HACK
         for model_id, name in sorted(model_names.items()):
-            ts_model = any(model_id in range(*CloudyGo.bucket_model_range(b))
-                           for b in CloudyGo.MINIGO_TS)
-            if ts_model:
-                cur = any(n.startswith(CloudyGo.MODEL_CKPT) for n in names[m])
-                if len(name) > 3 and not cur:
-                    # VERY SLOW
-                    print ("Slow lookup of checkpoint step for", model_id, name)
-                    path = os.path.join(self.model_path(CloudyGo.MINIGO_TS), name)
-                    import tensorflow.train as tf_train
-                    ckpt = tf_train.load_checkpoint(path)
-                    step = ckpt.get_tensor('global_step')
-                    new_name = CloudyGo.MODEL_CKPT + str(step)
-                    names[model_id].add(new_name)
+            bucket = [b for b in CloudyGo.MINIGO_TS
+                      if model_id in range(*CloudyGo.bucket_model_range(b))]
+            if not bucket:
+                continue
+            bucket = bucket[0]
 
-                    inserts.append((new_name, model_id))
-                    print ("\t", model_id, name, " =>  ", new_name)
+            cur = any(n.startswith(CloudyGo.MODEL_CKPT)
+                      for n in names[model_id])
+            if len(name) > 3 and not cur:
+                # VERY SLOW
+                print ("Slow lookup of checkpoint step for", model_id, name)
+                path = os.path.join(self.model_path(bucket), name)
+                import tensorflow.train as tf_train
+                ckpt = tf_train.load_checkpoint(path)
+                step = ckpt.get_tensor('global_step')
+                new_name = CloudyGo.MODEL_CKPT + str(step)
+                assert new_name not in names[model_id], (new_name, model_id)
+                names[model_id].add(new_name)
+
+                inserts.append((new_name, model_id))
+                print ("\t", model_id, name, " =>  ", new_name)
 
         if inserts:
             self.insert_rows_db('name_to_model_id', inserts)
@@ -813,9 +810,9 @@ class CloudyGo:
             # Check if directory mtime is recent, if not skip
             test_d = os.path.join(self.sgf_path(bucket), model[2], 'full')
             m_time = os.path.getmtime(test_d) if os.path.exists(test_d) else 0
-            #if m_time + 86400 < model[5]:
-            #    skipped.append(model[4])
-            #    continue
+            if m_time + 86400 < model[5]:
+                skipped.append(model[4])
+                continue
 
             name = '{}-{}'.format(model[4], model[1])
             model_id = model[0]
@@ -856,18 +853,10 @@ class CloudyGo:
                     new_games = self.process_sgf_names(bucket, new_games)
 
                 self.insert_rows_db('games2', new_games)
-
-                if model_id > bucket_salt[0]:
-                    total_games = len_existing + len(new_games)
-                    self.db().execute(
-                         'UPDATE models SET num_games = ? WHERE model_id = ?',
-                        (total_games, model_id,))
-
                 self.db().commit()
 
-                name = time_dir
                 result = '{}: {} existing, {} inserts'.format(
-                    name, len_existing, len(new_games))
+                    model_name, len_existing, len(new_games))
 
                 if len(new_games):
                     print(result)

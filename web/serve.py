@@ -697,7 +697,8 @@ def model_details(bucket, model_name):
 
     game_names = cache.get(model_name)
     if game_names is None:
-        game_names = cloudy.all_games(bucket, model_name)
+        game_names = cloudy.some_model_games(
+            bucket, model_id, limit=MAX_GAMES_ON_PAGE)
         game_names = sorted(list(map(os.path.basename, game_names)))
 
         always_include = game_names[:2] + game_names[-2:]

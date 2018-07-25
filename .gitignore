@@ -6,3 +6,4 @@ instance/
 web/static/wgo
 web/static/favicon*
 web/static/d3-tip.js
+web/static/*.pickle
