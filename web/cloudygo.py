@@ -14,7 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import bisect
 import datetime
+import functools
 import glob
 import hashlib
 import math
@@ -254,7 +256,7 @@ class CloudyGo:
 
     def get_models(self, bucket):
         return self.query_db(
-            'SELECT * FROM models WHERE bucket = ?',
+            'SELECT * FROM models WHERE bucket = ? ORDER BY model_id',
             (bucket,))
 
     def get_newest_model_num(self, bucket):
@@ -621,6 +623,7 @@ class CloudyGo:
 
                 resign_rate = min(resign_rates.keys()) if resign_rates else -1
                 assert resign_rate < 0, resign_rate
+
                 # TODO count leela holdouts but ignore resign problem.
                 holdouts = [game for game in wins if abs(game[16]) == 1]
                 holdout_resigns = [
@@ -756,23 +759,33 @@ class CloudyGo:
                     [(bucket,) + model_range])
                 self.db().commit()
 
+    @staticmethod
+    def _model_guesser(filename, model_mtimes, model_ids):
+        # NOTE: Guess that average game takes 40 minutes
+        game_time = int(filename.split('-', 1)[0]) - 40 * 60
+        assert 1520000000 < game_time < 1540000000, game_time
+        model_num = bisect.bisect(model_mtimes, game_time, 1) - 1
+        assert model_num >= 0, model_num
+        return model_ids[model_num]
 
     @staticmethod
     def _game_paths_to_to_process(
-            bucket_salt, existing, games_added,
-            model_id, game_paths, max_inserts):
+            bucket, existing, model_lookup,
+            game_paths, max_inserts):
+
+        bucket_salt = CloudyGo.bucket_salt(bucket)
         to_process = []
+
         for game_path in sorted(game_paths):
             filename = os.path.basename(game_path)
             game_num = CloudyGo.get_game_num(bucket_salt, filename)
 
             if game_num in existing:
                 continue
-
-            assert game_num not in games_added, (game_num, game_path)
-            games_added.add(game_num)
             existing.add(game_num)
 
+            # MINIGO-HACK, this would be easy otherwise
+            model_id = model_lookup(filename)
             to_process.append((game_path, game_num, filename, model_id))
 
             if len(to_process) >= max_inserts:
@@ -781,30 +794,34 @@ class CloudyGo:
 
 
     def _get_update_games_time_dir(self, bucket, max_inserts):
-        bucket_salt = CloudyGo.bucket_salt(bucket)
+        model_range = CloudyGo.bucket_model_range(bucket)
         models = self.get_models(bucket)
 
-        query = 'SELECT game_num FROM games2 WHERE filename like "%tpu-player%"'
-        existing = set(record[0] for record in self.query_db(query))
-        print (len(existing), "existing games")
-        games_added = set()
+        model_mtimes = [model[6] for model in models]
+        model_ids = [model[0] for model in models]
+        model_lookup = functools.partial(
+            CloudyGo._model_guesser,
+            model_mtimes=model_mtimes,
+            model_ids=model_ids)
 
-        base_dir = os.path.join(self.sgf_path(bucket), 'full')
+        query = 'SELECT game_num FROM games2 WHERE model_id BETWEEN ? AND ?'
+        existing = set(num[0] for num in self.query_db(query, model_range))
+        print (len(existing), "existing games")
+
+        # TODO find a way to rsync faster
+        #base_dir = os.path.join(self.sgf_path(bucket), 'full')
+        base_dir = os.path.join(self.sgf_path(bucket), 'clean')
         time_dirs = sorted(glob.glob(os.path.join(base_dir, '*')))
         for time_dir in time_dirs[-5:]:
             name = os.path.basename(time_dir)
-            model_id = -1
 
             game_paths = glob.glob(os.path.join(time_dir, '*.sgf'))
             to_process = CloudyGo._game_paths_to_to_process(
-                bucket_salt, existing, games_added,
-                model_id, game_paths, max_inserts)
+                bucket, existing, model_lookup, game_paths, max_inserts)
             yield name, to_process, len(existing)
 
 
     def _get_update_games_model(self, bucket, max_inserts):
-        bucket_salt = CloudyGo.bucket_salt(bucket)
-        games_added = set()
         skipped = []
         for model in self.get_models(bucket):
             # Check if directory mtime is recent, if not skip
@@ -816,13 +833,12 @@ class CloudyGo:
 
             name = '{}-{}'.format(model[4], model[1])
             model_id = model[0]
+            model_lookup = lambda: model_id
 
             existing = self.get_existing_games(model_id)
-
             game_paths = self.all_games(bucket, model[2])
             to_process = CloudyGo._game_paths_to_to_process(
-                bucket_salt, existing, games_added,
-                model_id, game_paths, max_inserts)
+                bucket, existing, model_lookup, game_paths, max_inserts)
             yield name, to_process, len(existing)
         if len(skipped) > 0:
             print('skipped {}, {}'.format(
@@ -849,8 +865,8 @@ class CloudyGo:
                 new_games = list(filter(None.__ne__, new_games))
 
                 # DARN YOU TIME BASED MODELS
-                if bucket in CloudyGo.MINIGO_TS:
-                    new_games = self.process_sgf_names(bucket, new_games)
+                #if bucket in CloudyGo.MINIGO_TS:
+                #    new_games = self.process_sgf_names(bucket, new_games)
 
                 self.insert_rows_db('games2', new_games)
                 self.db().commit()

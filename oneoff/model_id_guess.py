@@ -17,7 +17,7 @@
 import sys
 sys.path.insert(0, '.')
 
-import bisect
+import functools
 import os
 import sqlite3
 import time
@@ -27,8 +27,7 @@ from tqdm import tqdm
 from web.cloudygo import CloudyGo
 
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-INSTANCE_PATH = os.path.join(ROOT_DIR, 'instance')
-DATABASE_PATH = os.path.join(INSTANCE_PATH, 'clouds.db')
+DATABASE_PATH = os.path.join(ROOT_DIR, 'instance', 'clouds.db')
 
 BOARD_SIZE = 19
 BUCKET = 'v9-19x19'
@@ -47,7 +46,11 @@ def query_db(query, args=()):
 model_range = CloudyGo.bucket_model_range(BUCKET)
 model_creation = query_db('SELECT model_id, creation '
                           'FROM models WHERE bucket = ?', (BUCKET,))
-models, creation_times = zip(*model_creation)
+model_ids, creation_times = zip(*model_creation)
+model_guesser = functools.partial(
+    CloudyGo._model_guesser,
+    model_mtimes=creation_times,
+    model_ids=model_ids)
 
 T0 = time.time()
 
@@ -56,17 +59,12 @@ game_data = query_db('SELECT game_num, filename, model_id '
 equal = 0
 results = []
 for game_num, filename, model_id in tqdm(game_data, unit="game"):
-    # Assume the game took ~40 minutes
-    game_time = int(filename.split('-', 1)[0]) - 40 * 60
-    assert 1520000000 < game_time < 1540000000, game_time
-    new_i = bisect.bisect(creation_times, game_time, 1)
-    assert new_i >= 0
-    new_m = models[new_i - 1] # played by an existing model
+    guess_id = model_guesser(filename)
 
-    if new_m != model_id:
-        results.append((new_m, game_num))
-    else:
+    if guess_id == model_id:
         equal += 1
+    else:
+        results.append((guess_id, game_num))
 
 T1 = time.time()
 print('Model Id Guess took: {:.1f} seconds'.format(T1 - T0))

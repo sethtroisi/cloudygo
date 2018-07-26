@@ -386,7 +386,7 @@ def parse_game(game_path):
 
     raw_moves, parsed_comments = raw_game_data(data)
 
-    model = parsed_comments[0][0][0]
+    model = parsed_comments[0][0][0] if parsed_comments else ""
 
     played_moves = [sgf_to_cord(board_size, move.group(1))
                     for move in raw_moves]
