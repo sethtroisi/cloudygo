@@ -134,13 +134,14 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
         log_data = ''
         with open(log_filename, 'r', encoding='utf-8') as log_file:
             log_data = log_file.readlines()
+        full_count = len(log_data)
         log_data = list(filter(not_boring_line, log_data))
-
-        log_datas.append((log_filename, log_data))
+        log_datas.append((log_filename, full_count, log_data))
 
     return render_template(
         'secret-site-nav.html',
         logs=log_datas,
+        full_count=full_count,
         secret_vars=secret_vars,
     )
 
