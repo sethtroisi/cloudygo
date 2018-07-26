@@ -339,7 +339,8 @@ class CloudyGo:
                     file_path = testing
                     break
             else:
-                return 'not found', view_type
+                # Failed to find file. May fallback still fallback to clean.
+                file_path = os.path.join(base_path, view_type, filename)
 
         base_dir_abs = os.path.abspath(base_path)
         file_path_abs = os.path.abspath(file_path)
@@ -581,7 +582,6 @@ class CloudyGo:
             currently_processed = self.query_db(
                 'SELECT max(stats_games) FROM model_stats WHERE model_id = ?',
                 (model_id,))
-
             currently_processed = currently_processed[0][0] or 0
             if partial and num_games == currently_processed:
                 continue
@@ -621,7 +621,8 @@ class CloudyGo:
                         print('{} has multiple Resign rates: {}'.format(
                             raw_name, resign_rates))
 
-                resign_rate = min(resign_rates.keys()) if resign_rates else -1
+                # Note resign_rates are negative, max gets the value closest to zero.
+                resign_rate = max(resign_rates.keys()) if resign_rates else -1
                 assert resign_rate < 0, resign_rate
 
                 # TODO count leela holdouts but ignore resign problem.
@@ -697,8 +698,9 @@ class CloudyGo:
         # TODO compare sgf_model with model_id
 
         # MINIGO-HACK
-        if any(b in game_path for b in CloudyGo.MINIGO_TS):
-            model_id = sgf_model
+        is_ts_game = any(b in game_path for b in CloudyGo.MINIGO_TS)
+        if sgf_model.isdigit() and is_ts_game:
+            model_id = int(sgf_model)
 
         return (game_num, model_id, filename) + tuple(result)
 
@@ -895,8 +897,9 @@ class CloudyGo:
             n = None
             sgf = None
 
+            # TODO if pv has ~81 moves this can result in an error.
             if len(values) in (9*9+1, 19*19+1):
-                assert group == 'policy', group
+                assert group == 'policy', (group, filename)
 
                 render = (name == 'empty' and group == 'policy')
                 filename = '-'.join([str(model_id), group, name + '.png'])
