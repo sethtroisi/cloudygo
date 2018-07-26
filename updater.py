@@ -117,7 +117,7 @@ def update_games(cloudy, bucket):
     print("{}: Updating Models and Games".format(bucket))
 
     # Setup models if they don't exist
-    cloudy.update_models(bucket, partial=True)
+    cloudy.update_models(bucket)
 
     models = cloudy.get_models(bucket)
     if len(models) == 0:
@@ -129,7 +129,7 @@ def update_games(cloudy, bucket):
 
     if updates > 0:
         # Sync models with new data
-        count += cloudy.update_models(bucket, partial=False)
+        count += cloudy.update_models(bucket)
     return updates
 
 
@@ -148,7 +148,7 @@ if __name__ == "__main__":
         for bucket in sys.argv[3:]:
             updates += cloudy.update_models(
                 bucket,
-                partial=(sys.argv[2] != "False"))
+                refresh_all=(sys.argv[2] == "True"))
 
     if len(sys.argv) == 1 or arg1 == "games":
         for bucket in buckets:

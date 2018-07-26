@@ -518,7 +518,7 @@ class CloudyGo:
 
     #### PAGES ####
 
-    def update_models(self, bucket, partial=True):
+    def update_models(self, bucket, refresh_all=False):
         # LEELA-HACK
         if CloudyGo.LEELA_ID in bucket:
             model_glob = os.path.join(self.model_path(bucket), '[0-9a-f]*')
@@ -576,14 +576,11 @@ class CloudyGo:
             assert len(model) == 11, model
             model_inserts.append(model)
 
-            if partial and model_id in existing:
-                continue
-
             currently_processed = self.query_db(
                 'SELECT max(stats_games) FROM model_stats WHERE model_id = ?',
                 (model_id,))
             currently_processed = currently_processed[0][0] or 0
-            if partial and num_games == currently_processed:
+            if not refresh_all and num_games == currently_processed:
                 continue
 
             opening_name = str(model_id) + '-favorite-openings.png'
@@ -814,7 +811,7 @@ class CloudyGo:
         #base_dir = os.path.join(self.sgf_path(bucket), 'full')
         base_dir = os.path.join(self.sgf_path(bucket), 'clean')
         time_dirs = sorted(glob.glob(os.path.join(base_dir, '*')))
-        for time_dir in time_dirs[-5:]:
+        for time_dir in time_dirs[-100:]:
             name = os.path.basename(time_dir)
 
             game_paths = glob.glob(os.path.join(time_dir, '*.sgf'))
