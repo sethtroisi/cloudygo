@@ -355,7 +355,7 @@ def models_graphs(bucket):
             '   black_won * -bleakest_eval_black + '
             '   (1-black_won) * bleakest_eval_white '
             'FROM games2 '
-            'WHERE model_id >= ? AND model_id < ? AND black_won',
+            'WHERE (model_id BETWEEN ? AND ?) AND black_won',
             (max(model_range[0], newest_model - 10), newest_model))
 
         # model, rate below which would fail
@@ -366,7 +366,6 @@ def models_graphs(bucket):
         # calculate some percentages
         for m in bad_resign_thresh:
             bleak = sorted(bad_resign_thresh[m])
-            bad_resign_thresh[m].clear()
             percents = [(p, round(np.percentile(bleak, 100 - p), 3))
                         for p in range(10)]
             bad_resign_thresh[m] = percents
@@ -403,7 +402,7 @@ def models_graphs(bucket):
             '    100 * avg((m1_black_wins + m1_white_wins) / ('
             '           (m1_black_games + m1_white_games + 0.001))) '
             'FROM eval_models m '
-            'WHERE model_id_1 >= ? AND model_id_1 < ? AND model_id_2 != 0 '
+            'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_2 != 0 '
             'GROUP BY 1 ORDER BY 1 asc',
             model_range)
 
@@ -412,7 +411,7 @@ def models_graphs(bucket):
             'FROM eval_models m INNER JOIN eval_models m2 '
             'WHERE m.model_id_2 = 0 AND m2.model_id_2 = 0 '
             '   AND m2.model_id_1 = m.model_id_1 - 1 '
-            '   AND m.model_id_1 >= ? AND m.model_id_1 < ? '
+            '   AND (m.model_id_1 BETWEEN ? AND ?) '
             'ORDER BY m.model_id_1 desc LIMIT ?',
             model_range + (model_limit,))
         rating_delta = list(reversed(rating_delta))
@@ -542,8 +541,8 @@ def eval_graphs(bucket):
 
     eval_models = cloudy.query_db(
         'SELECT * FROM eval_models '
-        'WHERE model_id_1 >= ? AND model_id_1 < ? AND '
-        '      model_id_2 = 0  AND games >= 10 '
+        'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_2 = 0 '
+        '      AND games >= 10 '
         'ORDER BY model_id_1 desc',
         model_range)
 
@@ -554,8 +553,8 @@ def eval_graphs(bucket):
                                bucket=bucket, total_games=total_games)
 
     num_to_name = dict(cloudy.query_db(
-        'SELECT model_id,name FROM name_to_model_id '
-        'WHERE model_id >= ? AND model_id < ?',
+        'SELECT model_id, name FROM name_to_model_id '
+        'WHERE model_id BETWEEN ? AND ?',
         model_range))
 
     # Replace model_id_2 with name
@@ -584,7 +583,7 @@ def eval_graphs(bucket):
         '       sum((model_id_1 < model_id_2) * (m1_black_wins+m1_white_wins)), '
         '       sum((model_id_1 < model_id_2) * games) '
         'FROM eval_models '
-        'WHERE model_id_1 >= ? and model_id_1 < ? and model_id_2 != 0 '
+        'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_2 != 0 '
         'GROUP BY 1 ORDER BY 1 asc',
         model_range)
 
@@ -618,7 +617,7 @@ def model_eval(bucket, model_name):
     model_range = CloudyGo.bucket_model_range(bucket)
     num_to_name = dict(cloudy.query_db(
         'SELECT model_id,name FROM name_to_model_id '
-        'WHERE model_id >= ? AND model_id < ?',
+        'WHERE model_id BETWEEN ? AND ?',
         model_range))
 
     eval_models = cloudy.query_db(
@@ -829,8 +828,7 @@ def ratings_json(bucket):
     data = cloudy.query_db(
         'SELECT model_id_1 % 10000, model_id_2 % 10000, games '
         'FROM eval_models '
-        'WHERE model_id_1 < model_id_2 AND'
-        '      model_id_1 >= ? and model_id_1 < ?',
+        'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_1 < model_id_2',
         model_range)
 
     for m_1, m_2, g in data:
@@ -871,8 +869,7 @@ def eval_json(bucket):
         '   model_id_1 % 10000, model_id_2 % 10000, '
         '   m1_black_wins + m1_white_wins, games '
         'FROM eval_models '
-        'WHERE model_id_1 < model_id_2 AND'
-        '      model_id_1 >= ? and model_id_1 < ?',
+        'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_1 < model_id_2',
         model_range)
     return str(data)
 

@@ -117,7 +117,7 @@ class CloudyGo:
     def bucket_condition(bucket):
         min_model = CloudyGo.bucket_salt(bucket)
         assert isinstance(min_model, int), min_model
-        return ' model_id >= {} AND model_id < {} '.format(
+        return ' (model_id BETWEEN {} AND {}) '.format(
             min_model, min_model + CloudyGo.SALT_MULT)
 
     def bucket_query_db(
@@ -171,7 +171,7 @@ class CloudyGo:
     @staticmethod
     def bucket_model_range(bucket):
         bucket_salt = CloudyGo.bucket_salt(bucket)
-        return (bucket_salt, bucket_salt + CloudyGo.SALT_MULT)
+        return (bucket_salt, bucket_salt + CloudyGo.SALT_MULT - 1)
 
     @staticmethod
     def get_game_num(bucket_salt, filename):
@@ -373,7 +373,7 @@ class CloudyGo:
         model_range = CloudyGo.bucket_model_range(bucket)
         query = ('SELECT eval_num '
                  'FROM eval_games '
-                 'WHERE model_id_1 >= ? and model_id_1 < ?')
+                 'WHERE model_id_1 BETWEEN ? AND ?')
         records = self.query_db(query, model_range)
         return set(r[0] for r in records)
 
@@ -381,7 +381,7 @@ class CloudyGo:
         bucket_salt = CloudyGo.bucket_salt(bucket)
 
         # Single model_id, two model_ids, all model_ids
-        where = 'WHERE cord = -2 AND model_id >= ? AND model_id < ?'
+        where = 'WHERE cord = -2 AND model_id BETWEEN ? AND ?'
         args = (bucket_salt + 10, bucket_salt + CloudyGo.SALT_MULT)
 
         if model_ids == None:
@@ -946,7 +946,7 @@ class CloudyGo:
         bucket_salt = model_range[0]
         name_to_num = dict(self.query_db(
             'SELECT name, model_id FROM name_to_model_id '
-            'WHERE model_id >= ? AND model_id < ?',
+            'WHERE model_id BETWEEN ? AND ?',
             model_range))
         new_names = []
 
@@ -1081,7 +1081,7 @@ class CloudyGo:
             '   model_id_2, '
             '   black_won '
             'FROM eval_games '
-            'WHERE model_id_1 >= ? AND model_id_1 < ?',
+            'WHERE model_id_1 BETWEEN ? AND ?',
             model_range)
 
         if len(eval_games) < 10:
@@ -1137,7 +1137,7 @@ class CloudyGo:
 
         # Delete old eval_models and add new eval games
         cur = self.db().execute(
-            'DELETE FROM eval_models WHERE model_id_1 >= ? AND model_id_1 < ?',
+            'DELETE FROM eval_models WHERE model_id_1 BETWEEN ? AND ?',
             model_range)
         removed = cur.rowcount
 
