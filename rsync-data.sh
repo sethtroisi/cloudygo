@@ -170,7 +170,7 @@ do
         else
             mkdir -p "$partial_dest/clean/$model" "$partial_dest/full/$model"
             gsutil -m rsync $exclude $exclude_re -r "$cloud_path/clean/$model" "$partial_dest/clean/$model"
-            gsutil -m rsync $exclude $exclude_re -r "$cloud_path/full/$model" "$partial_dest/full/$model"
+#            gsutil -m rsync $exclude $exclude_re -r "$cloud_path/full/$model" "$partial_dest/full/$model"
         fi
     fi
 done

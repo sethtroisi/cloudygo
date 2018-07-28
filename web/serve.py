@@ -872,7 +872,7 @@ def eval_json(bucket):
         'FROM eval_models '
         'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_1 < model_id_2',
         model_range)
-    return str(data)
+    return jsonify(data)
 
 
 @app.route('/<bucket>/json/ratings.json')
@@ -888,4 +888,4 @@ def ratings(bucket):
         'WHERE model_id_2 == 0 AND '
         '      model_id_1 >= ? AND model_id_1 < ?',
         model_range)
-    return str(ratings)
+    return jsonify(ratings)

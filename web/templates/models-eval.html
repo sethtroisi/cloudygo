@@ -102,21 +102,25 @@
           <tbody>
           <tr>
             <td>Ratings from</td>
-            <td colspan="2">{{ total_games }} games</td>
+            <td>{{ total_games }} games</td>
+            <td>rating</td>
+            <td>uncertainty</td>
           </tr>
 
           {% for great in top_ten_models %}
           <tr class="great-model">
             <td>{{ "Best model" if loop.index0 == 0 else loop.index }}</td>
             <td>{{ eval_link(great[0], great[1]) }}</td>
-            <td>rating {{great[2]|round|int }}</td>
+            <td>{{great[2]|round|int }}</td>
+            <td>&plusmn; {{ great[3]|round|int }}</td>
           </tr>
           {% endfor %}
           <tr>
             <td>Worst model</td>
             {% set worst = sorted_models[-1] %}
             <td>{{ eval_link(worst[0], worst[1]) }}</td>
-            <td>rating {{ worst[2]|round|int }}</td>
+            <td>{{ worst[2]|round|int }}</td>
+            <td>&plusmn; {{ worst[3]|round|int }}</td>
           </tr>
           </tbody>
         </table>
@@ -149,7 +153,7 @@
       <tr{% if data[2] > great_threshold %} class="great-model" {% endif %}>
         <td>{{ eval_link(data[0], data[1] if is_sorted else data[0]) }}</a></td>
         <td>{{ data[2]|round|int }}
-            {%- if data[3] > 50 %} (&plusmn;{{ data[3]|round(1)}}){% endif -%}
+            {%- if data[3] > 50 %} (&plusmn;{{ data[3]|round|int }}){% endif -%}
         </td>
         <td>{{ data[4] }}</td>
       </tr>
