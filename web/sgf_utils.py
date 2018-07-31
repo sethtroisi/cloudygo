@@ -111,10 +111,14 @@ def board_png(board_size, setup, data, filename=None,
     sgf = commented_squares(board_size, setup, data, include_move, is_pv)
     if filename:
         if force_refresh or not os.path.exists(filename):
-            # Consider a better caching scheme.
-            p = Popen(['sgftopng', filename, '-coord', '-nonrs'],
-                      stdout=PIPE, stdin=PIPE, stderr=STDOUT)
-            sgf_to_png_stdout = p.communicate(input=sgf.encode('utf-8'))[0]
+            try:
+                p = Popen(['sgftopng', filename, '-coord', '-nonrs'],
+                          stdout=PIPE, stdin=PIPE, stderr=STDOUT)
+                sgf_to_png_stdout = p.communicate(input=sgf.encode('utf-8'))[0]
+            except FileNotFoundError:
+                # sgftopng not found.
+                # model page and model-graphs won't have pretty images.
+                pass
     return sgf
 
 

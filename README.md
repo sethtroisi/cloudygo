@@ -8,6 +8,14 @@ Frontend for displaying MiniGo training data.
 
 Checkout [CloudyGo.com](http://CloudyGo.com) to see a live version.
 
+### Prerequisites
+
+The site requires several python libraries, this may not be a complete list
+```
+pip3 install choix flask numpy tqdm sqlite3
+```
+sgftopng is required to render some images, but isn't required to run.
+
 For local development I suggest using
 [devel_instance.7z](https://drive.google.com/file/d/1IwvvSLpKnrzNQUX6XaRaAQ5KXkjn9rrG/view?usp=sharing) to bootstrap.
 
@@ -17,18 +25,12 @@ devel_instance.7z contains enough of MiniGo v3-9x9 and v7-19x19 data to test the
 7z x devel_instance.7z
 mv -n devel_instance instance
 ./oneoff/repopulate_db.sh
-./updater.py
-# Optionally uncomment #CURRENT_BUCKET = 'v3-9x9'
-# and run ./updater.py again
-FLASK_DEBUG=1 FLASK_APP="web/serve.py" flask run --host 0.0.0.0 --port 6000
+./updater.py models True v3-9x9 v5-19x19 v7-19x19 leela-zero-v1
+./updater.py games v3-9x9 v5-19x19 v7-19x19 leela-zero-v1
+./updater.py eval_games v3-9x9 v5-19x19 v7-19x19 leela-zero-v1
+./updater.py position_evals v3-9x9 v5-19x19 v7-19x19 leela-zero-v1
+FLASK_DEBUG=1 FLASK_APP="web/serve.py" flask run --host 0.0.0.0 --port 5000
 # follow instructions in SETUP so SGFS can be rendered with WGo.js
-```
-
-### Prerequisites
-
-The site requires several python libraries, this may not be a complete list
-```
-pip3 install choix, flask, numpy, tqdm
 ```
 
 ### Coding style

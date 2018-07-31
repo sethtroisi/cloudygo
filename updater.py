@@ -70,8 +70,9 @@ def update_position_eval(cloudy, bucket, group):
     models = cloudy.get_models(bucket)
     model_ids = {model[4]: model[0] for model in models}
 
+    count_per_model = len(position_paths) / max(1, len(models))
     print("{}: Updating {} {} position evals ({:.2f}/model)".format(
-        bucket, group, len(position_paths), len(position_paths) / len(models)))
+        bucket, group, len(position_paths), count_per_model))
 
     updates = 0
     for position_path in position_paths:
