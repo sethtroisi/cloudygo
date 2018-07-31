@@ -179,6 +179,8 @@ def eval_view(bucket, model, filename):
 @app.route('/<bucket>/<model>/full/<filename>')
 def game_view(bucket, model, filename):
     view_type = request.args.get('type') or 'clean'
+    assert view_type in ('clean', 'eval', 'full'), view_type
+
     is_raw = get_bool_arg('raw', request.args)
 
     data, game_view = cloudy.get_game_data(

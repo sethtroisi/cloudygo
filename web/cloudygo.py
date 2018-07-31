@@ -49,6 +49,10 @@ class CloudyGo:
     # Set to 'minigo-pub' or similiar to serve debug games from the cloud.
     DEBUG_GAME_CLOUD_BUCKET = 'minigo-pub'
 
+    # AMJ has asked me to keep this a secret
+    CURRENT_BUCKET_CLOUD_BUCKET = os.environ.get(
+        'CURRENT_CLOUD_BUCKET', DEBUG_GAME_CLOUD_BUCKET)
+
     DEFAULT_BUCKET = 'v9-19x19'
     LEELA_ID = 'leela-zero'
 
@@ -68,7 +72,7 @@ class CloudyGo:
         self.pool = pool
 
         self.last_cloud_request = 0
-        self.storage_client = None
+        self.storage_clients = {}
 
     #### PATH UTILS ####
 
@@ -307,19 +311,43 @@ class CloudyGo:
             return None
         self.last_cloud_request = now
 
-        from google.cloud import storage
-        if not self.storage_client:
-            self.storage_client = storage.Client(project="minigo-pub").bucket(
-                CloudyGo.DEBUG_GAME_CLOUD_BUCKET)
+        # NOTE: needs to be before cloud_bucket cleas bucket.
 
-        path = os.path.join(bucket, 'sgf', model, 'full', filename)
-        blob = self.storage_client.get_blob(path)
+        if bucket not in self.storage_clients:
+            cloud_bucket = CloudyGo.DEBUG_GAME_CLOUD_BUCKET
+            if bucket == CloudyGo.DEFAULT_BUCKET:
+                cloud_bucket = CloudyGo.CURRENT_BUCKET_CLOUD_BUCKET
+
+            from google.cloud import storage
+            client = storage.Client(project="minigo-pub").bucket(cloud_bucket)
+            self.storage_clients[bucket] = client
+
+        # MINIGO-HACK
+        if bucket in CloudyGo.MINIGO_TS:
+            # Take a guess at based on timestamp
+            hour_guess = CloudyGo.guess_hour_dir(filename)
+            model = hour_guess
+
+            path_bucket = "" if bucket == CloudyGo.DEFAULT_BUCKET else bucket
+            path = os.path.join(path_bucket, 'sgf', 'full', hour_guess, filename)
+        else:
+            path = os.path.join(bucket, 'sgf', model, 'full', filename)
+
+        blob = self.storage_clients[bucket].get_blob(path)
+        print("Checking {}: {}".format(filename, blob is not None))
+        print(self.storage_clients[bucket], path)
         if not isinstance(blob, storage.Blob):
             return None
 
-        print ("Found via Debug", filename)
         data = blob.download_as_string().decode('utf8')
         return data
+
+    @staticmethod
+    def guess_hour_dir(filename):
+        file_time = int(filename.split('-', 1)[0])
+        assert 1520000000 < file_time < 1540000000, file_time
+        dt = datetime.datetime.utcfromtimestamp(file_time)
+        return dt.strftime("%Y-%m-%d-%H")
 
     def get_game_data(self, bucket, model, filename, view_type):
         # Reconstruct path from filename
@@ -332,15 +360,10 @@ class CloudyGo:
 
         # MINIGO-HACK
         if bucket in CloudyGo.MINIGO_TS and not os.path.isfile(file_path):
+            # Take a guess at based on timestamp
+            hour_guess = CloudyGo.guess_hour_dir(filename)
             base_path = os.path.join(self.sgf_path(bucket), view_type)
-            for hour in os.listdir(base_path):
-                testing = os.path.join(base_path, hour, filename)
-                if os.path.isfile(testing):
-                    file_path = testing
-                    break
-            else:
-                # Failed to find file. May fallback still fallback to clean.
-                file_path = os.path.join(base_path, view_type, filename)
+            file_path = os.path.join(base_path, hour_guess, filename)
 
         base_dir_abs = os.path.abspath(base_path)
         file_path_abs = os.path.abspath(file_path)
