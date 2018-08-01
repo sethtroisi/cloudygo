@@ -20,7 +20,7 @@
 
 function print_help {
     echo "
-usage: $0 [-h] [-n] [-t] [-m model] [-b bucket] [-r run] type dest
+usage: $0 [-h] [-n] [-t] [-m model] [-b bucket] [-r run] [-c count] type dest
 
 This script rsyncs sgf files from minigo public bucket to local drive
 
@@ -28,9 +28,10 @@ optional arguments:
   -h              Print this help message
   -n              Dry run
   -t              use time based names
+  -m model        only sync this models and later (e.g. 102 syncs models >=102)
   -b bucket       Google Cloud bucket, defaults to "minigo-pub"
   -r run          Top level folder in bucket, defaults to "v7-19x19"
-  -m model        only sync this models and later (e.g. 102 syncs models >=102)
+  -c count        Sync at most this many files from each directory
 
 Positional arguments
   type  Source directory in bucket {clean, full, both, models}
@@ -49,15 +50,17 @@ MIN_MODEL=
 DRY_RUN=
 MODELS=
 TIME_BASED_NAMES=
-while getopts hntm:b:r: option
+MAX_COUNT=
+while getopts hntm:b:r:c: option
 do
  case "${option}" in
    h) print_help; exit 2;;
    n) DRY_RUN=1;;
    t) TIME_BASED_NAMES=1;;
+   m) MIN_MODEL=$OPTARG;;
    b) BUCKET=$OPTARG;;
    r) RUN=$OPTARG;;
-   m) MIN_MODEL=$OPTARG;;
+   c) MAX_COUNT=$OPTARG;;
    *) error "Unexpected option ${option}";;
  esac
 done
@@ -80,18 +83,15 @@ if [[ ! -d "$DEST" ]]; then
     exit 2;
 fi
 
-exclude=''
-exclude_re=''
 EVALS=
-PER_MODEL="1"
+CLEAN=1
+FULL=1
 case "$TYPE" in
   both) ;;
   clean)
-    exclude='-x'
-    exclude_re='.*\/?full\/';;
+    FULL=0;;
   full)
-    exclude='-x'
-    exclude_re='.*\/?clean\/';;
+    CLEAN=0;;
   models)
     MODELS=1;;
   evals)
@@ -101,16 +101,16 @@ esac
 
 # gsutil doesn't like // in folder paths which happens if RUN is empty.
 base_cloud_path="gs://$(echo "$BUCKET/$RUN/" | sed 's#//#/#g')"
-if [[ ! -z $MODELS ]]; then
+if [[ ! -z "$MODELS" ]]; then
     cloud_model_path="${base_cloud_path}models/"
     echo "Syncing model files from $cloud_path, at $(date)"
 
-    dest=$(readlink -f "$DEST/$RUN/models")
+    dest="$DEST/$RUN/models"
     gsutil -m rsync "$cloud_model_path" "$dest"
     exit 0;
 fi
 
-if [[ ! -z $EVALS ]]; then
+if [[ ! -z "$EVALS" ]]; then
     cloud_path="${base_cloud_path}sgf/eval"
     echo "Syncing eval files from $cloud_path, at $(date)"
 
@@ -133,7 +133,7 @@ fi
 cloud_path="${base_cloud_path}sgf"
 partial_dest="$DEST/$RUN/sgf"
 echo "Getting models list from $cloud_path"
-if [[ -z $TIME_BASED_NAMES ]]; then
+if [[ -z "$TIME_BASED_NAMES" ]]; then
     models=$(gsutil ls "$cloud_path" | grep -o "00[0-9]\{4\}-[a-z-]*/")
 else
     models=$(gsutil ls "$cloud_path/clean" | grep -o "2018-[0-9-]\{8\}/")
@@ -143,13 +143,11 @@ first_model=$(echo "$models" | head -n 1)
 last_model=$(echo "$models" | tail -n 1)
 echo "Found $(echo "$models" | wc -l) models ($first_model to $last_model)"
 
-if [[ ! -z $MIN_MODEL ]]; then
+if [[ ! -z "$MIN_MODEL" ]]; then
     models=$(echo "$models" | sed 's#^\(\([0-9-]*\)\(-.*\|/\)\)$#\2 \1#' |
                     awk -v min="$MIN_MODEL" '$1 >= min { print $2 }')
     echo "Syncing $(echo "$models" | wc -l) models >= $MIN_MODEL"
 fi
-
-echo "excluding: \"$exclude_re\""
 
 read -p "Do you want to sync \"$cloud_path\" to \"$partial_dest\" [Y]/n: " answer
 case $answer in
@@ -158,19 +156,49 @@ case $answer in
     * ) echo "Defaulting Yes!";;
 esac
 
+function gs_rsync() {
+    mkdir -p "$2"
+    echo -e "\t\e[1;32m$1 => $2\e[0m"
+    echo -e "\t$(date)"
+
+    if [[ ! -z "$MAX_COUNT" ]]; then
+        existing="$(ls "$2" | wc -l)"
+        echo -e "\texisting: $existing"
+        if [[ "$existing" -ge "$MAX_COUNT" ]]; then
+            return;
+        fi
+        file_list="$(gsutil ls $1)"
+        found="$(echo "$file_list" | wc -l)"
+        echo "$(echo "$file_list" | head)"
+        echo -e "\tfound: $found"
+        if [[ $found -gt 10 ]]; then
+            partial_list="$(echo "$file_list" | shuf -n $MAX_COUNT)"
+            gsutil -m cp $partial_list "$2"
+        fi
+    else
+        gsutil -m rsync -r "$1" "$2"
+    fi
+}
 
 echo "$models" | while read model;
 do
     echo
-    echo -e "\e[1;32mSyncing $model $exclude $exclude_re, $(date)\e[0m"
+    echo -e "\e[1;32mSyncing $model $(date)\e[0m"
     if [[ -z "$DRY_RUN" ]]; then
-        if [[ -z $TIME_BASED_NAMES ]]; then
-            mkdir -p "$partial_dest/$model"
-            gsutil -m rsync $exclude $exclude_re -r "$cloud_path/$model" "$partial_dest/$model"
+        if [[ -z "$TIME_BASED_NAMES" ]]; then
+            full_path="$model/full"
+            clean_path="$model/clean"
         else
-            mkdir -p "$partial_dest/clean/$model" "$partial_dest/full/$model"
-            gsutil -m rsync $exclude $exclude_re -r "$cloud_path/clean/$model" "$partial_dest/clean/$model"
-#            gsutil -m rsync $exclude $exclude_re -r "$cloud_path/full/$model" "$partial_dest/full/$model"
+            FULL=
+            full_path="full/$model"
+            clean_path="clean/$model"
+        fi
+
+        if [[ ! -z "$CLEAN" ]]; then
+            gs_rsync "$cloud_path/$clean_path" "$partial_dest/$clean_path"
+        fi
+        if [[ ! -z "$FULL" ]]; then
+            gs_rsync "$cloud_path/$full_path" "$partial_dest/$full_path"
         fi
     fi
 done

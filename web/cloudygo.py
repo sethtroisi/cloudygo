@@ -313,12 +313,12 @@ class CloudyGo:
 
         # NOTE: needs to be before cloud_bucket cleas bucket.
 
+        from google.cloud import storage
         if bucket not in self.storage_clients:
             cloud_bucket = CloudyGo.DEBUG_GAME_CLOUD_BUCKET
             if bucket == CloudyGo.DEFAULT_BUCKET:
                 cloud_bucket = CloudyGo.CURRENT_BUCKET_CLOUD_BUCKET
 
-            from google.cloud import storage
             client = storage.Client(project="minigo-pub").bucket(cloud_bucket)
             self.storage_clients[bucket] = client
 
