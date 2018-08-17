@@ -53,13 +53,13 @@ class CloudyGo:
     CURRENT_BUCKET_CLOUD_BUCKET = os.environ.get(
         'CURRENT_CLOUD_BUCKET', DEBUG_GAME_CLOUD_BUCKET)
 
-    DEFAULT_BUCKET = 'v9-19x19'
+    DEFAULT_BUCKET = 'v10-19x19'
     LEELA_ID = 'leela-zero'
 
-    # NOTE: For v8 and v9 sgf folder has timestamp instead of model directories
+    # NOTE: For v9, v10 sgf folder has timestamp instead of model directories
     # this radically complicates several parts of the update code. Those places
     # should be documented either MINIGO_TS or MINIGO-HACK.
-    MINIGO_TS = ['v9-19x19']
+    MINIGO_TS = ['v9-19x19', 'v10-19x19']
 
     MODEL_CKPT = 'model.ckpt-'
 
@@ -305,6 +305,7 @@ class CloudyGo:
     def __get_gs_game(self, bucket, model, filename, view_type):
         assert 'full' in view_type, view_type
 
+
         # Maybe it's worth caching these for, now just globally rate limit
         now = time.time()
         if now - self.last_cloud_request < 1:
@@ -321,6 +322,7 @@ class CloudyGo:
 
             client = storage.Client(project="minigo-pub").bucket(cloud_bucket)
             self.storage_clients[bucket] = client
+
 
         # MINIGO-HACK
         if bucket in CloudyGo.MINIGO_TS:
@@ -359,7 +361,9 @@ class CloudyGo:
         file_path = os.path.join(base_path, view_type, filename)
 
         # MINIGO-HACK
-        if bucket in CloudyGo.MINIGO_TS and not os.path.isfile(file_path):
+        if (view_type != 'eval' and
+                bucket in CloudyGo.MINIGO_TS and
+                not os.path.isfile(file_path)):
             # Take a guess at based on timestamp
             hour_guess = CloudyGo.guess_hour_dir(filename)
             base_path = os.path.join(self.sgf_path(bucket), view_type)
@@ -408,7 +412,7 @@ class CloudyGo:
 
         # Single model_id, two model_ids, all model_ids
         where = 'WHERE cord = -2 AND model_id BETWEEN ? AND ?'
-        args = (bucket_salt + 10, bucket_salt + CloudyGo.SALT_MULT)
+        args = (bucket_salt + 5, bucket_salt + CloudyGo.SALT_MULT)
 
         if model_ids == None:
             pass
@@ -635,11 +639,11 @@ class CloudyGo:
                                       if '+R' not in game[4])
 
                 resign_rates = Counter(game[16] for game in wins)
-                resign_rates.pop(-1, None)  # remove -1 if it's present
-                if len(resign_rates) > 1 and CloudyGo.LEELA_ID not in bucket:
+                if len(resign_rates) > 2 and CloudyGo.LEELA_ID not in bucket:
                     if perspective == 'all':
                         print('{} has multiple Resign rates: {}'.format(
                             raw_name, resign_rates))
+                resign_rates.pop(-1, None)  # remove -1 if it's present
 
                 # Note resign_rates are negative, max gets the value closest to zero.
                 resign_rate = max(resign_rates.keys()) if resign_rates else -1
@@ -831,10 +835,10 @@ class CloudyGo:
         print (len(existing), "existing games")
 
         # TODO find a way to rsync faster
-        #base_dir = os.path.join(self.sgf_path(bucket), 'full')
-        base_dir = os.path.join(self.sgf_path(bucket), 'clean')
-        time_dirs = sorted(glob.glob(os.path.join(base_dir, '*')))
-        for time_dir in time_dirs[-100:]:
+        # TODO(sethtroisi): find a way to update clean with full.
+        base_paths = os.path.join(self.sgf_path(bucket), '*', '*')
+        time_dirs = sorted(glob.glob(base_paths))
+        for time_dir in time_dirs[-48:]:
             name = os.path.basename(time_dir)
 
             game_paths = glob.glob(os.path.join(time_dir, '*.sgf'))

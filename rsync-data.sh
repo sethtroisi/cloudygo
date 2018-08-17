@@ -89,9 +89,9 @@ FULL=1
 case "$TYPE" in
   both) ;;
   clean)
-    FULL=0;;
+    FULL=;;
   full)
-    CLEAN=0;;
+    CLEAN=;;
   models)
     MODELS=1;;
   evals)
@@ -189,7 +189,6 @@ do
             full_path="$model/full"
             clean_path="$model/clean"
         else
-            FULL=
             full_path="full/$model"
             clean_path="clean/$model"
         fi

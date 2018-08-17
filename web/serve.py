@@ -527,7 +527,6 @@ def position_comparison(bucket, model_name_a, model_name_b):
 @app.route('/<bucket>/models_evolution/')
 def models_evolution(bucket):
     count, sgfs = cloudy.get_position_sgfs(bucket)
-
     return render_template('position-evolution.html',
                            bucket=bucket,
                            sgfs=sgfs,
