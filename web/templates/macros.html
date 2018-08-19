@@ -32,15 +32,104 @@
   <a href="{{ url_for('models_details', bucket=bucket) }}">{{bucket}} Models</a>
 {%- endmacro %}
 
+{% macro bootstrap_links() -%}
+  {% set base="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7" %}
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+  <link rel="stylesheet" href="{{base}}/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <link rel="stylesheet" href="{{base}}/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+  <script src="{{base}}/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+{%- endmacro %}
+
+
+{% set TOP_LEVEL_PAGES = [
+  ('models_graphs', 'Graphs'),
+  ('figure_three', 'Figure 3'),
+  ('eval_graphs', 'Evaluation'),
+] %}
+
+{% set MINIGO_FULL_SIZE_RUNS = [
+  ('v10-19x19', ' - 20x256'), ('v9-19x19', ' - 20x128'),
+  ('v7-19x19', ' - 10x128'), ('v5-19x19', ' - 10x128'),
+] %}
+
+{% macro navbar(current_page, page_desc, model=None, other_page=None) -%}
+  {% set other_page = other_page or current_page %}
+  {% set model = model or "latest" %}
+  <nav class="navbar navbar-default">
+    <div class="container-fluid">
+      <!-- Brand and toggle get grouped for better mobile display -->
+      <div class="navbar-header">
+        {# used for this devices when all stuff doesn't fit on nav bar #}
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs- example-navbar-collapse-1" aria-expanded="false">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="/">CloudyGo</a>
+      </div>
+
+      <!-- Collect the nav links, forms, and other content for toggling -->
+      <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+        <ul class="nav navbar-nav">
+          <li>{{ models_link() }}</li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                aria-haspopup="true" aria-expanded="false">Pages <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              {%- for page, name in TOP_LEVEL_PAGES -%}
+                {%- if page == current_page -%}
+                  <li class="active"><a href="#">{{name}}</a></li>
+                {% else %}
+                  <li><a href="{{ url_for(page, bucket=bucket) }}">{{name}}</a></li>
+                {%- endif -%}
+              {%- endfor -%}
+              {# TODO(sethtroisi): Add per model links use model or latest #}
+            </ul>
+          </li>
+            <li><p class="navbar-text"><strong>{{page_desc}}</strong><p></li>
+        </ul>
+        {# TODO(sethtroisi): Consider adding model/bucket search #}
+        <ul class="nav navbar-nav navbar-right">
+          <li><a href="{{ url_for('site_nav', bucket=bucket) }}">Site Nav</a></li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                aria-haspopup="true" aria-expanded="false">Other Runs <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              {{ other_buckets_li(MINIGO_FULL_SIZE_RUNS, page=other_page) }}
+              <li role="separator" class="divider"></li>
+              {{ other_buckets_li([ ('v3-9x9', '') ], page=other_page) }}
+              <li role="separator" class="divider"></li>
+              {{ other_buckets_li([
+                    ('leela-zero-v1', ' (partial)'), ('cross-eval', ' (eval only)'),
+                  ], page=other_page) }}
+            </ul>
+          </li>
+        </ul>
+      </div><!-- /.navbar-collapse -->
+    </div><!-- /.container-fluid -->
+  </nav>
+{%- endmacro %}
+
+{% macro other_buckets_li(others, page='models_details') -%}
+  {%- for other_bucket, desc in others -%}
+    {%- if bucket != other_bucket -%}
+      <li><a class="h2" href="{{ url_for(page, bucket=other_bucket) }}">{{other_bucket}}{{desc}}</a></li>
+    {%- endif -%}
+  {%- endfor -%}
+{%- endmacro %}
+
 {% macro other_buckets(page='models_details') -%}
   <div class="right-nav">(
   {%- for other_bucket in ['v10-19x19', 'v9-19x19', 'v7-19x19', 'v5-19x19', 'v3-9x9', 'leela-zero-v1'] -%}
-    {%- if bucket != other_bucket -%}
+     {%- if bucket != other_bucket -%}
       <a href="{{ url_for(page, bucket=other_bucket) }}">{{other_bucket}}</a>&nbsp;
-    {%- endif -%}
-  {%- endfor -%}
+     {%- endif -%}
+   {%- endfor -%}
   )</div>
 {%- endmacro %}
+
 
 {% macro cloudy_footer() -%}
     <div>
