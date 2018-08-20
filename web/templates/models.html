@@ -44,7 +44,7 @@
           background-color: #bababa;
         }
 
-        .tooltip:hover .tooltiptext:hover {
+        .c-tooltip:hover .tooltiptext:hover {
             display: none;
         }
       </style>
@@ -69,14 +69,14 @@
           <th>Model</th>
           <th class="model-name-col">Name</th>
           <th>Trained</th>
-          <th class="tooltip">Games {{ tip("Self-play Games") }}</td>
+          <th class="c-tooltip">Games {{ tip("Self-play Games") }}</td>
       </thead>
       <tbody>
         {% for m in models[c*rows:(c+1)*rows] %}
         <tr>
           <td>{{m[4]}}</td>
           <td><a href="{{ url_for('model_details', bucket=bucket, model_name=m[2]) }}">{{m[1]}}</a></td>
-          <td class="tooltip">{{m[6][0]}} {{ tip(m[6][1]) }}</td>
+          <td class="c-tooltip">{{m[6][0]}} {{ tip(m[6][1]) }}</td>
           <td>
             {{m[8]}}
             {%- if m[9] + 30 < m[8] and m[9] != 0 %} ({{m[9]}} w/ stats){% endif -%}

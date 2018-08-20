@@ -109,9 +109,9 @@
         <th>Holdout games</th>
         {%- if 'leela' not in bucket -%}
         <th>Bad resigns</th>
-        <th class="tooltip">Unluckiness{{tip('Sum of soft-n for all moves above move choosen') }}</th>
-        <th class="tooltip">Number moves{{tip('From both players, but only in games won by Player')}}</th>
-        <th class="tooltip">Sum move visits{{tip('From both players, but only in games won by Player')}}</th>
+        <th class="c-tooltip">Unluckiness{{tip('Sum of soft-n for all moves above move choosen') }}</th>
+        <th class="c-tooltip">Number moves{{tip('From both players, but only in games won by Player')}}</th>
+        <th class="c-tooltip">Sum move visits{{tip('From both players, but only in games won by Player')}}</th>
         {%- endif -%}
       </thead>
       <tbody>
@@ -176,21 +176,21 @@
         <th>Results</th>
         <th>Moves</th>
         {%- if 'leela' not in bucket -%}
-        <th class="debug-sep tooltip">
+        <th class="debug-sep c-tooltip">
           Unluckiness
           {{ tip('Sum of soft-n for moves ranked higher than selected move (summed over first thiry moves)') }}
         </th>
-        <th class="tooltip">
+        <th class="c-tooltip">
           Sum visits (first 30 moves)
           {{ tip('Number of visits per side to top MCTS move (black count|white count)') }}
         </th>
         <th>Sum visits (all moves)</th>
-        <th class="tooltip">
+        <th class="c-tooltip">
           Bleakest eval
           {{ tip('Worst eval during the game by (black|white)') }}
         </th>
         {%- endif -%}
-        <th class="tooltip">Opening
+        <th class="c-tooltip">Opening
           {{ tip('First ten moves of game') }}
         </th>
       </thead>

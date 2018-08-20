@@ -79,7 +79,7 @@
         <td colspan="2" class="rating">
           Rating {{ overall[2]|round|int }}
         </td>
-        <td class="tooltip">
+        <td class="c-tooltip">
           Uncertainty {{ overall[3]|round(1) }}
           {{ tip('Std error of rating param') }}
         </td>
@@ -92,7 +92,7 @@
       <tr>
         <td>vs Earlier Models {{ WLR(earlier_models[1], earlier_models[0]) }}</td>
         <td>vs Later Models {{ WLR(later_models[1], later_models[0]) }}</td>
-        <td class="tooltip">
+        <td class="c-tooltip">
           Played {{ played_better }} stronger* ranked models
           {{ tip('Stronger based on current Bradley-Terry rankings') }}
         </td>
