@@ -15,13 +15,16 @@
 -->
 <!DOCTYPE html>
 <html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
-  {% from "macros.html" import models_link, other_buckets, favicon_links with context %}
+  {% from "macros.html" import models_link, other_buckets,
+        bootstrap_links, favicon_links, navbar with context %}
   <head lang="en">
       <meta charset="UTF-8">
       <meta http-equiv="Content-Language" content="en">
-      <title>Minigo Figure 3 Reproduction</title>
+      <title>Minigo Figure 3 reproduction</title>
 
       {{ favicon_links() }}
+      {{ bootstrap_links() }}
+
       <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
 
       <script src="https://d3js.org/d3.v4.min.js"></script>
@@ -39,6 +42,8 @@
       </style>
   </head>
   <body>
+    {{ navbar('figure_three', 'Figure 3 Reproduction') }}
+
     <h1>
       {{ models_link() }}
       | <a href="{{ url_for('models_graphs', bucket=bucket) }}">Graphs</a>

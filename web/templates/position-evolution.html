@@ -15,13 +15,15 @@
 -->
 <!DOCTYPE html>
 <html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
-  {% from "macros.html" import models_link, favicon_links with context %}
+  {% from "macros.html" import models_link,
+      bootstrap_links, favicon_links, navbar with context %}
   <head lang="en">
       <meta charset="UTF-8">
       <meta http-equiv="Content-Language" content="en">
       <title>Minigo {{ group|title }} Evolution</title>
 
       {{ favicon_links() }}
+      {{ bootstrap_links() }}
       <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
 
       <script type="text/javascript" src="{{ url_for('static',filename='graphs.js') }}"></script>
@@ -70,6 +72,9 @@
       </style>
   </head>
   <body>
+    {{ navbar('models_evolution',
+              bucket + ' Evolution',
+       ) }}
     <h1>
         {{ models_link() }}
         | Model Evolution ({{ count }})

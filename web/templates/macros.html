@@ -43,9 +43,17 @@
 
 
 {% set TOP_LEVEL_PAGES = [
+  ('models_details', 'Model list'),
   ('models_graphs', 'Graphs'),
   ('figure_three', 'Figure 3'),
   ('eval_graphs', 'Evaluation'),
+] %}
+
+{# TODO(Sethtroisi): make all model pages accept newest #}
+{% set MODEL_PAGES = [
+  ('model_details', 'Model Details'),
+  ('model_graphs', 'Model Graphs'),
+  ('model_eval', 'Model Evaluation'),
 ] %}
 
 {% set MINIGO_FULL_SIZE_RUNS = [
@@ -55,7 +63,7 @@
 
 {% macro navbar(current_page, page_desc, model=None, other_page=None) -%}
   {% set other_page = other_page or current_page %}
-  {% set model = model or "latest" %}
+  {% set model = model or "newest" %}
   <nav class="navbar navbar-default">
     <div class="container-fluid">
       <!-- Brand and toggle get grouped for better mobile display -->
@@ -85,7 +93,14 @@
                   <li><a href="{{ url_for(page, bucket=bucket) }}">{{name}}</a></li>
                 {%- endif -%}
               {%- endfor -%}
-              {# TODO(sethtroisi): Add per model links use model or latest #}
+              <li role="separator" class="divider"></li>
+              {%- for page, name in MODEL_PAGES -%}
+                {%- if page == current_page -%}
+                  <li class="active"><a href="#">{{name}}</a></li>
+                {% else %}
+                  <li><a href="{{ url_for(page, bucket=bucket, model_name=model) }}">{{name}}</a></li>
+                {%- endif -%}
+              {%- endfor -%}
             </ul>
           </li>
             <li><p class="navbar-text"><strong>{{page_desc}}</strong><p></li>
