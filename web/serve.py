@@ -140,6 +140,7 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
 
     return render_template(
         'secret-site-nav.html',
+        bucket=bucket,
         logs=log_datas,
         full_count=full_count,
         secret_vars=secret_vars,

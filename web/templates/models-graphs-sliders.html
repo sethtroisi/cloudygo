@@ -70,14 +70,6 @@
   <body>
     {{ navbar('models_graphs_sliders', 'Wonky Unsupported Graphs') }}
 
-    <h1>
-        {{ models_link() }}
-        | <a href="{{ url_for('models_graphs', bucket=bucket) }}">Graphs</a>
-        | Slider Graphs
-        | <a href="{{ url_for('figure_three', bucket=bucket) }}">Figure 3</a>
-        | <a href="{{ url_for('eval_graphs', bucket=bucket) }}">Evaluation</a>
-    </h1>
-    <hr>
     <span id="opening-container">
         <input type="range" id="opening-select" autofocus>
         <span id="opening-span"></span>

@@ -29,14 +29,7 @@
 
   <body>
     {{ navbar('eval_graphs', "Sorry evaluation ratings don't exist yet :(") }}
-    <h1>
-      {{ models_link() }}
-      | <a href="{{ url_for('models_graphs', bucket=bucket) }}">Graphs</a>
-      | <a href="{{ url_for('figure_three', bucket=bucket) }}">Figure 3</a>
-      | Evaluation
-      {{ other_buckets('eval_graphs') }}
-    </h1>
-    <hr>
+
     <h1>
         Sorry, {{ bucket }} doesn't have enough evaluation games yet (currently {{ total_games}}).
         <hr>

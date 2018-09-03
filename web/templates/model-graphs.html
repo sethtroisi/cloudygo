@@ -69,14 +69,7 @@
               model=model[2],
               other_page='models_details',
        ) }}
-    <h1>
-        {{ models_link() }}
-        | <a class="model-name" href="{{ url_for('model_details', bucket=bucket, model_name=model[2]) }}">
-            {{ model[1] }} Details</a>
-        | Graphs
-    </h1>
 
-    <hr>
     <div class="wgo-container policy-data">
       <input type="range" id="policy-select">
       <div class="diagram-title"></div>

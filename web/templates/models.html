@@ -51,16 +51,7 @@
   </head>
   <body>
     {{ navbar('models_details', 'Model list') }}
-    <h1>
-        {{ bucket }} Models
-        | <a href="{{ url_for('models_graphs', bucket=bucket, last_n=100) }}">Graphs</a>
-        | <a href="{{ url_for('figure_three', bucket=bucket) }}">Figure 3</a>
-        | <a href="{{ url_for('eval_graphs', bucket=bucket) }}">Evaluation</a>
-        {{ other_buckets() }}
-        <div class="right-nav">
-          (<a href="{{ url_for('site_nav', bucket=bucket) }}">site nav</a>)
-        </div>
-    </h1>
+
     {% set rows = 30 %}
     {% set columns = (models|length - 1 + rows) // rows %}
     {% for c in range(columns) %}

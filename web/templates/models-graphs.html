@@ -59,13 +59,6 @@
   <body>
     {{ navbar('models_graphs', bucket + ' graphs') }}
 
-    <h1>
-        {{ models_link() }}
-        | Graphs
-        | <a href="{{ url_for('figure_three', bucket=bucket) }}">Figure 3</a>
-        | <a href="{{ url_for('eval_graphs', bucket=bucket) }}">Evaluation</a>
-    </h1>
-    <hr>
     <svg id="winrate-svg"></svg>
     <svg id="game-len-simple-svg"></svg>
     <svg id="bad-resign-rate-svg"></svg>

@@ -75,14 +75,8 @@
               model=model_a[4],
               other_page='models_details',
        ) }}
-    <h1>
-        {{ models_link() }}
-        | <a class="model-name" href="{{ url_for('model_details', bucket=bucket, model_name=model_a[4]) }}">
-            {{ model_a[1] }} Details</a>
-        | {{ group|title }} Comparison {{ model_a[4] }} vs {{ model_b[4] }}
-    </h1>
+    {# TODO(sethtroisi): More explicit link to model_a[1] Details #}
 
-    <hr>
     <div class="container-container">
       <div class="input-container">
         <input type="range" id="position-select" autofocus>

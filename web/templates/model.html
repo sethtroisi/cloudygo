@@ -65,15 +65,8 @@
               model=model[1],
               other_page='models_details',
        ) }}
-    <h1>
-        {{ models_link() }}
-        | {{ model_link('<', prev_model) }}
-        <span class="model-name">{{ model[1] }}</span> Details
-        {{ model_link('>', next_model) }}
-        {{ model_link('>>', 'newest') }}
-        | <a href="{{ url_for('model_graphs', bucket=bucket, model_name=model[2]) }}">Graphs</a>
-    </h1>
-    <hr>
+    {# TODO(sethtroisi): prev, next, newest links #}
+
     <table>
       <thead>
         <th colspan="2">

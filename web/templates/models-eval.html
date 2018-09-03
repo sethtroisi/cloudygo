@@ -89,14 +89,7 @@
   </head>
   <body>
     {{ navbar('eval_graphs', 'Evaluation ratings generated from eval self-play games') }}
-    <h1>
-      {{ models_link() }}
-      | <a href="{{ url_for('models_graphs', bucket=bucket) }}">Graphs</a>
-      | <a href="{{ url_for('figure_three', bucket=bucket) }}">Figure 3</a>
-      | Evaluation
-      {{ other_buckets('eval_graphs') }}
-    </h1>
-    <hr>
+
     {% if not is_sorted %}
     <div class="ratings-scatter">
       <svg class="model-graph" id="rating-svg"></svg>

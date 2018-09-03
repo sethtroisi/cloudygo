@@ -65,14 +65,7 @@
               display_name + ": evaluation stats and games data",
               model=name,
               other_page='models_details') }}
-    <h1>
-      {{ models_link() }}
-      | <a href="{{ url_for('models_graphs', bucket=bucket) }}">Graphs</a>
-      | <a href="{{ url_for('eval_graphs', bucket=bucket) }}">Evaluations</a>
-      | <a href="{{ url_for('model_details', bucket=bucket, model_name=overall[0]) }}"
-        >{{ display_name }}</a>
-    </h1>
-    <hr>
+
     <table class="models-table overall">
       <tbody>
       <tr>

@@ -120,6 +120,7 @@ if [[ ! -z "$EVALS" ]]; then
     TOMORROW=$(date --date=tomorrow +"%Y-%m-%d")
 
     dest="$DEST/$RUN/eval"
+    #mkdir -p "$dest"
     #gsutil -m rsync -r "$cloud_path" "$dest"
 
     mkdir -p "$dest/$TODAY" "$dest/$YESTERDAY" "$dest/$TOMORROW"
