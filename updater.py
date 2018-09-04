@@ -119,6 +119,7 @@ def update_games(cloudy, bucket):
     print("{}: Updating Models and Games".format(bucket))
 
     # Setup models if they don't exist
+    # TODO(sethtroisi): This seems to take a long time?
     cloudy.update_models(bucket)
 
     models = cloudy.get_models(bucket)

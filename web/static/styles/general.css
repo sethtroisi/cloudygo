@@ -6,14 +6,18 @@ body {
     text-transform: capitalize;
 }
 
-.back {
-    margin-right: 8px;
+// Breadcrumbs are not working with this
+//nav.navbar a {
+//    font-size: 1.5em;
+//    line-height: 1.5em;
+//}
+
+.navbar .dropdown-toggle.h2 {
+    margin: auto;
 }
 
-.right-nav {
-    float: right;
-}
-
-h1 {
-    overflow: auto;
+.navbar .breadcrumb {
+    margin: 0;
+    padding: 0 0 0 1rem;
+    background-color: inherit;
 }

@@ -39,6 +39,9 @@
   <link rel="stylesheet" href="{{base}}/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
   <link rel="stylesheet" href="{{base}}/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
   <script src="{{base}}/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="{{ url_for('static',filename='styles/general.css') }}">
+
 {%- endmacro %}
 
 
@@ -56,54 +59,68 @@
   ('model_eval', 'Model Evaluation'),
 ] %}
 
+{% set MODEL_PAGE_KEYS = dict(MODEL_PAGES).keys() %}
+{% set ALL_PAGES = TOP_LEVEL_PAGES + [("separator","")] + MODEL_PAGES %}
+
 {% set MINIGO_FULL_SIZE_RUNS = [
   ('v10-19x19', ' - 20x256'), ('v9-19x19', ' - 20x128'),
   ('v7-19x19', ' - 10x128'), ('v5-19x19', ' - 10x128'),
 ] %}
 
 {% macro navbar(current_page, page_desc, model=None, other_page=None) -%}
-  {% set other_page = other_page or current_page %}
+  {% set other_run_page = other_page or current_page %}
   {% set model = model or "newest" %}
+  {% set is_model_page = current_page in MODEL_PAGES_KEYS %}
+  {% set page_name = dict(TOP_LEVEL_PAGES + MODEL_PAGES).get(current_page, "") %}
+
   <nav class="navbar navbar-default">
     <div class="container-fluid">
-      <!-- Brand and toggle get grouped for better mobile display -->
       <div class="navbar-header">
         {# used for this devices when all stuff doesn't fit on nav bar #}
-        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs- example-navbar-collapse-1" aria-expanded="false">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse-1" aria-expanded="false">
           <span class="sr-only">Toggle navigation</span>
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
         </button>
         <a class="navbar-brand" href="/">CloudyGo</a>
+        {# TODO(sethtroisi): Add breadcrumbs #}
       </div>
 
-      <!-- Collect the nav links, forms, and other content for toggling -->
-      <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <!-- This div toggles when screen is thin -->
+      <div class="collapse navbar-collapse" id="navbar-collapse-1">
         <ul class="nav navbar-nav">
-          <li>{{ models_link() }}</li>
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
                 aria-haspopup="true" aria-expanded="false">Pages <span class="caret"></span></a>
             <ul class="dropdown-menu">
-              {%- for page, name in TOP_LEVEL_PAGES -%}
-                {%- if page == current_page -%}
-                  <li class="active"><a href="#">{{name}}</a></li>
+              {% for page, name in ALL_PAGES %}
+                {% if page == "separator" %}
+                  <li role="separator" class="divider"></li>
+                {% elif page == current_page %}
+                  <li class="disabled"><a href="#">{{name}}</a></li>
                 {% else %}
-                  <li><a href="{{ url_for(page, bucket=bucket) }}">{{name}}</a></li>
-                {%- endif -%}
-              {%- endfor -%}
-              <li role="separator" class="divider"></li>
-              {%- for page, name in MODEL_PAGES -%}
-                {%- if page == current_page -%}
-                  <li class="active"><a href="#">{{name}}</a></li>
-                {% else %}
-                  <li><a href="{{ url_for(page, bucket=bucket, model_name=model) }}">{{name}}</a></li>
-                {%- endif -%}
-              {%- endfor -%}
+                  {% if page in MODEL_PAGE_KEYS %}
+                    <li><a href="{{ url_for(page, bucket=bucket, model_name=model) }}">{{name}}</a></li>
+                  {% else %}
+                    <li><a href="{{ url_for(page, bucket=bucket) }}">{{name}}</a></li>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
             </ul>
           </li>
-            <li><p class="navbar-text"><strong>{{page_desc}}</strong><p></li>
+          <li class="navbar-text">
+            <ol class="breadcrumb">
+              <li><a href="{{ url_for('models_details', bucket=bucket) }}">{{bucket}}</a></li>
+              {% if is_model_page and current_page != 'model_details' %}
+                <li><a href="{{ url_for('model_details', bucket=bucket, model_name=model) }}">Details</a></li>
+              {% endif %}
+              {% if page_name and page_name != page_desc %}
+                <li class="breadcrumb-item active" aria-current="page">{{page_name}}</li>
+              {% endif %}
+            </ol>
+          </li>
+          <li><p class="navbar-text"><strong>{{page_desc}}</strong></p></li>
         </ul>
         {# TODO(sethtroisi): Consider adding model/bucket search #}
         <ul class="nav navbar-nav navbar-right">
@@ -112,39 +129,28 @@
             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
                 aria-haspopup="true" aria-expanded="false">Other Runs <span class="caret"></span></a>
             <ul class="dropdown-menu">
-              {{ other_buckets_li(MINIGO_FULL_SIZE_RUNS, page=other_page) }}
+              {{ other_buckets(MINIGO_FULL_SIZE_RUNS, page=other_run_page) }}
               <li role="separator" class="divider"></li>
-              {{ other_buckets_li([ ('v3-9x9', '') ], page=other_page) }}
+              {{ other_buckets([ ('v3-9x9', '') ], page=other_run_page) }}
               <li role="separator" class="divider"></li>
-              {{ other_buckets_li([
+              {{ other_buckets([
                     ('leela-zero-v1', ' (partial)'), ('cross-eval', ' (eval only)'),
-                  ], page=other_page) }}
+                  ], page=other_run_page) }}
             </ul>
           </li>
         </ul>
-      </div><!-- /.navbar-collapse -->
-    </div><!-- /.container-fluid -->
+      </div> <!-- /.navbar-collapse -->
+    </div> <!-- /.container-fluid -->
   </nav>
 {%- endmacro %}
 
-{% macro other_buckets_li(others, page='models_details') -%}
-  {%- for other_bucket, desc in others -%}
-    {%- if bucket != other_bucket -%}
-      <li><a class="h2" href="{{ url_for(page, bucket=other_bucket) }}">{{other_bucket}}{{desc}}</a></li>
-    {%- endif -%}
-  {%- endfor -%}
-{%- endmacro %}
-
-{% macro other_buckets(page='models_details') -%}
-  <div class="right-nav">(
-  {%- for other_bucket in ['v10-19x19', 'v9-19x19', 'v7-19x19', 'v5-19x19', 'v3-9x9', 'leela-zero-v1'] -%}
-     {%- if bucket != other_bucket -%}
-      <a href="{{ url_for(page, bucket=other_bucket) }}">{{other_bucket}}</a>&nbsp;
-     {%- endif -%}
-   {%- endfor -%}
-  )</div>
-{%- endmacro %}
-
+{% macro other_buckets(others, page='models_details') %}
+  {% for other_bucket, desc in others %}
+    <li class={{"disabled" if bucket == other_bucket else ""}}>
+      <a class="h2" href="{{ url_for(page, bucket=other_bucket) }}">{{other_bucket}}{{desc}}</a>
+    </li>
+  {% endfor %}
+{% endmacro %}
 
 {% macro cloudy_footer() -%}
     <div>
