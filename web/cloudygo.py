@@ -28,6 +28,7 @@ from collections import Counter, defaultdict
 
 import choix
 import numpy as np
+from tqdm import tqdm
 
 from . import sgf_utils
 from . import utils
@@ -838,7 +839,8 @@ class CloudyGo:
         # TODO(sethtroisi): find a way to update clean with full.
         base_paths = os.path.join(self.sgf_path(bucket), '*', '*')
         time_dirs = sorted(glob.glob(base_paths))
-        for time_dir in time_dirs[-48:]:
+        # TODO(sethtroisi): -48? or something better?
+        for time_dir in time_dirs:
             name = os.path.basename(time_dir)
 
             game_paths = glob.glob(os.path.join(time_dir, '*.sgf'))
@@ -882,6 +884,7 @@ class CloudyGo:
             games_source = self._get_update_games_time_dir(bucket, max_inserts)
 
         for model_name, to_process, len_existing in games_source:
+            print (model_name, len_existing, len(to_process))
             if len(to_process) > 0:
                 print("About to process {} games for {}".format(
                     len(to_process), model_name))
@@ -1095,8 +1098,12 @@ class CloudyGo:
 
         new_evals = []
         if len(evals_to_process) > 0:
-            mapper = self.pool.map if self.pool else map
-            new_evals = mapper(CloudyGo.process_eval, evals_to_process)
+            print()
+            mapper = self.pool.imap if self.pool else map
+            new_evals = list(tqdm(
+                mapper(CloudyGo.process_eval, evals_to_process),
+                unit="eval games",
+                total=len(evals_to_process)))
 
             broken = new_evals.count(None)
             new_evals = list(filter(None.__ne__, new_evals))
