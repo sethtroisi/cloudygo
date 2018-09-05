@@ -1072,6 +1072,7 @@ class CloudyGo:
 
         existing = self.get_existing_eval_games(bucket)
         evals_to_process = []
+        new_eval_nums = set()
 
         eval_games = glob.glob(
             os.path.join(eval_dir, '**', '*.sgf'),
@@ -1087,6 +1088,8 @@ class CloudyGo:
             eval_num, m1, m2 = CloudyGo.get_eval_parts(filename)
             if eval_num in existing:
                 continue
+            assert eval_num not in new_eval_nums, (eval_num, filename)
+            new_eval_nums.add(eval_num)
 
             # Minigo eval games have white before black
             white_model = bucket_salt + m1
