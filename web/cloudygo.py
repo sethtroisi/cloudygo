@@ -272,6 +272,9 @@ class CloudyGo:
         return model_nums[0][0]
 
     def load_model(self, bucket, model_name):
+        if model_name == 'newest':
+            model_name = self.get_newest_model_num(bucket)
+
         model = self.query_db(
             'SELECT * FROM models WHERE bucket = ? AND (raw_name = ? or num = ?)',
             (bucket, model_name, model_name))

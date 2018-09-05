@@ -687,9 +687,6 @@ def model_eval(bucket, model_name):
 # Supports full name (0000102-monarch as well as 102)
 @app.route('/<bucket>/details/<model_name>')
 def model_details(bucket, model_name):
-    if model_name == 'newest':
-        model_name = cloudy.get_newest_model_num(bucket)
-
     model, model_stats = cloudy.load_model(bucket, model_name)
     if model is None:
         return 'Model {} not found'.format(model_name)
