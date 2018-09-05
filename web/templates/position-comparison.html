@@ -72,11 +72,10 @@
     {{ navbar('position_comparison',
               '{} Comparison of {} vs {}'.format(
                   group|title, model_a[4], model_b[4]),
-              model=model_a[4],
+              model=model_a[2],
               other_page='models_details',
        ) }}
     {# TODO(sethtroisi): More explicit link to model_a[1] Details #}
-
     <div class="container-container">
       <div class="input-container">
         <input type="range" id="position-select" autofocus>

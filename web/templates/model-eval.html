@@ -60,7 +60,7 @@
   </head>
   <body>
     {% set name = overall[1] if is_sorted else model[2] %}
-    {% set display_name = name.replace('000', '') %}
+    {% set display_name = (name|string).replace('000', '') %}
     {{ navbar('model_eval',
               display_name + ": evaluation stats and games data",
               model=name,
