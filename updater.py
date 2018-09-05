@@ -118,9 +118,8 @@ def update_games(cloudy, bucket):
     updates = 0
     print("{}: Updating Models and Games".format(bucket))
 
-    # Setup models if they don't exist
-    # TODO(sethtroisi): This seems to take a long time?
-    cloudy.update_models(bucket)
+    # Setup models if they don't exist, don't update stats
+    cloudy.update_models(bucket, regen_all_stats=-1)
 
     models = cloudy.get_models(bucket)
     if len(models) == 0:
@@ -145,13 +144,14 @@ if __name__ == "__main__":
 
     arg1 = sys.argv[1] if len(sys.argv) > 1 else ""
     buckets = sys.argv[2:] if len(sys.argv) > 2 else [CURRENT_BUCKET]
+    assert 'True' not in buckets and 'False' not in buckets
 
     # Note: Models are also updated in update_games.
-    if len(sys.argv) > 3 and arg1 == "models":
-        for bucket in sys.argv[3:]:
+    if arg1 in ("models", "all_models"):
+        for bucket in buckets:
             updates += cloudy.update_models(
                 bucket,
-                refresh_all=(sys.argv[2] == "True"))
+                regen_all_stats=(arg1 == "all_models"))
 
     if len(sys.argv) == 1 or arg1 == "games":
         for bucket in buckets:

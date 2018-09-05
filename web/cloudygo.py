@@ -549,7 +549,7 @@ class CloudyGo:
 
     #### PAGES ####
 
-    def update_models(self, bucket, refresh_all=False):
+    def update_models(self, bucket, regen_all_stats=False):
         # LEELA-HACK
         if CloudyGo.LEELA_ID in bucket:
             model_glob = os.path.join(self.model_path(bucket), '[0-9a-f]*')
@@ -611,8 +611,9 @@ class CloudyGo:
                 'SELECT max(stats_games) FROM model_stats WHERE model_id = ?',
                 (model_id,))
             currently_processed = currently_processed[0][0] or 0
-            if not refresh_all and num_games == currently_processed:
-                continue
+            if regen_all_stats != True:
+                if regen_all_stats == -1 or num_games == currently_processed:
+                    continue
 
             opening_name = str(model_id) + '-favorite-openings.png'
             opening_file = os.path.join(

@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS bucket_model_range(
 );
 
 CREATE TABLE IF NOT EXISTS models (
+  /* TODO add new display_name column */
   model_id integer primary key,
   name text not null,
   raw_name text not null,
