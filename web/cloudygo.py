@@ -19,6 +19,7 @@ import datetime
 import functools
 import glob
 import hashlib
+import itertools
 import math
 import os
 import re
@@ -843,7 +844,7 @@ class CloudyGo:
         # TODO(sethtroisi): find a way to update clean with full.
         base_paths = os.path.join(self.sgf_path(bucket), '*', '*')
         time_dirs = sorted(glob.glob(base_paths))
-        # TODO(sethtroisi): -48? or something better?
+        # NOTE: sorted puts clean before full so we can't filter to [-N:]
         for time_dir in time_dirs:
             name = os.path.basename(time_dir)
 
@@ -856,6 +857,7 @@ class CloudyGo:
     def _get_update_games_model(self, bucket, max_inserts):
         skipped = []
         for model in self.get_models(bucket):
+            # HACK: only newest one day of model folders are updated.
             # Check if directory mtime is recent, if not skip
             test_d = os.path.join(self.sgf_path(bucket), model[2], 'full')
             m_time = os.path.getmtime(test_d) if os.path.exists(test_d) else 0
@@ -877,6 +879,23 @@ class CloudyGo:
                 len(skipped), utils.list_preview(skipped)))
 
 
+    def map_and_filter(self, funct, items, unit="it"):
+        length = len(items)
+        mapper = self.pool.imap if self.pool else itertools.imap
+        mapped = mapper(funct, items)
+
+        if length < 100:
+            results = list(mapped)
+        else:
+            results = list(tqdm(mapped, unit=unit, total=length))
+
+        broken = results.count(None)
+        if broken > 10:
+            print("{} Broken".format(broken))
+
+        return list(filter(None.__ne__, results))
+
+
     def update_games(self, bucket, max_inserts):
         # This is REALLY SLOW because it's potentially >1M items
         # loop by model to avoid huge globs and commits
@@ -893,9 +912,7 @@ class CloudyGo:
                 print("About to process {} games for {}".format(
                     len(to_process), model_name))
 
-                mapper = self.pool.map if self.pool else map
-                new_games = mapper(CloudyGo.process_game, to_process)
-                new_games = list(filter(None.__ne__, new_games))
+                new_games = self.map_and_filter(CloudyGo.process_game, to_process)
 
                 # DARN YOU TIME BASED MODELS
                 #if bucket in CloudyGo.MINIGO_TS:
@@ -1106,17 +1123,10 @@ class CloudyGo:
         new_evals = []
         if len(evals_to_process) > 0:
             print()
-            mapper = self.pool.imap if self.pool else map
-            new_evals = list(tqdm(
-                mapper(CloudyGo.process_eval, evals_to_process),
-                unit="eval games",
-                total=len(evals_to_process)))
-
-            broken = new_evals.count(None)
-            new_evals = list(filter(None.__ne__, new_evals))
-
-            if broken > 10:
-                print("{} Broken games".format(broken))
+            new_evals = self.map_and_filter(
+                CloudyGo.process_eval,
+                evals_to_process,
+                unit="eval games")
 
             # Post-process PB/PW to model_id (when filename is ambiguous)
             new_evals = self.process_sgf_names(bucket, new_evals)
