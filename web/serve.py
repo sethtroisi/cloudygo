@@ -862,7 +862,6 @@ def eval_json(bucket):
     # Not used by CloudyGo but easy to support for external people
 
     model_range = CloudyGo.bucket_model_range(bucket)
-    models = cloudy.get_newest_model_num(bucket)
 
     data = cloudy.query_db(
         'SELECT '
@@ -879,7 +878,6 @@ def ratings(bucket):
     # Not used by CloudyGo but easy to support for external people
 
     model_range = CloudyGo.bucket_model_range(bucket)
-    models = cloudy.get_newest_model_num(bucket)
 
     ratings = cloudy.query_db(
         'SELECT model_id_1 % 10000, round(rankings, 3), round(std_err,3) '

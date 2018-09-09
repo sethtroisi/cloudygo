@@ -69,8 +69,8 @@
 
 {% macro navbar(current_page, page_desc, model=None, other_page=None) -%}
   {% set other_run_page = other_page or current_page %}
-  {% set model = model or "newest" %}
-  {% set is_model_page = current_page in MODEL_PAGES_KEYS %}
+  {% set model = (model or 'newest')|capitalize %}
+  {% set is_model_page = current_page in MODEL_PAGE_KEYS %}
   {% set page_name = dict(TOP_LEVEL_PAGES + MODEL_PAGES).get(current_page, "") %}
 
   <nav class="navbar navbar-default">
@@ -84,7 +84,6 @@
           <span class="icon-bar"></span>
         </button>
         <a class="navbar-brand" href="/">CloudyGo</a>
-        {# TODO(sethtroisi): Add breadcrumbs #}
       </div>
 
       <!-- This div toggles when screen is thin -->
@@ -116,11 +115,11 @@
                 <li><a href="{{ url_for('model_details', bucket=bucket, model_name=model) }}">Details</a></li>
               {% endif %}
               {% if page_name and page_name != page_desc %}
-                <li class="breadcrumb-item active" aria-current="page">{{page_name}}</li>
+                <li class="active" aria-current="page">{{page_name}}</li>
               {% endif %}
             </ol>
           </li>
-          <li><p class="navbar-text"><strong>{{page_desc}}</strong></p></li>
+          <p class="navbar-text page-desc">{{page_desc|title}}</p>
         </ul>
         {# TODO(sethtroisi): Consider adding model/bucket search #}
         <ul class="nav navbar-nav navbar-right">

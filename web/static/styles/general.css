@@ -6,11 +6,16 @@ body {
     text-transform: capitalize;
 }
 
-// Breadcrumbs are not working with this
-//nav.navbar a {
-//    font-size: 1.5em;
-//    line-height: 1.5em;
-//}
+/* It would be lovely to have this truncate at page thinned */
+.page-desc {
+}
+
+/* Breadcrumbs are not working with this */
+nav.navbar a,
+nav.navbar p {
+    font-size: 1.5em;
+    line-height: 1.5em;
+}
 
 .navbar .dropdown-toggle.h2 {
     margin: auto;

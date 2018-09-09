@@ -273,7 +273,7 @@ class CloudyGo:
         return model_nums[0][0]
 
     def load_model(self, bucket, model_name):
-        if model_name == 'newest':
+        if str(model_name).lower() == 'newest':
             model_name = self.get_newest_model_num(bucket)
 
         model = self.query_db(
@@ -842,16 +842,20 @@ class CloudyGo:
 
         # TODO find a way to rsync faster
         # TODO(sethtroisi): find a way to update clean with full.
-        base_paths = os.path.join(self.sgf_path(bucket), '*', '*')
-        time_dirs = sorted(glob.glob(base_paths))
-        # NOTE: sorted puts clean before full so we can't filter to [-N:]
-        for time_dir in time_dirs:
-            name = os.path.basename(time_dir)
+        for d_type in ['full', 'clean']:
+            base_paths = os.path.join(self.sgf_path(bucket), d_type, '*')
+            time_dirs = sorted(glob.glob(base_paths))
+            print ("\t{}, {} folders: {}".format(
+                d_type,
+                len(time_dirs),
+                utils.list_preview(list(map(os.path.basename, time_dirs)), 2)))
+            for time_dir in time_dirs[-24:]:
+                name = os.path.basename(time_dir)
 
-            game_paths = glob.glob(os.path.join(time_dir, '*.sgf'))
-            to_process = CloudyGo._game_paths_to_to_process(
-                bucket, existing, model_lookup, game_paths, max_inserts)
-            yield name, to_process, len(existing)
+                game_paths = glob.glob(os.path.join(time_dir, '*.sgf'))
+                to_process = CloudyGo._game_paths_to_to_process(
+                    bucket, existing, model_lookup, game_paths, max_inserts)
+                yield name, to_process, len(existing)
 
 
     def _get_update_games_model(self, bucket, max_inserts):
