@@ -45,32 +45,37 @@
 {%- endmacro %}
 
 
-{% set TOP_LEVEL_PAGES = [
-  ('models_details', 'Model list'),
-  ('models_graphs', 'Graphs'),
-  ('figure_three', 'Figure 3'),
-  ('eval_graphs', 'Evaluation'),
-] %}
-
-{# TODO(Sethtroisi): make all model pages accept newest #}
-{% set MODEL_PAGES = [
-  ('model_details', 'Model Details'),
-  ('model_graphs', 'Model Graphs'),
-  ('model_eval', 'Model Evaluation'),
-] %}
-
-{% set MODEL_PAGE_KEYS = dict(MODEL_PAGES).keys() %}
-{% set ALL_PAGES = TOP_LEVEL_PAGES + [("separator","")] + MODEL_PAGES %}
-
-{% set MINIGO_FULL_SIZE_RUNS = [
-  ('v10-19x19', ' - 20x256'), ('v9-19x19', ' - 20x128'),
-  ('v7-19x19', ' - 10x128'), ('v5-19x19', ' - 10x128'),
-] %}
-
 {% macro navbar(current_page, page_desc, model=None, other_page=None) -%}
-  {% set other_run_page = other_page or current_page %}
   {% set model = (model or 'newest')|capitalize %}
-  {% set is_model_page = current_page in MODEL_PAGE_KEYS %}
+
+  {% set TOP_LEVEL_PAGES = [
+    ('models_details', 'Model list'),
+    ('models_graphs', 'Graphs'),
+    ('figure_three', 'Figure 3'),
+    ('eval_graphs', 'Evaluation'),
+  ] %}
+
+  {# TODO(Sethtroisi): make all model pages accept newest #}
+  {% set MODEL_PAGES = [
+    ('model_details', 'Model Details'),
+    ('model_graphs', 'Model Graphs'),
+    ('model_eval', model),
+  ] %}
+
+  {% set PAGE_PARENT = {
+    'model_graphs': ('model_details', 'Details'),
+    'model_eval': ('eval_graphs', 'Evaluation'),
+  } %}
+
+  {% set MODEL_PAGE_KEYS = dict(MODEL_PAGES).keys() %}
+  {% set ALL_PAGES = TOP_LEVEL_PAGES + [("separator","")] + MODEL_PAGES %}
+
+  {% set MINIGO_FULL_SIZE_RUNS = [
+    ('v10-19x19', ' - 20x256'), ('v9-19x19', ' - 20x128'),
+    ('v7-19x19', ' - 10x128'), ('v5-19x19', ' - 10x128'),
+  ] %}
+
+  {% set other_run_page = other_page or current_page %}
   {% set page_name = dict(TOP_LEVEL_PAGES + MODEL_PAGES).get(current_page, "") %}
 
   <nav class="navbar navbar-default">
@@ -111,8 +116,10 @@
           <li class="navbar-text">
             <ol class="breadcrumb">
               <li><a href="{{ url_for('models_details', bucket=bucket) }}">{{bucket}}</a></li>
-              {% if is_model_page and current_page != 'model_details' %}
-                <li><a href="{{ url_for('model_details', bucket=bucket, model_name=model) }}">Details</a></li>
+              {% if current_page in PAGE_PARENT %}
+                <li><a href="{{ url_for(PAGE_PARENT[current_page][0], bucket=bucket, model_name=model) }}">
+                  {{- PAGE_PARENT[current_page][1] -}}
+                </a></li>
               {% endif %}
               {% if page_name and page_name != page_desc %}
                 <li class="active" aria-current="page">{{page_name}}</li>

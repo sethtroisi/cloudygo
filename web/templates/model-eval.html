@@ -48,13 +48,20 @@
 
       <style>
         .models-table.overall {
-          font-size: 170%
+          font-size: 170%;
+          display: block;
         }
         .winrate, .rating {
           font-weight: bold;
         }
+        .opponent-link-column {
+          white-space: nowrap;
+        }
         .game-link-column {
-          width: 70%;
+          max-width: 630px;
+          max-height: 200px;
+          text-overflow: ellipsis;
+          overflow: hidden;
         }
       </style>
   </head>
@@ -62,34 +69,34 @@
     {% set name = overall[1] if is_sorted else model[2] %}
     {% set display_name = (name|string).replace('000', '') %}
     {{ navbar('model_eval',
-              display_name + ': evaluation stats and games data',
+              'evaluation stats and crosstable',
               model=name,
               other_page='models_details') }}
 
     <table class="models-table overall">
       <tbody>
-      <tr>
-        <td colspan="2" class="rating">
-          Rating {{ overall[2]|round|int }}
-        </td>
-        <td class="c-tooltip">
-          Uncertainty {{ overall[3]|round(1) }}
-          {{ tip('Std error of rating param') }}
-        </td>
-      </tr>
-      <tr>
-        <td>Overall {{ WLR(overall[6] + overall[8], overall[5] + overall[7]) }}</td>
-        <td>As Black {{ WLR(overall[6], overall[5]) }}</td>
-        <td>As White {{ WLR(overall[8], overall[7]) }}</td>
-      </tr>
-      <tr>
-        <td>vs Earlier Models {{ WLR(earlier_models[1], earlier_models[0]) }}</td>
-        <td>vs Later Models {{ WLR(later_models[1], later_models[0]) }}</td>
-        <td class="c-tooltip">
-          Played {{ played_better }} stronger* ranked models
-          {{ tip('Stronger based on current Bradley-Terry rankings') }}
-        </td>
-      </tr>
+        <tr>
+          <td colspan="2" class="rating">
+            Rating {{ overall[2]|round|int }}
+          </td>
+          <td class="c-tooltip">
+            Uncertainty {{ overall[3]|round(1) }}
+            {{ tip('Std error of rating param') }}
+          </td>
+        </tr>
+        <tr>
+          <td>Overall {{ WLR(overall[6] + overall[8], overall[5] + overall[7]) }}</td>
+          <td>As Black {{ WLR(overall[6], overall[5]) }}</td>
+          <td>As White {{ WLR(overall[8], overall[7]) }}</td>
+        </tr>
+        <tr>
+          <td>vs Earlier Models {{ WLR(earlier_models[1], earlier_models[0]) }}</td>
+          <td>vs Later Models {{ WLR(later_models[1], later_models[0]) }}</td>
+          <td class="c-tooltip">
+            Played {{ played_better }} stronger* ranked models
+            {{ tip('Stronger based on current Bradley-Terry rankings') }}
+          </td>
+        </tr>
       </tbody>
     </table>
     <table class="models-table">
@@ -103,32 +110,34 @@
       <tbody>
       {% for data in model_games[::-1] %}
         <tr>
-          <td>
+          <td class="opponent-link-column">
             <a href="{{ url_for('model_eval',
                                 bucket=bucket,
                                 model_name=data[1],
                                 sorted=is_sorted) }}">
               {{ data[2] if is_sorted else data[1] }}</a>
             <br>
-            {{ "{:+.0f}".format(data[3]) }} elo
+            {{- "{:+.0f}".format(data[3]) }} elo
           </td>
           <td>{{ WLR(data[7], data[6], 0) }}</td>
           <td>{{ WLR(data[9], data[8], 0) }}</td>
           <td>{{ WLR(data[7] + data[9], data[6] + data[8], 1) }}</td>
-          <td class="game-link-column">
-            {% set count = namespace(displayed=0) %}
-            {% for eval_game in eval_games %}
-              {% if eval_game[0] == data[1] or eval_game[1] == data[1] %}
-                {% set count.displayed = count.displayed + 1 %}
-                {% if count.displayed <= 100 %}
-                  <a href="{{ url_for('eval_view',
-                                      bucket=bucket,
-                                      model=data[0],
-                                      filename=eval_game[2],
-                                      type='eval') }}">{{loop.index }}</a>,
+          <td>
+            <div class="game-link-column">
+              {% set count = namespace(displayed=0) %}
+              {% for eval_game in eval_games %}
+                {% if eval_game[0] == data[1] or eval_game[1] == data[1] %}
+                  {% set count.displayed = count.displayed + 1 %}
+                  {% if count.displayed <= 100 %}
+                    <a href="{{ url_for('eval_view',
+                                        bucket=bucket,
+                                        model=data[0],
+                                        filename=eval_game[2],
+                                        type='eval') }}">{{loop.index }}</a>,
+                  {% endif %}
                 {% endif %}
-              {% endif %}
-            {% endfor %}
+              {% endfor %}
+            </div>
           </td>
         </tr>
       {% endfor %}
