@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS games2 (
   model_id integer not null,
   filename text not null,
 
+  /* TODO(sethtroisi): timestamp */
+
   black_won boolean not null,
   result text not null,
   result_margin float not null, /* 0 if resign for now */

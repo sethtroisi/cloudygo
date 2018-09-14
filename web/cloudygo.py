@@ -836,9 +836,16 @@ class CloudyGo:
             model_mtimes=model_mtimes,
             model_ids=model_ids)
 
+        day_old_model = model_lookup("{}-".format(time.time()))
+        min_model = min(model_range[0], day_old_model)
+
+
+        # TODO(sethtroisi): do better than getting all games,
+        #   filter by some reasonable timestamp or something.
         query = 'SELECT game_num FROM games2 WHERE model_id BETWEEN ? AND ?'
-        existing = set(num[0] for num in self.query_db(query, model_range))
-        print (len(existing), "existing games")
+        existing = set(num[0] for num in self.query_db(
+            query, (min_model, model_range[1])))
+        print("{} existing games (>= {})".format(len(existing), min_model))
 
         # TODO find a way to rsync faster
         # TODO(sethtroisi): find a way to update clean with full.
