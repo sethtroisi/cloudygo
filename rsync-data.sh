@@ -150,6 +150,11 @@ if [[ ! -z "$MIN_MODEL" ]]; then
     echo "Syncing $(echo "$models" | wc -l) models >= $MIN_MODEL"
 fi
 
+if [[ -z "$models" ]]; then
+    echo "NO MODELS FOUND!"
+    exit;
+fi
+
 read -p "Do you want to sync \"$cloud_path\" to \"$partial_dest\" [Y]/n: " answer
 case $answer in
     [Yy]* ) ;;

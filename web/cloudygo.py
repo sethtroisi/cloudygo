@@ -586,6 +586,10 @@ class CloudyGo:
             training_time_m = 120
             creation = int(os.path.getmtime(model_filename))
 
+            # TODO(sethtroisi): figure out how to avoid suming large numbers of games.
+            if last_updated - creation > (24 * 3600):
+                continue
+
             num_games = self.query_db(
                 'SELECT count(*), sum(has_stats) from games2 WHERE model_id = ?',
                 (model_id,))
@@ -836,9 +840,8 @@ class CloudyGo:
             model_mtimes=model_mtimes,
             model_ids=model_ids)
 
-        day_old_model = model_lookup("{}-".format(time.time()))
-        min_model = min(model_range[0], day_old_model)
-
+        day_old_model = model_lookup("{}-".format(int(time.time() - 2 * 86400)))
+        min_model = max(model_range[0], day_old_model)
 
         # TODO(sethtroisi): do better than getting all games,
         #   filter by some reasonable timestamp or something.
