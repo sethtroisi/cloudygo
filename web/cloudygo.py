@@ -38,10 +38,6 @@ from . import utils
 class CloudyGo:
     SALT_MULT = 10 ** 6
 
-    GAME_TIME_MOD = 10 ** 8  # Most of a year in seconds
-    GAME_POD_MULT = 10 ** 8  # Large enough for 6 hexdecimal characters
-    GAME_BUCKET_MULT = 10 ** 3
-
     DIR_EVAL_START = 2500  # offset from SALT_MULT to start
 
     # set by __init__ but treated as constant
@@ -91,7 +87,7 @@ class CloudyGo:
         return os.path.join(self.data_path(bucket), 'eval')
 
     def some_model_games(self, bucket, model_id, limit):
-        query = 'SELECT filename FROM games2 WHERE model_id = ? LIMIT ?'
+        query = 'SELECT filename FROM games WHERE model_id = ? LIMIT ?'
         return [p[0] for p in self.query_db(query, (model_id, limit))]
 
     def all_games(self, bucket, model, game_type='full'):
@@ -189,36 +185,28 @@ class CloudyGo:
             assert number.endswith('.sgf')
             # TODO(sethtroisi): these are generated from sgfsplit
             # come up with a better scheme (hash maybe) for numbering
-            return int(number[:-4])
+            return (1, int(number[:-4]))
 
         # MINIGO-HACK for timestamps
         # TODO: replace this hack with something different
         if 'tpu-player' in filename:
             assert filename.endswith('.sgf')
             parts = filename[:-4].split('-')
-            game = int(parts[0])
+            timestamp = parts[0]
             pod = parts[-2]
             pod_num = int(parts[-1])
             assert 0 <= pod_num <= 99
-
-            # Use the more unique lower time bits.
-            game = ((game % 10000) * 100) + pod_num
         else:
-            game, name = filename.split('-', 1)
+            timestamp, name = filename.split('-', 1)
             pod = name.split('-')[-1][:-4]
             pod_num = 0
 
-        game_num = int(game) % CloudyGo.GAME_TIME_MOD
-
-        pod_num = int(pod, 36)
-        assert pod_num < CloudyGo.GAME_POD_MULT
-        game_num = game_num * CloudyGo.GAME_POD_MULT + pod_num
-
         assert bucket_salt % CloudyGo.SALT_MULT == 0, bucket_salt
         bucket_num = bucket_salt // CloudyGo.SALT_MULT
-        game_num = game_num * CloudyGo.GAME_BUCKET_MULT + bucket_num
 
-        return game_num
+        timestamp = int(timestamp)
+        game_num = 1000 * int(pod, 36) + 100 * pod_num + bucket_num
+        return (timestamp, game_num)
 
     @staticmethod
     def get_eval_parts(filename):
@@ -300,8 +288,8 @@ class CloudyGo:
             game_num = CloudyGo.get_game_num(bucket_salt, filename)
             # NOTE: if table is altered * may return unexpected order
             game = self.query_db(
-                'SELECT * FROM games2 WHERE game_num = ?',
-                (game_num,))
+                'SELECT * FROM games WHERE timestamp = ?, game_num = ?',
+                game_num)
             if len(game) == 0:
                 continue
             games.append(game[0])
@@ -399,10 +387,15 @@ class CloudyGo:
 
         return data, view_type
 
-    def get_existing_games(self, model_id):
+    def get_existing_games(self, model_id, upper=None):
+        if upper == None:
+            upper = model_id
+        model_ids = (model_id, upper)
+
         # TODO(sethtroisi): rename table to games.
-        query = 'SELECT game_num FROM games2 WHERE model_id = ?'
-        return set(record[0] for record in self.query_db(query, (model_id,)))
+        query = ('SELECT timestamp, game_num FROM games '
+                'WHERE model_id BETWEEN ? AND ?')
+        return set(map(tuple, self.query_db(query, model_ids)))
 
     def get_existing_eval_games(self, bucket):
         model_range = CloudyGo.bucket_model_range(bucket)
@@ -540,7 +533,7 @@ class CloudyGo:
             'SELECT SUBSTR(early_moves_canonical,'
             '              0, instr(early_moves_canonical, ";")),'
             '       count(*)'
-            'FROM games2 WHERE model_id = ? '
+            'FROM games WHERE model_id = ? '
             'GROUP BY 1 ORDER BY 2 DESC LIMIT 16',
             (model_id,))
 
@@ -591,7 +584,7 @@ class CloudyGo:
                 continue
 
             num_games = self.query_db(
-                'SELECT count(*), sum(has_stats) from games2 WHERE model_id = ?',
+                'SELECT count(*), sum(has_stats) from games WHERE model_id = ?',
                 (model_id,))
             assert len(num_games) == 1
             num_games, num_stats_games = num_games[0]
@@ -632,7 +625,7 @@ class CloudyGo:
 
             # NOTE: if table is altered * may return unexpected order
             games = self.query_db(
-                'SELECT * from games2 WHERE model_id = ?',
+                'SELECT * from games WHERE model_id = ?',
                 (model_id,))
 
             for perspective in ['all', 'black', 'white']:
@@ -845,9 +838,7 @@ class CloudyGo:
 
         # TODO(sethtroisi): do better than getting all games,
         #   filter by some reasonable timestamp or something.
-        query = 'SELECT game_num FROM games2 WHERE model_id BETWEEN ? AND ?'
-        existing = set(num[0] for num in self.query_db(
-            query, (min_model, model_range[1])))
+        existing = self.get_existing_games(self, min_model, model_range[1])
         print("{} existing games (>= {})".format(len(existing), min_model))
 
         # TODO find a way to rsync faster
@@ -932,7 +923,7 @@ class CloudyGo:
                 #if bucket in CloudyGo.MINIGO_TS:
                 #    new_games = self.process_sgf_names(bucket, new_games)
 
-                self.insert_rows_db('games2', new_games)
+                self.insert_rows_db('games', new_games)
                 self.db().commit()
 
                 result = '{}: {} existing, {} inserts'.format(

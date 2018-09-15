@@ -39,7 +39,7 @@ cur = db.execute('SELECT model_id, bucket FROM models')
 model_buckets = dict((map(tuple, cur.fetchall())))
 
 cur = db.execute(
-    'SELECT game_num, model_id, early_moves, early_moves_canonical FROM games2')
+    'SELECT timestamp, game_num, model_id, early_moves, early_moves_canonical FROM games')
 rows = list(map(tuple, cur.fetchall()))
 cur.close()
 
@@ -49,7 +49,7 @@ print('Got {} games'.format(len(rows)))
 equal = 0
 mismatch = 0
 results = []
-for game_num, model_id, raw_moves, saved_canonical in tqdm(rows, unit="game"):
+for ts, game_num, model_id, raw_moves, saved_canonical in tqdm(rows, unit="game"):
     bucket = model_buckets[model_id]
     board_size = 9 if '9x9' in bucket else 19
 
@@ -62,13 +62,13 @@ for game_num, model_id, raw_moves, saved_canonical in tqdm(rows, unit="game"):
 #            print ("{} => {} did not match saved {}".format(
 #                raw_moves, canonical, saved_canonical))
 
-        results.append((canonical, game_num))
+        results.append((canonical, ts, game_num))
 
 T1 = time.time()
 print('Move canonical(ization) took: {:.1f} seconds'.format(T1 - T0))
 
 cur = db.executemany(
-    'UPDATE games SET early_moves_canonical = ? WHERE game_num = ?',
+    'UPDATE games SET early_moves_canonical = ? WHERE timestamp = ? AND game_num = ?',
     (results))
 db.commit()
 

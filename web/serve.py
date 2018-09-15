@@ -358,7 +358,7 @@ def models_graphs(bucket):
             'SELECT model_id % 10000, '
             '   black_won * -bleakest_eval_black + '
             '   (1-black_won) * bleakest_eval_white '
-            'FROM games2 '
+            'FROM games '
             'WHERE (model_id BETWEEN ? AND ?) AND black_won',
             (max(model_range[0], newest_model - 10), newest_model))
 
@@ -463,7 +463,7 @@ def models_graphs_sliders(bucket):
         game_length = cloudy.bucket_query_db(
             bucket,
             'SELECT model_id % 10000, black_won, 4*(num_moves/4), count(*)',
-            'games2', 'WHERE model_id % 10000 >= 50 ', 3, limit=20000)
+            'games', 'WHERE model_id % 10000 >= 50 ', 3, limit=20000)
 
         sum_unluck_per = cloudy.bucket_query_db(
             bucket,
@@ -472,7 +472,7 @@ def models_graphs_sliders(bucket):
             '   round(100 * (unluckiness_black - unluckiness_white) / '
             '       (unluckiness_black + unluckiness_white), 0), '
             '   count(*) ',
-            'games2', '', 3, limit=20000)
+            'games', '', 3, limit=20000)
 
         picture_sliders = []
 
@@ -723,7 +723,7 @@ def model_details(bucket, model_name):
     min_unluck = []
     for perspective, order_by in unluck_by:
         min_unluck_game = cloudy.query_db(
-            'SELECT filename, {} FROM games2 '
+            'SELECT filename, {} FROM games '
             'WHERE model_id = ? AND num_moves > 70 '
             'ORDER BY 2 ASC LIMIT 1'.format(order_by),
             (model_id,))
@@ -758,7 +758,7 @@ def model_graphs(bucket, model_name):
 
     # Divide by two to help avoid 'only black can win on even moves'
     game_length = cloudy.query_db(
-        'SELECT black_won, 2*(num_moves/2), count(*) FROM games2 ' +
+        'SELECT black_won, 2*(num_moves/2), count(*) FROM games ' +
         'WHERE model_id = ? GROUP BY 1,2 ORDER BY 1,2', (model[0],))
 
     #### OPENING RESPONSES ####
@@ -767,7 +767,7 @@ def model_graphs(bucket, model_name):
         'SELECT SUBSTR(early_moves_canonical,'
         '              0, instr(early_moves_canonical, ";")),'
         '       count(*)'
-        'FROM games2 WHERE model_id = ? GROUP BY 1 ORDER BY 2 DESC LIMIT 16',
+        'FROM games WHERE model_id = ? GROUP BY 1 ORDER BY 2 DESC LIMIT 16',
         (model_id,))
 
     favorite_response = []
@@ -781,7 +781,7 @@ def model_graphs(bucket, model_name):
             'SELECT SUBSTR(early_moves_canonical, '
             '              0, ?+instr(SUBSTR(early_moves_canonical, ?, 6), ";")),'
             '       count(*) '
-            'FROM games2 '
+            'FROM games '
             'WHERE model_id = ? AND num_moves > 2 AND early_moves_canonical LIKE ?'
             'GROUP BY 1 ORDER BY 2 DESC LIMIT 8',
             (len_move, len_move, model_id, black_first_move + ';%'))

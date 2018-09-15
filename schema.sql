@@ -46,13 +46,12 @@ CREATE TABLE IF NOT EXISTS models (
 );
 
 
-CREATE TABLE IF NOT EXISTS games2 (
-  game_num integer primary key,
+CREATE TABLE IF NOT EXISTS games (
+  timestamp integer not null,
+  game_num integer not null,
 
   model_id integer not null,
   filename text not null,
-
-  /* TODO(sethtroisi): timestamp */
 
   black_won boolean not null,
   result text not null,
@@ -60,7 +59,7 @@ CREATE TABLE IF NOT EXISTS games2 (
 
   num_moves integer not null,
 
-  early_moves text,
+  early_moves text, /* now just first two moves */
   early_moves_canonical text,
 
   has_stats boolean not null,
@@ -76,7 +75,9 @@ CREATE TABLE IF NOT EXISTS games2 (
 
   resign_threshold float,
   bleakest_eval_black float,
-  bleakest_eval_white float
+  bleakest_eval_white float,
+
+  PRIMARY KEY (timestamp, game_num)
 );
 
 
@@ -182,7 +183,7 @@ CREATE INDEX IF NOT EXISTS models_bucket_index ON models (bucket);
 CREATE INDEX IF NOT EXISTS models_name_index ON models (name);
 CREATE INDEX IF NOT EXISTS models_raw_name_index ON models (raw_name);
 
-CREATE INDEX IF NOT EXISTS game_model_index ON games2 (model_id);
+CREATE INDEX IF NOT EXISTS game_model_index ON games (model_id);
 
 CREATE INDEX IF NOT EXISTS eval_models_model_index_1 on eval_models (model_id_1);
 CREATE INDEX IF NOT EXISTS eval_models_model_index_2 on eval_models (model_id_2);

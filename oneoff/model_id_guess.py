@@ -54,17 +54,17 @@ model_guesser = functools.partial(
 
 T0 = time.time()
 
-game_data = query_db('SELECT game_num, filename, model_id '
-                     'FROM games2 WHERE model_id BETWEEN ? AND ?', model_range)
+game_data = query_db('SELECT timestamp, game_num, filename, model_id '
+                     'FROM games WHERE model_id BETWEEN ? AND ?', model_range)
 equal = 0
 results = []
-for game_num, filename, model_id in tqdm(game_data, unit="game"):
+for ts, game_num, filename, model_id in tqdm(game_data, unit="game"):
     guess_id = model_guesser(filename)
 
     if guess_id == model_id:
         equal += 1
     else:
-        results.append((guess_id, game_num))
+        results.append((guess_id, ts, game_num))
 
 T1 = time.time()
 print('Model Id Guess took: {:.1f} seconds'.format(T1 - T0))
@@ -72,7 +72,7 @@ print('Model Id Guess took: {:.1f} seconds'.format(T1 - T0))
 print("\t", results[:3], results[-3:])
 
 cur = db.executemany(
-    'UPDATE games2 SET model_id = ? WHERE game_num = ?',
+    'UPDATE games SET model_id = ? WHERE timestamp = ? AND game_num = ?',
     results)
 db.commit()
 
