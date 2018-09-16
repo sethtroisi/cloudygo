@@ -198,10 +198,12 @@ def game_view(bucket, model, filename):
     player_evals = []
     if len(data) > 3200:
         try:
+            # NOTE: evals are printed ~near~ the move they are for but plus or
+            # minus one because of 2*m+1 below.
             _, comments = sgf_utils.raw_game_data(data)
             evals = [comment[2][0] for comment in comments]
             for m, (b_eval, w_eval) in enumerate(zip(evals[::2], evals[1::2])):
-                player_evals.append((2 * m, b_eval, w_eval))
+                player_evals.append((2 * m + 1, b_eval, w_eval))
         except Exception as e:
             print("Failed to eval parse:", filename)
             print(e)

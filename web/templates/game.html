@@ -97,15 +97,11 @@
     {% if render_sorry %}
     <div class="sorry">Due to space constraints the debug version of this game was deleted, sorry :(</div>
     {% endif %}
-    <div data-wgo="{{ data }}"
-         {%- if 'M' in request.args -%} data-wgo-move="{{ request.args['M'] }}" {%- endif -%}
+    <div id="game-player"
          style="width: {{ 1000 if is_full else 800 }}px">
       Sorry, your browser doesn't support WGo.js.
-      <a href="{{ url_for('game_view',
-                          bucket=bucket,
-                          model=model,
-                          filename=filename,
-                          raw="",
+      <a href="{{ url_for('game_view', bucket=bucket, model=model,
+                          filename=filename, raw="",
                           type=request.args['type']) }}">Download SGF file directly</a>
     </div>
     <div class="centered">
@@ -115,7 +111,7 @@
   <script type="text/javascript">
     var game_data = JSON.parse('{{ player_evals | tojson | safe}}');
     if (game_data.length > 0) {
-      per_model_graph(
+      var plotting = per_model_graph(
           d3.select("#eval-graph"),
           game_data,
           [function(d) { return d[1]; }, function(d) { return d[2]; }],
@@ -125,6 +121,32 @@
           "Estimated Winrate by Black/White",
           "Turn",
           "Winrate");
+
+      var add_line = plotting[0];
+      var x = plotting[1];
+      var y = plotting[2];
+
+      var current_move_line = undefined;
+      function add_move_line(n) {
+        if (current_move_line) {
+          current_move_line.remove();
+        }
+        current_move_line = add_line(
+            [[n, -1], [n, 1]], x, y,
+            function(d) { return d[1]; }, '#F66');
+      }
+
+      var elem = document.getElementById("game-player");
+      var player = new WGo.BasicPlayer(elem, {
+        move: "{{ request.args.get('M', '') }}",
+        sgf: "{{ data.replace('\n', '\\n') }}",
+        update: function(update) {
+            var n = update.path.m;
+            //console.log("Game at move", n);
+            add_move_line(n);
+        }
+      });
+      player.setCoordinates(true);
     }
   </script>
 </html>

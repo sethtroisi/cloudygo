@@ -121,7 +121,7 @@ function per_model_graph(
             .x(function(d) { return x(d[0]); })
             .y(function(d) { return y(funct(d)); });
 
-        paths_group.append('path')
+        return paths_group.append('path')
             .attr('class', 'data-line')
             .data([data])
             .attr('d', line)
@@ -130,7 +130,8 @@ function per_model_graph(
 
     // Scale the range of the data
     var x;
-    if (data.length < 1 || data[0].length < 1 || data[0][0] == undefined || data[0][0].getDate == null) {
+    if (data.length < 1 || data[0].length < 1 ||
+        data[0][0] == undefined || data[0][0].getDate == null) {
       // Consider breaking out to different function
       x = d3.scaleLinear();
     } else {
@@ -170,6 +171,8 @@ function per_model_graph(
           x, y, include_right_axis ? y : null,
           x_text, y_text, title_text);
     }
+
+    return [add_line, x, y];
 }
 
 
