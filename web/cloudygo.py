@@ -54,7 +54,7 @@ class CloudyGo:
     CURRENT_BUCKET_CLOUD_BUCKET = os.environ.get(
         'CURRENT_CLOUD_BUCKET', DEBUG_GAME_CLOUD_BUCKET)
 
-    DEFAULT_BUCKET = 'v10-19x19'
+    DEFAULT_BUCKET = 'v11-19x19'
     LEELA_ID = 'leela-zero'
 
     # NOTE: For v9, v10 sgf folder has timestamp instead of model directories

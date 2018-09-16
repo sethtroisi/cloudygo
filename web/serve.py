@@ -194,7 +194,7 @@ def game_view(bucket, model, filename):
     # HACK: we'd like all eval games to be full in the future
     is_full_eval = 'cc-evaluator' in filename
 
-    # 3200 = 500 * 'B[aa];'
+    # 3200 > 500 * 'B[aa];'
     player_evals = []
     if len(data) > 3200:
         try:
