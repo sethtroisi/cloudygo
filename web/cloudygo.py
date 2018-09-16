@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import bisect
-import datetime
 import functools
 import glob
 import hashlib
@@ -25,7 +24,8 @@ import os
 import re
 import time
 import zlib
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, OrderedDict
+from datetime import datetime, timezone
 
 import choix
 import numpy as np
@@ -39,6 +39,9 @@ class CloudyGo:
     SALT_MULT = 10 ** 6
 
     DIR_EVAL_START = 2500  # offset from SALT_MULT to start
+
+    # FAST UPDATE HACK fastness
+    FAST_UPDATE_HOURS = 96 #24
 
     # set by __init__ but treated as constant
     INSTANCE_PATH = None
@@ -57,7 +60,9 @@ class CloudyGo:
     # NOTE: For v9, v10 sgf folder has timestamp instead of model directories
     # this radically complicates several parts of the update code. Those places
     # should be documented either MINIGO_TS or MINIGO-HACK.
-    MINIGO_TS = ['v9-19x19', 'v10-19x19']
+    MINIGO_TS = ['v9-19x19', 'v10-19x19', 'v11-19x19']
+    MINIGO_GAME_LENGTH = 25 * 60
+
 
     MODEL_CKPT = 'model.ckpt-'
 
@@ -237,8 +242,8 @@ class CloudyGo:
 
     @staticmethod
     def time_stamp_age(mtime):
-        now = datetime.datetime.now()
-        was = datetime.datetime.fromtimestamp(mtime)
+        now = datetime.now()
+        was = datetime.fromtimestamp(mtime)
         delta = now - was
         deltaDays = str(delta.days) + ' days '
         deltaHours = str(round(delta.seconds / 3600, 1)) + ' hours ago'
@@ -341,7 +346,7 @@ class CloudyGo:
     def guess_hour_dir(filename):
         file_time = int(filename.split('-', 1)[0])
         assert 1520000000 < file_time < 1540000000, file_time
-        dt = datetime.datetime.utcfromtimestamp(file_time)
+        dt = datetime.utcfromtimestamp(file_time)
         return dt.strftime("%Y-%m-%d-%H")
 
     def get_game_data(self, bucket, model, filename, view_type):
@@ -387,17 +392,17 @@ class CloudyGo:
 
         return data, view_type
 
-    def get_existing_games(self, model_id, upper=None):
-        if upper == None:
-            upper = model_id
-        model_ids = (model_id, upper)
+    def _get_games_from_model(self, model_id):
+        query = 'SELECT timestamp, game_num FROM games WHERE model_id = ?'
+        return set(map(tuple, self.query_db(query, model_id)))
 
-        # TODO(sethtroisi): rename table to games.
+    def _get_games_from_ts(self, model_range, ts_range):
         query = ('SELECT timestamp, game_num FROM games '
-                'WHERE model_id BETWEEN ? AND ?')
-        return set(map(tuple, self.query_db(query, model_ids)))
+                 'WHERE model_id  BETWEEN ? and ? AND '
+                 '      timestamp BETWEEN ? and ?')
+        return set(map(tuple, self.query_db(query, model_range + ts_range)))
 
-    def get_existing_eval_games(self, bucket):
+    def _get_eval_games(self, bucket):
         model_range = CloudyGo.bucket_model_range(bucket)
         query = ('SELECT eval_num '
                  'FROM eval_games '
@@ -543,7 +548,7 @@ class CloudyGo:
 
     #### PAGES ####
 
-    def update_models(self, bucket, regen_all_stats=False):
+    def update_models(self, bucket, only_create=False):
         # LEELA-HACK
         if CloudyGo.LEELA_ID in bucket:
             model_glob = os.path.join(self.model_path(bucket), '[0-9a-f]*')
@@ -562,25 +567,27 @@ class CloudyGo:
             # LEELA-HACK
             if CloudyGo.LEELA_ID in bucket:
                 # Note: this is brittle but I can't think of how to get model_id
-                existing = [m for m in existing_models
+                lz = [m for m in existing_models
                             if raw_name.startswith(m[1])]
-                assert len(existing_model) == 1, (model_filename, existing)
-                existing_model = existing_model[0]
+                assert len(lz) == 1, (model_filename, lz)
+                existing_model = lz[0]
 
                 raw_name = raw_name[:8]  # otherwise sgf loading fails
-                model_id = existing[0]
-                model_name = existing[1]
-                model_num = existing[4]
+                model_id = lz[0]
+                model_name = lz[1]
+                model_num = lz[4]
             else:
                 model_num, model_name = raw_name.split('-', 1)
                 model_id = CloudyGo.bucket_salt(bucket) + int(model_num)
+
+            if only_create and model_id in existing:
+                continue
 
             last_updated = int(time.time())
             training_time_m = 120
             creation = int(os.path.getmtime(model_filename))
 
-            # TODO(sethtroisi): figure out how to avoid suming large numbers of games.
-            if last_updated - creation > (24 * 3600):
+            if last_updated - creation > (CloudyGo.FAST_UPDATE_HOURS * 3600):
                 continue
 
             num_games = self.query_db(
@@ -609,9 +616,8 @@ class CloudyGo:
                 'SELECT max(stats_games) FROM model_stats WHERE model_id = ?',
                 (model_id,))
             currently_processed = currently_processed[0][0] or 0
-            if regen_all_stats != True:
-                if regen_all_stats == -1 or num_games == currently_processed:
-                    continue
+            if num_games == currently_processed:
+                continue
 
             opening_name = str(model_id) + '-favorite-openings.png'
             opening_file = os.path.join(
@@ -729,7 +735,7 @@ class CloudyGo:
         if sgf_model.isdigit() and is_ts_game:
             model_id = int(sgf_model)
 
-        return (game_num, model_id, filename) + tuple(result)
+        return game_num + (model_id, filename) + tuple(result)
 
     def update_model_names(self):
         model_names = dict(self.query_db('SELECT model_id, raw_name from models'))
@@ -790,8 +796,8 @@ class CloudyGo:
 
     @staticmethod
     def _model_guesser(filename, model_mtimes, model_ids):
-        # NOTE: Guess that average game takes 40 minutes
-        game_time = int(filename.split('-', 1)[0]) - 40 * 60
+        game_time = int(filename.split('-', 1)[0])
+        game_time -= CloudyGo.MINIGO_GAME_LENGTH
         assert 1520000000 < game_time < 1540000000, game_time
         model_num = bisect.bisect(model_mtimes, game_time, 1) - 1
         assert model_num >= 0, model_num
@@ -833,24 +839,43 @@ class CloudyGo:
             model_mtimes=model_mtimes,
             model_ids=model_ids)
 
-        day_old_model = model_lookup("{}-".format(int(time.time() - 2 * 86400)))
-        min_model = max(model_range[0], day_old_model)
-
-        # TODO(sethtroisi): do better than getting all games,
-        #   filter by some reasonable timestamp or something.
-        existing = self.get_existing_games(self, min_model, model_range[1])
-        print("{} existing games (>= {})".format(len(existing), min_model))
-
-        # TODO find a way to rsync faster
-        # TODO(sethtroisi): find a way to update clean with full.
+        # NOTE: this code goes first so we know what timestamp range to load.
+        to_update = OrderedDict()
         for d_type in ['full', 'clean']:
             base_paths = os.path.join(self.sgf_path(bucket), d_type, '*')
             time_dirs = sorted(glob.glob(base_paths))
-            print ("\t{}, {} folders: {}".format(
+            # FAST UPDATE HACK
+            will_update = time_dirs[-CloudyGo.FAST_UPDATE_HOURS:]
+            if len(will_update) > 0:
+                to_update[d_type] = will_update
+            print ("\t{}, {} folders (updating {}): {}".format(
                 d_type,
                 len(time_dirs),
-                utils.list_preview(list(map(os.path.basename, time_dirs)), 2)))
-            for time_dir in time_dirs[-24:]:
+                len(will_update),
+                utils.list_preview(list(map(os.path.basename, time_dirs)), 1)))
+
+        if len(to_update) == 0:
+            return
+
+        def get_folder_ts(func, comp):
+            all_updates = [d for v in to_update.values() for d in v]
+            folder = func(map(os.path.basename, all_updates))
+            dt = datetime.strptime(folder, '%Y-%m-%d-%H')
+            return int(dt.replace(tzinfo=timezone.utc).timestamp())
+
+        min_ts = get_folder_ts(min, model_range[0]) - 5
+        max_ts = get_folder_ts(max, model_range[1]) + 3605
+
+        # TODO(sethtroisi): do better than getting all games,
+        #   filter by some reasonable timestamp or something.
+        existing = self._get_games_from_ts(model_range, (min_ts, max_ts))
+        print("{} existing games ({} to {})".format(
+            len(existing), min_ts, max_ts))
+
+        # TODO find a way to rsync faster
+        # TODO(sethtroisi): find a way to update clean with full.
+        for d_type, time_dirs in to_update.items():
+            for time_dir in time_dirs:
                 name = os.path.basename(time_dir)
 
                 game_paths = glob.glob(os.path.join(time_dir, '*.sgf'))
@@ -862,11 +887,11 @@ class CloudyGo:
     def _get_update_games_model(self, bucket, max_inserts):
         skipped = []
         for model in self.get_models(bucket):
-            # HACK: only newest one day of model folders are updated.
+            # FAST UPDATE HACK: only newest day of model folders are updated.
             # Check if directory mtime is recent, if not skip
             test_d = os.path.join(self.sgf_path(bucket), model[2], 'full')
             m_time = os.path.getmtime(test_d) if os.path.exists(test_d) else 0
-            if m_time + 86400 < model[5]:
+            if model[5] > m_time + 3600 * CloudyGo.FAST_UPDATE_HOURS:
                 skipped.append(model[4])
                 continue
 
@@ -874,7 +899,7 @@ class CloudyGo:
             model_id = model[0]
             model_lookup = lambda: model_id
 
-            existing = self.get_existing_games(model_id)
+            existing = self._get_games_from_model(model_id)
             game_paths = self.all_games(bucket, model[2])
             to_process = CloudyGo._game_paths_to_to_process(
                 bucket, existing, model_lookup, game_paths, max_inserts)
@@ -912,9 +937,8 @@ class CloudyGo:
             games_source = self._get_update_games_time_dir(bucket, max_inserts)
 
         for model_name, to_process, len_existing in games_source:
-            print (model_name, len_existing, len(to_process))
             if len(to_process) > 0:
-                print("About to process {} games for {}".format(
+                print("About to process {} games of {}".format(
                     len(to_process), model_name))
 
                 new_games = self.map_and_filter(CloudyGo.process_game, to_process)
@@ -923,6 +947,10 @@ class CloudyGo:
                 #if bucket in CloudyGo.MINIGO_TS:
                 #    new_games = self.process_sgf_names(bucket, new_games)
 
+                #for g in new_games:
+                #    print("\t", g[:3])
+                #    print("SELECT * FROM games WHERE timestamp = {} AND game_num = {};".format(
+                #        *g[:2]))
                 self.insert_rows_db('games', new_games)
                 self.db().commit()
 
@@ -1093,7 +1121,7 @@ class CloudyGo:
 
         bucket_salt = CloudyGo.bucket_salt(bucket)
 
-        existing = self.get_existing_eval_games(bucket)
+        existing = self._get_eval_games(bucket)
         evals_to_process = []
         new_eval_nums = set()
 

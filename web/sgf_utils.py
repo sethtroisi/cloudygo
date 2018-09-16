@@ -395,7 +395,7 @@ def parse_game(game_path):
     played_moves = [sgf_to_cord(board_size, move.group(1))
                     for move in raw_moves]
 
-    first_two_moves = ';'.join(palyed_moves[:2])
+    first_two_moves = ';'.join(played_moves[:2])
     early_moves = ';'.join(played_moves[:10])
     early_moves_canonical = canonical_moves(board_size, early_moves)
 

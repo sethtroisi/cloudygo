@@ -119,7 +119,7 @@ def update_games(cloudy, bucket):
     print("{}: Updating Models and Games".format(bucket))
 
     # Setup models if they don't exist, don't update stats
-    cloudy.update_models(bucket, regen_all_stats=-1)
+    cloudy.update_models(bucket, only_create=True)
 
     models = cloudy.get_models(bucket)
     if len(models) == 0:
@@ -151,7 +151,7 @@ if __name__ == "__main__":
         for bucket in buckets:
             updates += cloudy.update_models(
                 bucket,
-                regen_all_stats=(arg1 == "all_models"))
+                only_create=(arg1 == "models"))
 
     if len(sys.argv) == 1 or arg1 == "games":
         for bucket in buckets:

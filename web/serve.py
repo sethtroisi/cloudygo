@@ -47,7 +47,6 @@ DATABASE_PATH = os.path.join(app.instance_path, 'clouds.db')
 
 RANDOMIZE_GAMES = True
 MAX_GAMES_ON_PAGE = 100
-MAX_INSERTS = 5000
 
 #### DB STUFF ####
 
