@@ -41,7 +41,7 @@ class CloudyGo:
     DIR_EVAL_START = 2500  # offset from SALT_MULT to start
 
     # FAST UPDATE HACK fastness
-    FAST_UPDATE_HOURS = 96 #24
+    FAST_UPDATE_HOURS = 12
 
     # set by __init__ but treated as constant
     INSTANCE_PATH = None
