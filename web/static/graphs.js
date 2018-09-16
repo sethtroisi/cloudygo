@@ -295,7 +295,7 @@ function per_model_slider_graph_setup(
 
 
 function rating_scatter_plot(
-        svg, data, f1,
+        svg, data, f1, f2,
         title_text, x_text, y_text) {
     var rightMargin = 20; // seperate incase we add a y2 axis label.
     var margin = {top: 25, right: rightMargin, bottom: 50, left: 60};
@@ -324,7 +324,7 @@ function rating_scatter_plot(
                  ' ranking: ' + Math.round(f1(d));
       });
 
-    function add_dots(x, y, funct, colorScale) {
+    function add_dots_and_bars(x, y, funct, error_funct, colorScale) {
         var entering = graph_group.selectAll('scatter-point')
             .data(data).enter();
 
@@ -346,6 +346,37 @@ function rating_scatter_plot(
                 tool_tip.show(e);
                 setTimeout(tool_tip.hide, 3000);
             });
+
+        if (error_funct) {
+            var error_shift = function(d) {
+              // NOTE: y heads DOWN the screen.
+              return y(0) - y(error_funct(d))
+            }
+            var negative_error_shift = function(d) {
+              return -error_shift(d);
+            }
+            var visibility = function(d) {
+              return Math.abs(error_shift(d)) > 10 ? "visible" : "hidden";
+            };
+            var add_line = function(class_name, x1, y1, x2, y2) {
+              g.append('line')
+                  .attr('class', class_name)
+                  .attr('stroke', function(d) { return colorScale(funct(d)); })
+                  .attr('x1', x1)
+                  .attr('y1', y1)
+                  .attr('x2', x2)
+                  .attr('y2', y2)
+                  .attr('visibility', visibility);
+            };
+
+            add_line('error-line', '0', error_shift, '0', negative_error_shift);
+
+            var x_scale = x(1) - x(0);
+            add_line('', x_scale, error_shift,
+                        -x_scale, error_shift);
+            add_line('', x_scale, negative_error_shift,
+                        -x_scale, negative_error_shift);
+        }
     }
 
     // Scale the range of the data
@@ -354,6 +385,7 @@ function rating_scatter_plot(
 
     var y1;
     if (f1) {
+        // Consider adding a little cushion to y1 if error bars are on.
         y1 = d3.scaleLinear()
             .domain(d3.extent(data, f1))
             .range([height, 0]);
@@ -362,7 +394,7 @@ function rating_scatter_plot(
             .domain(data.map(f1))
             .range(['#F00', '#B00', '#222', '#2B2', '#2F2']);
 
-        add_dots(x, y1, f1, colorScale);
+        add_dots_and_bars(x, y1, f1, f2, colorScale);
     }
 
     var trailing_avg_data = add_weighted_average(

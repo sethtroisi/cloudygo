@@ -45,7 +45,8 @@
           width: 600px;
           height: 600px;
         }
-        .filter-models,
+        .filter-good-models,
+        .filter-recent-models,
         .model-graph,
         .rating-desc,
         .ratings-scatter,
@@ -56,7 +57,8 @@
           vertical-align: top;
           margin-top: 50px;
         }
-        .filter-models {
+        .filter-good-models,
+        .filter-recent-models {
           margin-top: 10px;
         }
 
@@ -74,7 +76,12 @@
           border-radius: 4px;
         }
 
-      /* Creates a small triangle extender for the tooltip */
+        .error-line {
+          stroke-dasharray: 2, 6;
+        }
+
+
+        /* Creates a small triangle extender for the tooltip */
         .d3-tip.s:after {
           position: absolute;
           width: 100%;
@@ -121,8 +128,13 @@
           </tbody>
         </table>
         {# TODO re check checkbox #}
-        <label class="filter-models"><input id="filter-models" type="checkbox">
+        <label class="filter-good-models">
+            <input id="filter-good-models" type="checkbox">
             Filter bad models
+        </label>
+        <label class="filter-recent-models">
+            <input id="filter-recent-models" type="checkbox">
+            Filter old models
         </label>
       </div>
     </div>
@@ -149,7 +161,7 @@
       <tr{% if data[2] > great_threshold %} class="great-model" {% endif %}>
         <td>{{ eval_link(data[0], data[1] if is_sorted else data[0]) }}</a></td>
         <td>{{ data[2]|round|int }}
-            {%- if data[3] > 50 %} (&plusmn;{{ data[3]|round|int }}){% endif -%}
+            {%- if data[3] > 80 %} (&plusmn;{{ data[3]|round|int }}){% endif -%}
         </td>
         <td>{{ data[4] }}</td>
       </tr>
@@ -163,21 +175,30 @@
   <script type="text/javascript">
     {# Have to reverse models so that filter works #}
     var ratings = JSON.parse('{{ models[::-1] | tojson | safe }}');
-    var model_filter = d3.select("#filter-models")
+    var model_goodness_filter = d3.select("#filter-good-models")
+    var model_recency_filter = d3.select("#filter-recent-models")
     var rating_svg = d3.select("#rating-svg");
 
     function plot_ratings() {
-      var checked = model_filter.node().checked;
-      var new_ratings = ratings.filter(function(r, i) {
-        if (!checked) return true;
+      var goodness_checked = model_goodness_filter.node().checked;
+      var recency_checked = model_recency_filter.node().checked;
 
+      var new_ratings = ratings.filter(function(r, i) {
         sawBetter = false;
         for (j = Math.max(0, i - 3); j < i; j++) {
           if (ratings[j][2] > r[2]) {
             sawBetter = true;
           }
         }
-        return !sawBetter;
+
+        var result = true;
+        if (goodness_checked) {
+          result &= !sawBetter;
+        }
+        if (recency_checked) {
+          result &= 100 * i / ratings.length > 60;
+        }
+        return result;
       });
 
       rating_svg.selectAll("*").remove();
@@ -187,12 +208,14 @@
           rating_svg,
           new_ratings,
           function(d) { return d[2]; },
+          function(d) { return d[3]; },
           "Rating",
           "Model",
           "Rating (elo like)");
     }
 
-    model_filter.on("change", plot_ratings);
+    model_goodness_filter.on("change", plot_ratings);
+    model_recency_filter.on("change", plot_ratings);
 
     plot_ratings();
 
