@@ -190,7 +190,7 @@
       <tbody>
         {% for game in games -%}
         <tr>
-          <td>{{game[2]}}</td>
+          <td>{{game[3]}}</td>
           {%- if 'leela' in bucket -%}
             {%- set types = ['clean'] -%}
           {%- else -%}
@@ -199,20 +199,20 @@
           {% for type in types -%}
             <td><a href="{{ url_for('game_view',
                                     bucket=bucket, model=model[2],
-                                    filename=game[2], type=type) }}">SGF Viewer</a></td>
+                                    filename=game[3], type=type) }}">SGF Viewer</a></td>
             <td><a href="{{ url_for('game_view',
                                     bucket=bucket, model=model[2],
-                                    filename=game[2], type=type, raw='') }}">Raw SGF</a></td>
+                                    filename=game[3], type=type, raw='') }}">Raw SGF</a></td>
           {%- endfor -%}
-          <td>{{game[4]}}</td>
-          <td>{{game[6]}}</td>
-          {%if- game[9] -%}
-          <td class="debug-sep">{{game[14]|round(2)}}|{{game[15]|round(2)}}</td>
-          <td>{{game[12]}}|{{game[13]}}</td>
-          <td>{{game[10]}}|{{game[11]}}</td>
-          <td>{{game[17]|round(2)}}|{{game[18]|round(2)}}</td>
+          <td>{{game[5]}}</td>
+          <td>{{game[7]}}</td>
+          {%if- game[10] -%}
+          <td class="debug-sep">{{game[15]|round(2)}}|{{game[16]|round(2)}}</td>
+          <td>{{game[13]}}|{{game[14]}}</td>
+          <td>{{game[11]}}|{{game[12]}}</td>
+          <td>{{game[18]|round(2)}}|{{game[19]|round(2)}}</td>
           {%- endif %}
-          <td>{{game[8]}}</td>
+          <td>{{game[9]}}</td>
         </tr>
         {%- endfor %}
       </tbody>

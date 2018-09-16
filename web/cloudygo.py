@@ -205,7 +205,7 @@ class CloudyGo:
         bucket_num = bucket_salt // CloudyGo.SALT_MULT
 
         timestamp = int(timestamp)
-        game_num = 1000 * int(pod, 36) + 100 * pod_num + bucket_num
+        game_num = 10000 * int(pod, 36) + 100 * pod_num + bucket_num
         return (timestamp, game_num)
 
     @staticmethod
@@ -287,12 +287,12 @@ class CloudyGo:
         for filename in filenames:
             game_num = CloudyGo.get_game_num(bucket_salt, filename)
             # NOTE: if table is altered * may return unexpected order
+
             game = self.query_db(
-                'SELECT * FROM games WHERE timestamp = ?, game_num = ?',
+                'SELECT * FROM games WHERE timestamp = ? AND game_num = ?',
                 game_num)
-            if len(game) == 0:
-                continue
-            games.append(game[0])
+            if len(game) == 1:
+                games.append(game[0])
         return games
 
     def __get_gs_game(self, bucket, model, filename, view_type):
@@ -635,13 +635,13 @@ class CloudyGo:
                 # ASSUMPTION: every game has a result
                 wins = games
                 if not is_all:
-                    wins = [game for game in games if game[3] == is_black]
+                    wins = [game for game in games if game[4] == is_black]
 
-                wins_by_resign = len([1 for game in wins if '+R' in game[4]])
-                sum_wins_result = sum(float(game[4][2:]) for game in wins
-                                      if '+R' not in game[4])
+                wins_by_resign = len([1 for game in wins if '+R' in game[5]])
+                sum_wins_result = sum(float(game[5][2:]) for game in wins
+                                      if '+R' not in game[5])
 
-                resign_rates = Counter(game[16] for game in wins)
+                resign_rates = Counter(game[17] for game in wins)
                 if len(resign_rates) > 2 and CloudyGo.LEELA_ID not in bucket:
                     if perspective == 'all':
                         print('{} has multiple Resign rates: {}'.format(
@@ -653,18 +653,18 @@ class CloudyGo:
                 assert resign_rate < 0, resign_rate
 
                 # TODO count leela holdouts but ignore resign problem.
-                holdouts = [game for game in wins if abs(game[16]) == 1]
+                holdouts = [game for game in wins if abs(game[17]) == 1]
                 holdout_resigns = [
-                    game for game in holdouts if '+R' in game[4]]
+                    game for game in holdouts if '+R' in game[5]]
                 assert len(holdout_resigns) == 0, holdout_resigns
 
                 bad_resigns = 0
                 for game in holdouts:
-                    black_won = game[3]
+                    black_won = game[4]
 
                     # bleakest eval is generally negative for black and positive for white
-                    black_would_resign = game[17] < resign_rate
-                    white_would_resign = -game[18] < resign_rate
+                    black_would_resign = game[18] < resign_rate
+                    white_would_resign = -game[19] < resign_rate
 
                     if black_won:
                         if black_would_resign:
@@ -680,12 +680,12 @@ class CloudyGo:
                     len(wins) - wins_by_resign, sum_wins_result,
                     len(holdouts), bad_resigns,
 
-                    sum(game[6] for game in wins),  # num_moves
-                    sum(game[10] + game[11]
+                    sum(game[7] for game in wins),  # num_moves
+                    sum(game[11] + game[12]
                         for game in wins),  # both sides visits
-                    sum(game[12] + game[13]
+                    sum(game[13] + game[14]
                         for game in wins),  # both sides early visits
-                    sum(game[14] + game[15]
+                    sum(game[15] + game[16]
                         for game in wins),  # both sides unluckiness
                     opening_sgf if is_all else '',  # favorite_openings
                 ))

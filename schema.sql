@@ -183,6 +183,8 @@ CREATE INDEX IF NOT EXISTS models_bucket_index ON models (bucket);
 CREATE INDEX IF NOT EXISTS models_name_index ON models (name);
 CREATE INDEX IF NOT EXISTS models_raw_name_index ON models (raw_name);
 
+CREATE INDEX IF NOT EXISTS game_timestamp_index ON games (timestamp);
+CREATE INDEX IF NOT EXISTS game_game_num_index ON games (game_num);
 CREATE INDEX IF NOT EXISTS game_model_index ON games (model_id);
 
 CREATE INDEX IF NOT EXISTS eval_models_model_index_1 on eval_models (model_id_1);
