@@ -246,7 +246,9 @@ def pro_game_view(filename):
                            bucket=CloudyGo.DEFAULT_BUCKET,  # Any value will do
                            model='100',      # needs some value
                            data=data,
+                           player_evals="",
                            filename=filename,
+                           force_full=False
                            )
 
 

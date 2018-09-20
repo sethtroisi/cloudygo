@@ -19,13 +19,13 @@ import os
 import re
 import urllib.request
 
-BUCKET = 'leela-zero-v1'
-BUCKET_NUM = 13
+BUCKET = 'leela-zero-v2'
+BUCKET_NUM = 50
 
 URL = 'http://zero.sjeng.org'
-MODEL_DIR = os.path.join('instance', 'data', 'leela-zero-v1', 'models')
-FILE = os.path.join('instance', 'data', 'leela-zero-v1', 'zero-sjeng-org.html')
-INSERTS = os.path.join('instance', 'data', 'leela-zero-v1', 'inserts.csv')
+MODEL_DIR = os.path.join('instance', 'data', BUCKET, 'models')
+FILE = os.path.join('instance', 'data', BUCKET, 'zero-sjeng-org.html')
+INSERTS = os.path.join('instance', 'data', BUCKET, 'inserts.csv')
 INSERT = ','.join(['{}'] * 11)
 
 #urllib.request.urlretrieve(URL, FILE)
@@ -67,7 +67,7 @@ with open(INSERTS, 'w') as inserts:
 
 commands = [
     ".mode csv",
-    ".import instance/data/leela-zero-v1/inserts.csv models",
+    ".import instance/data/" + BUCKET + "/inserts.csv models",
 ]
 print()
 print('sqlite3 instance/clouds.db', ' '.join(map('"{}"'.format, commands)))

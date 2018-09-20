@@ -570,7 +570,7 @@ class CloudyGo:
                 lz = [m for m in existing_models
                             if raw_name.startswith(m[1])]
                 assert len(lz) == 1, (model_filename, lz)
-                existing_model = lz[0]
+                lz = lz[0]
 
                 raw_name = raw_name[:8]  # otherwise sgf loading fails
                 model_id = lz[0]
@@ -747,10 +747,9 @@ class CloudyGo:
 
         inserts = []
         for model_id, model_name in sorted(model_names.items()):
-            if model_id in names:
-                if model_name not in names[model_id]:
-                    inserts.append((model_name, model_id))
-                    names[model_id].add(model_name)
+            if model_name not in names[model_id]:
+                inserts.append((model_name, model_id))
+                names[model_id].add(model_name)
 
         # MINIGO-HACK
         for model_id, name in sorted(model_names.items()):
