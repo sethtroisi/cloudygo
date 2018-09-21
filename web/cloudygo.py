@@ -54,13 +54,13 @@ class CloudyGo:
     CURRENT_BUCKET_CLOUD_BUCKET = os.environ.get(
         'CURRENT_CLOUD_BUCKET', DEBUG_GAME_CLOUD_BUCKET)
 
-    DEFAULT_BUCKET = 'v11-19x19'
+    DEFAULT_BUCKET = 'v12-19x19'
     LEELA_ID = 'leela-zero'
 
     # NOTE: For v9, v10 sgf folder has timestamp instead of model directories
     # this radically complicates several parts of the update code. Those places
     # should be documented either MINIGO_TS or MINIGO-HACK.
-    MINIGO_TS = ['v9-19x19', 'v10-19x19', 'v11-19x19']
+    MINIGO_TS = ['v9-19x19', 'v10-19x19', 'v11-19x19', 'v12-19x19']
     MINIGO_GAME_LENGTH = 25 * 60
 
 
