@@ -40,15 +40,16 @@
       <style>
         .container-container {
           display: inline-block;
-          width: 98%;
+          width: 94%;
+          margin: auto
         }
         .input-container {
           width: 100%;
-          text-align: center
         }
         #position-select {
           width: 30%;
           border: 1px dotted blue;
+          margin: auto;
         }
         .wgo-container {
           display: inline-block;
@@ -69,15 +70,10 @@
       </style>
   </head>
   <body>
-    {{ navbar('position_comparison',
-              '{} Comparison of {} vs {}'.format(
-                  group|title, model_a[4], model_b[4]),
-              model=model_a[2],
-              other_page='models_details',
-       ) }}
-    {# TODO(sethtroisi): More explicit link to model_a[1] Details #}
+    {{ navbar('nearest_neighbor', 'Nearest Neighbors of {}'.format(x)) }}
     <div class="container-container">
       <div class="input-container">
+        <label for"position-select">Nth similiar position:</label>
         <input type="range" id="position-select" autofocus>
       </div>
       <div class="wgo-container position-data">
@@ -98,13 +94,15 @@
   <script>
     function player(elem) {
         var player = new WGo.BasicPlayer(elem, {
-            move: 99,
             board: {
               stoneHandler: WGo.Board.drawHandlers.MONO,
               theme: {font: 'arial' },
               background: '#f2b26d',
               lineWidth: 0,
               theme: {markupLinesWidth: 0 },
+            },
+            config: {
+              markLastMove: false,
             },
             layout: "{top: [], right: [], left: [], bottom: []}",
             enableKeys: false,
@@ -118,18 +116,7 @@
     /**** POSITION ****/
     var positionSlider = d3.select("#position-select");
 
-    var modelA = "{{ model_a[2] }}";
-    var modelB = "{{ model_b[2] }}";
-
-    var sgfs = JSON.parse('{{ sgfs | tojson | safe }}');
-    var sgfsA = sgfs[0];
-    var sgfsB = sgfs[1];
-
-    if (modelA.indexOf(sgfsA[0]) == -1) {
-      var tmp = sgfsA;
-      sgfsA = sgfsB;
-      sgfsB = tmp;
-    }
+    var neighbors = JSON.parse('{{ neighbors | tojson | safe }}');
 
     var playerA = player(document.getElementById("diagram-a"));
     var playerB = player(document.getElementById("diagram-b"));
@@ -137,38 +124,22 @@
     var titleA = d3.select(".position-data .title-a");
     var titleB = d3.select(".position-data .title-b");
 
+    rA = neighbors[0];
+    titleA.text(Math.round(100 * rA[0]) + " " + rA[1][0] + " @ " + rA[1][1]);
+    playerA.config.sgfFile = rA[1][0];
+    playerA.config.move = rA[1][1];
+    playerA.initGame();
+
     function update_position(index) {
-        var rA = sgfsA[index];
-        var rB = sgfsB[index];
-        var groupIndex = {{ 1 if group == 'policy' else 3}}
+        var rB = neighbors[index];
+        titleB.text(Math.round(100 * rB[0]) + " " + rB[1][0] + " @ " + rB[1][1]);
+        playerB.config.sgfFile = rB[1][0];
+        playerB.config.move = rB[1][1];
+        playerB.initGame();
 
-        // TODO(sethtroisi): add Q?
-        titleA.text("{{ group|title }} for " + rA[0] + " " + modelA);
-        titleB.text("{{ group|title }} for " + rB[0] + " " + modelB);
-        playerA.loadSgf(rA[groupIndex], 99);
-        playerB.loadSgf(rB[groupIndex], 99);
-
-        playerA.config.markLastMove=false;
-        playerA.marker.clearDefaultSytle();
-        playerA.marker.switchMaker({
-            'markerNum': rA[5]
-        });
-
-        playerB.config.markLastMove=false;
-        playerB.marker.clearDefaultSytle();
-        playerB.marker.switchMaker({
-            'markerNum': rB[5]
-        });
-
-        update_url_inplace("P", rA[0]);
+        update_url_inplace("x", rB[2]);
     }
 
-    add_slider(positionSlider, update_position, 1, sgfsA.length - 1, 1);
-    find_and_set_slider(
-        positionSlider,
-        sgfsA,
-        function(d) { return Array.isArray(d) ? d[0] : d + ""; },
-        '{{ request.args.get("P", "") }}');
-
+    add_slider(positionSlider, update_position, 0, neighbors.length - 1, 0);
   </script>
 </html>
