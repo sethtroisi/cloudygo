@@ -45,12 +45,16 @@
         }
         .input-container {
           width: 100%;
+          text-align: center
         }
         #position-select {
           width: 30%;
-          border: 1px dotted blue;
-          margin: auto;
+          display: inline-block;
         }
+        #position-select-label {
+          vertical-align: top;
+        }
+
         .wgo-container {
           display: inline-block;
           width: 45%;
@@ -73,7 +77,7 @@
     {{ navbar('nearest_neighbor', 'Nearest Neighbors of {}'.format(x)) }}
     <div class="container-container">
       <div class="input-container">
-        <label for"position-select">Nth similiar position:</label>
+        <label id="position-select-label" for"position-select">Nth similiar position</label>
         <input type="range" id="position-select" autofocus>
       </div>
       <div class="wgo-container position-data">
@@ -101,9 +105,7 @@
               lineWidth: 0,
               theme: {markupLinesWidth: 0 },
             },
-            config: {
-              markLastMove: false,
-            },
+            markLastMove: false,
             layout: "{top: [], right: [], left: [], bottom: []}",
             enableKeys: false,
             enableWheel: false,

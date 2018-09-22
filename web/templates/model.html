@@ -88,7 +88,7 @@
       </tr>
     </table>
     <br>
-    <table>
+    <table class="stripped">
       {% if model_stats is not none -%}
       <thead>
         <th colspan="10">All stats taken from games where perspective won</th>
@@ -152,7 +152,7 @@
       <div class="wgo-diagram" id="policy-diagram"></div>
       {%- endif %}
     <hr>
-    <table>
+    <table class="stripped">
       <thead>
         <th colspan="7">{{ games|length }}{{ " Random" if is_random else "" }} games</th>
         {%- if 'leela' not in bucket -%}

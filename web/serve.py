@@ -836,34 +836,41 @@ def model_graphs(bucket, model_name):
                            position_sgfs=sgfs,
                            )
 
+
+metadata, embeddings = None, None
 @app.route('/<bucket>/nearest-neighbor')
 @app.route('/<bucket>/nearest-neighbors')
 def nearest_neighbor(bucket):
-#        embeddings[ (os.path.join(root, d, f), idx)] = res['shared'][0].flatten()
-    embeddings_file = os.path.join(
-        app.instance_path, 'eval', bucket, 'embeddings.pickle')
-    with open(embeddings_file, 'rb') as pickle_file:
-        metadata, embeddings = pickle.load(pickle_file)
+    global metadata, embeddings
+
+    if embeddings is None:
+        embeddings_file = os.path.join(
+            app.instance_path, 'eval', bucket, 'embeddings.pickle')
+        print ("embeddings load")
+        with open(embeddings_file, 'rb') as pickle_file:
+            metadata, embeddings = pickle.load(pickle_file)
+
+        metadata = list(metadata)
+        for i, (f, idx) in enumerate(metadata):
+            short_path = f[f.index(bucket):]
+            f = url_for('send_game', filename=short_path)
+            metadata[i] = (f, idx)
+        print ("embeddings loaded")
 
     x = int(request.args.get('x', 0) or 0)
-    if x <= len(embeddings) < x:
+    if not 0 <= x <= len(embeddings):
         return "X out of range ({})".format(len(embeddings))
-
-    for i, (f, idx) in enumerate(metadata):
-        short_path = f[f.index(bucket):]
-        f = url_for('send_game', filename=short_path)
-        metadata[0][0] = f
 
     import sklearn.metrics
     import numpy as np
     distances = sklearn.metrics.pairwise.pairwise_distances(
-        np.array(embeds),
-        np.array([embeds[x]]),
+        np.array(embeddings),
+        np.array([embeddings[x]]),
         metric='l2',
         n_jobs=1).tolist()
 
     distances = [(d[0], i) for i, d in enumerate(distances)]
-    neighbors = heapq.nsmallest(25, distances)
+    neighbors = heapq.nsmallest(30, distances)
     neighbors = [(d, metadata[i], i) for d,i in neighbors]
 
     return render_template('nearest-neighbors.html',

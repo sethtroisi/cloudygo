@@ -74,55 +74,72 @@
               other_page='models_details') }}
 
     <table class="models-table overall">
-      <tbody>
         <tr>
-          <td colspan="2" class="rating">
-            Rating {{ overall[2]|round|int }}
-          </td>
+          <td class="rating">Rating</td>
+          <td class="rating">{{ overall[2]|round|int }}</td>
+        </tr>
+        <tr>
           <td class="c-tooltip">
-            Uncertainty {{ overall[3]|round(1) }}
+            Uncertainty
             {{ tip('Std error of rating param') }}
           </td>
+          <td>{{ overall[3]|round(1) }}</td>
         </tr>
+
+        <tr class="sep-top">
+          <td>Overall</td>
+          <td>{{ WLR(overall[6] + overall[8], overall[5] + overall[7]) }}</td>
         <tr>
-          <td>Overall {{ WLR(overall[6] + overall[8], overall[5] + overall[7]) }}</td>
-          <td>As Black {{ WLR(overall[6], overall[5]) }}</td>
-          <td>As White {{ WLR(overall[8], overall[7]) }}</td>
+          <td>As Black</td>
+          <td>{{ WLR(overall[6], overall[5]) }}</td>
         </tr>
+        <tr class="sep-bot">
+          <td>As White</td>
+          <td>{{ WLR(overall[8], overall[7]) }}</td>
+        </tr>
+
         <tr>
-          <td>vs Earlier Models {{ WLR(earlier_models[1], earlier_models[0]) }}</td>
-          <td>vs Later Models {{ WLR(later_models[1], later_models[0]) }}</td>
-          <td class="c-tooltip">
+          <td>vs Earlier Models</td>
+          <td>{{ WLR(earlier_models[1], earlier_models[0]) }}</td>
+        </tr>
+        <tr class="sep-bot">
+          <td>vs Later Models</td>
+          <td>{{ WLR(later_models[1], later_models[0]) }}</td>
+        </tr>
+
+        <tr>
+          <td class="c-tooltip" colspan="2">
             Played {{ played_better }} stronger* ranked models
             {{ tip('Stronger based on current Bradley-Terry rankings') }}
           </td>
         </tr>
-      </tbody>
     </table>
+
     <table class="models-table">
       <thead>
         <th>VS</th>
         <th>As Black </th>
         <th>As White </th>
         <th>Total</th>
-        <th>Game links</th>
       </thead>
       <tbody>
       {% for data in model_games[::-1] %}
-        <tr>
-          <td class="opponent-link-column">
+        <tr class="sep-top">
+          <td class="opponent-link-column" rowspan="2">
             <a href="{{ url_for('model_eval',
                                 bucket=bucket,
                                 model_name=data[1],
                                 sorted=is_sorted) }}">
               {{ data[2] if is_sorted else data[1] }}</a>
-            <br>
+            &nbsp;&nbsp;
             {{- "{:+.0f}".format(data[3]) }} elo
           </td>
           <td>{{ WLR(data[7], data[6], 0) }}</td>
           <td>{{ WLR(data[9], data[8], 0) }}</td>
           <td>{{ WLR(data[7] + data[9], data[6] + data[8], 1) }}</td>
-          <td>
+        </tr>
+        <tr>
+          <td colspan="100">
             <div class="game-link-column">
               {% set count = namespace(displayed=0) %}
               {% for eval_game in eval_games %}

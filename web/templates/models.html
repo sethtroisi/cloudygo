@@ -55,7 +55,7 @@
     {% set rows = 30 %}
     {% set columns = (models|length - 1 + rows) // rows %}
     {% for c in range(columns) %}
-    <table class="models-table">
+    <table class="stripped models-table">
       <thead>
           <th>Model</th>
           <th class="model-name-col">Name</th>

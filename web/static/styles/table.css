@@ -12,8 +12,12 @@ th, td {
     padding: 2px 5px;
 }
 
-tr { background: #fff; }
-tr:nth-child(even) { background: #dadada; }
+.stripped tr { background: #fff; }
+.stripped tr:nth-child(even) { background: #dadada; }
+
+tr.sep-bot td { padding-bottom: 20px; }
+tr.sep-top td { padding-top: 20px; }
+
 
 .debug-sep {
     border-left: 5px solid black
