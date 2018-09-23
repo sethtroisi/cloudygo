@@ -45,6 +45,7 @@ app.jinja_env.lstrip_blocks = True
 cache = SimpleCache()
 
 LOCAL_DATA_DIR = os.path.join(app.instance_path, 'data')
+LOCAL_EVAL_DIR = os.path.join(app.instance_path, 'eval')
 DATABASE_PATH = os.path.join(app.instance_path, 'clouds.db')
 
 RANDOMIZE_GAMES = True
@@ -166,7 +167,7 @@ def eval_image(bucket, filename):
     # TODO: add naughty check
 
     return send_file(
-        os.path.join(app.instance_path, 'eval', bucket, filename),
+        os.path.join(LOCAL_EVAL_DIR, bucket, filename),
         mimetype='image/png',
         cache_timeout=30*60)
 
@@ -229,7 +230,7 @@ def game_view(bucket, model, filename):
 @app.route('/sgf/<path:filename>')
 def send_game(filename):
     # TODO: add naughty check
-    path = os.path.join(app.instance_path, 'data', filename)
+    path = os.path.join(LOCAL_DATA_DIR, filename)
     if not os.path.exists(path):
         return "Not Found"
 
@@ -272,7 +273,7 @@ def pro_game_view(filename):
 
 @app.route('/<bucket>/figure-three')
 def figure_three(bucket):
-    eval_path = os.path.join(app.instance_path, 'eval', bucket)
+    eval_path = os.path.join(LOCAL_EVAL_DIR, bucket)
     exists = os.path.exists(os.path.join(eval_path, 'move_acc.png'))
 
     # This is a longtime request from andrew.
@@ -837,25 +838,28 @@ def model_graphs(bucket, model_name):
                            )
 
 
-metadata, embeddings = None, None
-@app.route('/<bucket>/nearest-neighbor')
-@app.route('/<bucket>/nearest-neighbors')
-def nearest_neighbor(bucket):
-    global metadata, embeddings
-
-    if embeddings is None:
-        embeddings_file = os.path.join(
-            app.instance_path, 'eval', bucket, 'embeddings.pickle')
-        print ("embeddings load")
+@app.route('/<bucket>/nearest-neighbor/<embedding_type>')
+@app.route('/<bucket>/nearest-neighbors/<embedding_type>')
+def nearest_neighbor(bucket, embedding_type="value_conv"):
+    file_bytes = cache.get(embedding_type)
+    if file_bytes is None:
+        embedding_name = 'embeddings.{}.pickle'.format(embedding_type)
+        embeddings_file = os.path.join(LOCAL_EVAL_DIR, bucket, embedding_name)
         with open(embeddings_file, 'rb') as pickle_file:
-            metadata, embeddings = pickle.load(pickle_file)
+            file_bytes = pickle_file.read()
 
-        metadata = list(metadata)
-        for i, (f, idx) in enumerate(metadata):
-            short_path = f[f.index(bucket):]
-            f = url_for('send_game', filename=short_path)
-            metadata[i] = (f, idx)
-        print ("embeddings loaded")
+        print("loaded {}, {} bytes".format(embedding_type, len(file_bytes)))
+        cache.set(embedding_type, file_bytes, timeout=5 * 60)
+
+    metadata, embeddings = pickle.loads(file_bytes)
+    metadata = list(metadata)
+    for i, (f, idx) in enumerate(metadata):
+        if i == 0 and bucket not in f:
+            print ("Problem!", embedding_type, f)
+        short_path = f[f.index(bucket):]
+        #f = url_for('send_game', filename=short_path)
+        f = os.path.join("/sgf/", short_path)
+        metadata[i] = (f, idx)
 
     x = int(request.args.get('x', 0) or 0)
     if not 0 <= x <= len(embeddings):
@@ -866,7 +870,7 @@ def nearest_neighbor(bucket):
     distances = sklearn.metrics.pairwise.pairwise_distances(
         np.array(embeddings),
         np.array([embeddings[x]]),
-        metric='l2',
+        metric='l1',
         n_jobs=1).tolist()
 
     distances = [(d[0], i) for i, d in enumerate(distances)]
@@ -874,7 +878,10 @@ def nearest_neighbor(bucket):
     neighbors = [(d, metadata[i], i) for d,i in neighbors]
 
     return render_template('nearest-neighbors.html',
-        bucket=bucket, x=x, neighbors=neighbors)
+        bucket=bucket,
+        x=x,
+        embed=str(embeddings[x]),
+        neighbors=neighbors)
 
 
 @app.route('/<bucket>/json/missing-ratings.json')

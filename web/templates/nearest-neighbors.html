@@ -74,11 +74,13 @@
       </style>
   </head>
   <body>
-    {{ navbar('nearest_neighbor', 'Nearest Neighbors of {}'.format(x)) }}
+    {{ navbar('nearest_neighbor',
+              'Nearest Neighbors of ' + x|string,
+              other_page='models_details') }}
     <div class="container-container">
       <div class="input-container">
         <label id="position-select-label" for"position-select">Nth similiar position</label>
-        <input type="range" id="position-select" autofocus>
+        <input type="range" id="position-select" value="1" autofocus>
       </div>
       <div class="wgo-container position-data">
         <div class="title-container">
@@ -93,7 +95,11 @@
         <div class="wgo-diagram" id="diagram-b"></div>
       </div>
     </div>
-
+    <div>value_conv, value_fc_hidden, policy_conv, and policy_logits are valid options</div>
+    <div>
+      <p>Embedding:</p>
+      <p>{{embed}}</p>
+    </div>
   </body>
   <script>
     function player(elem) {
@@ -127,14 +133,14 @@
     var titleB = d3.select(".position-data .title-b");
 
     rA = neighbors[0];
-    titleA.text(Math.round(100 * rA[0]) + " " + rA[1][0] + " @ " + rA[1][1]);
+    titleA.text(rA[1][0] + " @ " + rA[1][1]);
     playerA.config.sgfFile = rA[1][0];
     playerA.config.move = rA[1][1];
     playerA.initGame();
 
     function update_position(index) {
         var rB = neighbors[index];
-        titleB.text(Math.round(100 * rB[0]) + " " + rB[1][0] + " @ " + rB[1][1]);
+        titleB.text(rB[0] + " " + rB[1][0] + " @ " + rB[1][1]);
         playerB.config.sgfFile = rB[1][0];
         playerB.config.move = rB[1][1];
         playerB.initGame();
@@ -142,6 +148,6 @@
         update_url_inplace("x", rB[2]);
     }
 
-    add_slider(positionSlider, update_position, 0, neighbors.length - 1, 0);
+    add_slider(positionSlider, update_position, 0, neighbors.length - 1, 1);
   </script>
 </html>
