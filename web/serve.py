@@ -166,7 +166,7 @@ def opening_image(filename):
 def eval_image(bucket, filename):
     # TODO: add naughty check
 
-    if not path.endswith('png'):
+    if not filename.endswith('png'):
         return ''
 
     return send_file(
@@ -919,8 +919,13 @@ def tsne(bucket, embedding_type="value_conv"):
 
     results = []
     for i in range(len(metadata)):
+        # TODO: fix path hacks here: 20 for /sgf/eval/YYYY-MM-DD/'
+        filename = _embedding_serve_path(metadata[i][0], bucket)[20:]
+        url = url_for('eval_view', bucket=bucket, model=0, filename=filename)
+        url += '?type=eval&M=' + str(metadata[i][1])
+
         results.append([
-            _embedding_serve_path(metadata[i][0], bucket),
+            url,
             _embedding_serve_path(metadata[i][2], bucket),
             tnes[i]
         ])

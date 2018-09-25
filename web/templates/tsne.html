@@ -20,7 +20,7 @@
   <head lang="en">
       <meta charset="UTF-8">
       <meta http-equiv="Content-Language" content="en">
-      <title>Minigo {{ group|title }} Comparison</title>
+      <title>Minigo {{ group|title }} t-SNE!</title>
 
       {{ favicon_links() }}
       {{ bootstrap_links() }}
@@ -32,23 +32,30 @@
 
       <script src="https://d3js.org/d3.v4.min.js"></script>
 
-      <script type="text/javascript" src="/static/wgo/wgo.min.js"></script>
-      <script type="text/javascript" src="/static/wgo/wgo.player.min.js"></script>
-      <script type="text/javascript" src="/static/wgo/wgo_markers.js"></script>
-      <link type="text/css" href="/static/wgo/wgo.player.css" rel="stylesheet" />
-
       <style>
-        .container-container {
+        .input-container {
+          width: 100%;
+          text-align: center;
+        }
+        #zoom-select {
+          width: 60%;
+          display: inline-block;
+        }
+        #zoom-select-label {
+          vertical-align: top;
+        }
+
+        #container-container {
           position: absolute;
-          right:10%;
-          left: 10%;
-          top: 10%;
-          bottom: 10%;
+          right:-20%;
+          left: -20%;
+          top: 20%;
+          bottom: -140%;
         }
         .tsne-thumb {
-          width: 20px;
-          height: 20px;
           position: absolute;
+          width: 64px;
+          height: 64px;
         }
         .tsne-thumb:hover {
           z-index: 10;
@@ -57,11 +64,29 @@
   </head>
   <body>
     {{ navbar('tsne', 't-SNE!', other_page='models_details') }}
-    <div class="container-container">
+    <div class="input-container">
+      <label id="zoom-select-label" for"zoom-select">Zoom</label>
+      <input type="range" id="zoom-select" step="10" autofocus>
+    </div>
+    <div id="container-container">
       {% for r in results[:1000] %}
-        <img class="tsne-thumb" src="{{ r[1] }}"
-             style="left: {{100 * r[2][1] }}%; top: {{100 * r[2][0]}}%;">
+        <a href="{{ r[0] }}">
+          <img class="tsne-thumb" src="{{ r[1] }}"
+             style="left: {{100 * r[2][1] }}%; top: {{100 * r[2][0]}}%;"></a>
       {% endfor %}
     </div>
   </body>
+  <script>
+    var slider = d3.select("#zoom-select");
+
+    function update(zoom) {
+      console.log(zoom);
+      var e = document.getElementById('container-container')
+      e.style.right = -zoom + "%";
+      e.style.left = -zoom + "%";
+      e.style.bottom = -(2*zoom-80) + "%";
+    }
+
+    add_slider(slider, update, 10, 400, 100);
+  </script>
 </html>

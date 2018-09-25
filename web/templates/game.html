@@ -145,7 +145,6 @@
       sgf: "{{ data.replace('\n', '\\n') }}",
       update: function(update) {
           var n = update.path.m;
-          console.log("Game at move", n);
           add_move_line(n);
       }
     });
