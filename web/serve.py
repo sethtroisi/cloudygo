@@ -153,8 +153,8 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
 def opening_image(filename):
     # TODO: add naughty check
     path = os.path.join(app.instance_path, 'openings', filename)
-    if not os.path.exists(path):
-        return ""
+    if not os.path.exists(path) or not path.endswith('png'):
+        return ''
 
     return send_file(
         path,
@@ -165,6 +165,9 @@ def opening_image(filename):
 @app.route('/eval/<bucket>/<filename>')
 def eval_image(bucket, filename):
     # TODO: add naughty check
+
+    if not path.endswith('png'):
+        return ''
 
     return send_file(
         os.path.join(LOCAL_EVAL_DIR, bucket, filename),
@@ -232,13 +235,21 @@ def send_game(filename):
     # TODO: add naughty check
     path = os.path.join(LOCAL_DATA_DIR, filename)
     if not os.path.exists(path):
-        return "Not Found"
+        return 'Not Found'
 
-    return send_file(
-        path,
-        mimetype='xapplication/x-go-sgf',
-        cache_timeout=60)
+    mimetypes = {
+        '.png': 'image/png',
+        '.sgf': 'xapplication/x-go-sgf',
+    }
 
+    mimetype = mimetypes.get(path[-4:], None)
+
+    if mimetype:
+        return send_file(
+            path,
+            mimetype=mimetype,
+            cache_timeout=30*60)
+    return 'Not Found'
 
 @app.route('/secret-pro-games/<path:filename>')
 def pro_game_view(filename):
@@ -837,6 +848,11 @@ def model_graphs(bucket, model_name):
                            position_sgfs=sgfs,
                            )
 
+def _embedding_serve_path(f, bucket):
+    short_path = f[f.index(bucket):]
+    #f = url_for('send_game', filename=short_path)
+    return os.path.join("/sgf/", short_path)
+
 
 @app.route('/<bucket>/nearest-neighbor/<embedding_type>')
 @app.route('/<bucket>/nearest-neighbors/<embedding_type>')
@@ -852,21 +868,21 @@ def nearest_neighbor(bucket, embedding_type="value_conv"):
         cache.set(embedding_type, file_bytes, timeout=5 * 60)
 
     metadata, embeddings = pickle.loads(file_bytes)
-    metadata = list(metadata)
-    for i, (f, idx) in enumerate(metadata):
+    assert len(metadata) == len(embeddings)
+
+    metadata = list(list(m) for m in metadata)
+    for i in range(len(metadata)):
+        f = metadata[i][0]
         if i == 0 and bucket not in f:
             print ("Problem!", embedding_type, f)
-        short_path = f[f.index(bucket):]
-        #f = url_for('send_game', filename=short_path)
-        f = os.path.join("/sgf/", short_path)
-        metadata[i] = (f, idx)
+        f = _embedding_serve_path(f, bucket)
+        metadata[i][0] = f
 
     x = int(request.args.get('x', 0) or 0)
     if not 0 <= x <= len(embeddings):
         return "X out of range ({})".format(len(embeddings))
 
     import sklearn.metrics
-    import numpy as np
     distances = sklearn.metrics.pairwise.pairwise_distances(
         np.array(embeddings),
         np.array([embeddings[x]]),
@@ -882,6 +898,36 @@ def nearest_neighbor(bucket, embedding_type="value_conv"):
         x=x,
         embed=str(embeddings[x]),
         neighbors=neighbors)
+
+
+@app.route('/<bucket>/tsne/<embedding_type>')
+def tsne(bucket, embedding_type="value_conv"):
+    file_bytes = cache.get(embedding_type)
+    if file_bytes is None:
+        embedding_name = 'embeddings.{}.pickle'.format(embedding_type)
+        embeddings_file = os.path.join(LOCAL_EVAL_DIR, bucket, embedding_name)
+        with open(embeddings_file, 'rb') as pickle_file:
+            file_bytes = pickle_file.read()
+
+        print("loaded {}, {} bytes".format(embedding_type, len(file_bytes)))
+        cache.set(embedding_type, file_bytes, timeout=5 * 60)
+
+    metadata, embeddings, tnes = pickle.loads(file_bytes)
+    assert len(metadata) == len(embeddings) == len(tnes)
+
+    # Scale tnes to be out of ~800
+
+    results = []
+    for i in range(len(metadata)):
+        results.append([
+            _embedding_serve_path(metadata[i][0], bucket),
+            _embedding_serve_path(metadata[i][2], bucket),
+            tnes[i]
+        ])
+
+    return render_template('tsne.html',
+        bucket=bucket,
+        results=results)
 
 
 @app.route('/<bucket>/json/missing-ratings.json')

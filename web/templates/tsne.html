@@ -1,0 +1,67 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
+  {% from "macros.html" import models_link,
+      bootstrap_links, favicon_links, navbar with context %}
+  <head lang="en">
+      <meta charset="UTF-8">
+      <meta http-equiv="Content-Language" content="en">
+      <title>Minigo {{ group|title }} Comparison</title>
+
+      {{ favicon_links() }}
+      {{ bootstrap_links() }}
+
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
+
+      <script type="text/javascript" src="{{ url_for('static',filename='graphs.js') }}"></script>
+      <script type="text/javascript" src="{{ url_for('static',filename='general.js') }}"></script>
+
+      <script src="https://d3js.org/d3.v4.min.js"></script>
+
+      <script type="text/javascript" src="/static/wgo/wgo.min.js"></script>
+      <script type="text/javascript" src="/static/wgo/wgo.player.min.js"></script>
+      <script type="text/javascript" src="/static/wgo/wgo_markers.js"></script>
+      <link type="text/css" href="/static/wgo/wgo.player.css" rel="stylesheet" />
+
+      <style>
+        .container-container {
+          position: absolute;
+          right:10%;
+          left: 10%;
+          top: 10%;
+          bottom: 10%;
+        }
+        .tsne-thumb {
+          width: 20px;
+          height: 20px;
+          position: absolute;
+        }
+        .tsne-thumb:hover {
+          z-index: 10;
+        }
+      </style>
+  </head>
+  <body>
+    {{ navbar('tsne', 't-SNE!', other_page='models_details') }}
+    <div class="container-container">
+      {% for r in results[:1000] %}
+        <img class="tsne-thumb" src="{{ r[1] }}"
+             style="left: {{100 * r[2][1] }}%; top: {{100 * r[2][0]}}%;">
+      {% endfor %}
+    </div>
+  </body>
+</html>
