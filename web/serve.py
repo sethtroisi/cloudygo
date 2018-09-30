@@ -187,7 +187,13 @@ def eval_view(bucket, model, filename):
 @app.route('/<bucket>/<model>/clean/<filename>')
 @app.route('/<bucket>/<model>/full/<filename>')
 def game_view(bucket, model, filename):
-    view_type = request.args.get('type') or 'clean'
+    view_type = request.args.get('type')
+    if not view_type:
+        path = re.search(r'/(clean|full|eval)/', request.base_url)
+        if path:
+            view_type = path.group(1)
+        else:
+            view_type = 'clean'
     assert view_type in ('clean', 'eval', 'full'), view_type
 
     is_raw = get_bool_arg('raw', request.args)
@@ -916,7 +922,7 @@ def tsne(bucket, embedding_type="value_conv"):
         # TODO: fix path hacks here: 20 for /sgf/eval/YYYY-MM-DD/'
         filename = _embedding_serve_path(metadata[i][0], bucket)[20:]
         url = url_for('eval_view', bucket=bucket, model=0, filename=filename)
-        url += '?type=eval&M=' + str(metadata[i][1])
+        url += '?M=' + str(metadata[i][1])
 
         results.append([
             url,
