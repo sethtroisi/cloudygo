@@ -751,6 +751,13 @@ class CloudyGo:
                 inserts.append((model_name, model_id))
                 names[model_id].add(model_name)
 
+            # LEELA-HACK: also add short name.
+            if re.match(r'$[0-9a-fA-F]{64}^', model_name):
+                short_name = model_name[:8]
+                if short_name not in names[model_id]:
+                    inserts.append((short_name, model_id))
+                    names[model_id].add(short_name)
+
         # MINIGO-HACK
         for model_id, name in sorted(model_names.items()):
             bucket = [b for b in CloudyGo.MINIGO_TS
@@ -779,6 +786,38 @@ class CloudyGo:
             self.insert_rows_db('name_to_model_id', inserts)
             self.db().commit()
             print('Updated {} model names'.format(len(inserts)))
+
+    def get_model_names(self, model_range):
+        raw_names = self.query_db(
+            'SELECT model_id, name FROM name_to_model_id '
+            'WHERE model_id BETWEEN ? AND ?',
+            model_range)
+
+        num_to_name = {}
+        fallback = []
+        for model_id, name in raw_names:
+            if name.startswith(CloudyGo.MODEL_CKPT):
+                fallback.append((model_id, name))
+                continue
+
+            if "ELF" in name:
+                continue
+
+            if model_id in num_to_name:
+                # TODO(sethtroisi): Models having multiple names complicates
+                # things, e.g. eval page.
+                print("ERROR: {}, multiple names: {}, {}".format(
+                    model_id, name, num_to_name[model_id]))
+
+            num_to_name[model_id] = name
+
+        for model_id, name in fallback:
+            if model_id not in num_to_name:
+                print("error: {} didn't have no ckpt name ({})".format(
+                    model_id, name))
+                num_to_name[model_id] = name
+
+        return num_to_name
 
     def update_bucket_ranges(self, bucket_names):
         buckets = self.query_db('SELECT bucket from bucket_model_range')
@@ -1065,6 +1104,7 @@ class CloudyGo:
                 re.match(r'[0-9]{6}-([a-zA-Z-]+)', name)):
                 return bucket_salt + int(name.split('-', 1)[0])
 
+            # MINIGO-HACK: bucket ~= 'v10-19x19', name ~= 'model.ckpt.123'
             if bucket.startswith('v') and ckpt_num(name):
                 num = ckpt_num(name)
                 previous = set(ckpt_num(other) for other in name_to_num.keys())

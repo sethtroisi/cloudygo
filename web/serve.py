@@ -588,10 +588,7 @@ def eval_graphs(bucket):
         return render_template('models-eval-empty.html',
                                bucket=bucket, total_games=total_games)
 
-    num_to_name = dict(cloudy.query_db(
-        'SELECT model_id, name FROM name_to_model_id '
-        'WHERE model_id BETWEEN ? AND ?',
-        model_range))
+    num_to_name = cloudy.get_model_names(model_range)
 
     # Replace model_id_2 with name
     def eval_model_transform(m):
@@ -651,10 +648,7 @@ def model_eval(bucket, model_name):
     is_sorted = get_bool_arg('sorted', request.args)
 
     model_range = CloudyGo.bucket_model_range(bucket)
-    num_to_name = dict(cloudy.query_db(
-        'SELECT model_id,name FROM name_to_model_id '
-        'WHERE model_id BETWEEN ? AND ?',
-        model_range))
+    num_to_name = cloudy.get_model_names(model_range)
 
     eval_models = cloudy.query_db(
         'SELECT * FROM eval_models WHERE model_id_1 = ?',
