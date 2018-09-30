@@ -1131,9 +1131,14 @@ class CloudyGo:
         # sort by newest first
         eval_games = sorted(eval_games, reverse=True)
         for eval_path in eval_games:
-            # Note, we want to keep the YYYY-MM-DD folder part
+            # NOTE: we want to keep the YYYY-MM-DD folder part
             partial_path = eval_path.replace(eval_dir + '/', '')
             filename = os.path.basename(eval_path)
+
+            # NOTE: for files from ringmaster we use partial_path which
+            # is generally the ctl filename.
+            if re.match('[0-9]_[0-9]+\.sgf', filename):
+                filename = partial_path
 
             eval_num, m1, m2 = CloudyGo.get_eval_parts(filename)
             if eval_num in existing:
