@@ -576,8 +576,6 @@ def models_evolution(bucket):
 
 @app.route('/<bucket>/eval-graphs')
 def eval_graphs(bucket):
-    is_sorted = get_bool_arg('sorted', request.args)
-
     model_range = CloudyGo.bucket_model_range(bucket)
     bucket_salt = CloudyGo.bucket_salt(bucket)
 
@@ -601,19 +599,20 @@ def eval_graphs(bucket):
         model_id = m[0]
         num = model_id - bucket_salt
         name = num_to_name.get(model_id, str(num))
-        return (num, name) + m[2:]
+        return (bucket, num, name) + m[2:]
 
     eval_models = list(map(eval_model_transform, eval_models))
 
     # If directory has auto-names then it's a dir_eval and not a run_eval
-    max_model_id = max((m[0] for m in eval_models), default=0)
+    max_model_id = max((m[1] for m in eval_models), default=0)
+    is_sorted = get_bool_arg('sorted', request.args)
     is_sorted = is_sorted or max_model_id >= CloudyGo.CROSS_EVAL_START
 
-    sort_by_rank = operator.itemgetter(2)
+    sort_by_rank = operator.itemgetter(3)
     eval_models_by_rank = sorted(eval_models, key=sort_by_rank, reverse=True)
 
     top_ten_models = eval_models_by_rank[:10]
-    top_ten_threshold = top_ten_models[:10][-1][2]
+    top_ten_threshold = top_ten_models[:10][-1][3]
 
     older_newer_winrates = cloudy.query_db(
         'SELECT model_id_1 % 10000, '
@@ -639,6 +638,67 @@ def eval_graphs(bucket):
                            older_newer_winrates=older_newer_winrates,
                            )
 
+@app.route('/all-eval-graphs')
+def all_eval_graphs():
+    # unify with thing class above
+    bucket = 'synced-eval'
+    other_buckets = ['v9-19x19', 'v10-19x19', 'v12-19x19']
+
+    model_range = CloudyGo.bucket_model_range(bucket)
+    bucket_salt = CloudyGo.bucket_salt(bucket)
+
+    eval_models = cloudy.query_db(
+        'SELECT * FROM eval_models '
+        'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_2 = 0 '
+        '      AND games >= 10 '
+        'ORDER BY model_id_1 desc',
+        model_range)
+    total_games = sum(m[5] for m in eval_models)
+
+    num_to_name = cloudy.get_model_names(model_range)
+
+    duplicate_model_nums = {0, 117, 129, 266, 271, 321, 527, 588, 708}
+
+    name_to_original_num = {}
+    for b in other_buckets:
+        raw = cloudy.get_model_names(CloudyGo.bucket_model_range(b))
+        for num, name in raw.items():
+            num %= CloudyGo.SALT_MULT
+
+            # NOTE: Some model names are shared between runs.
+            if num in duplicate_model_nums:
+                continue
+
+            if name in name_to_original_num:
+                print("Duplicate name", name)
+
+            name_to_original_num[name] = (b, num)
+
+    # Replace model_id_2 with name
+    def eval_model_transform(m):
+        model_id = m[0]
+        name = num_to_name.get(model_id, str(model_id))
+        bucket, num = name_to_original_num.get(name, ("?", 0))
+        if num == 0 and int(name.split('-')[0]) not in duplicate_model_nums:
+            # Not sure which bucket this would have come from.
+            print("Didn't find", model_id, name)
+
+        return (bucket, num, name) + m[2:]
+
+    eval_models = map(eval_model_transform, eval_models)
+    # Filter not found models
+    eval_models = [e_m for e_m in eval_models if e_m[1] != 0]
+    eval_models = sorted(eval_models, reverse=True)
+
+    sort_by_rank = operator.itemgetter(3)
+    eval_models_by_rank = sorted(eval_models, key=sort_by_rank, reverse=True)
+
+    return render_template('models-eval-cross.html',
+                           bucket=bucket,
+                           total_games=total_games,
+                           models=eval_models,
+                           sorted_models=eval_models_by_rank,
+                           )
 
 @app.route('/<bucket>/eval-model/<model_name>')
 def model_eval(bucket, model_name):

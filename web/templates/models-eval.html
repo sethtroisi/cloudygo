@@ -113,17 +113,17 @@
           {% for great in top_ten_models %}
           <tr class="great-model">
             <td>{{ "Best model" if loop.index0 == 0 else loop.index }}</td>
-            <td>{{ eval_link(great[0], great[1]) }}</td>
-            <td>{{great[2]|round|int }}</td>
-            <td>&plusmn; {{ great[3]|round|int }}</td>
+            <td>{{ eval_link(great[1], great[2]) }}</td>
+            <td>{{great[3]|round|int }}</td>
+            <td>&plusmn; {{ great[4]|round|int }}</td>
           </tr>
           {% endfor %}
           <tr>
             <td>Worst model</td>
             {% set worst = sorted_models[-1] %}
-            <td>{{ eval_link(worst[0], worst[1]) }}</td>
-            <td>{{ worst[2]|round|int }}</td>
-            <td>&plusmn; {{ worst[3]|round|int }}</td>
+            <td>{{ eval_link(worst[1], worst[2]) }}</td>
+            <td>{{ worst[3]|round|int }}</td>
+            <td>&plusmn; {{ worst[4]|round|int }}</td>
           </tr>
           </tbody>
         </table>
@@ -158,12 +158,12 @@
       </thead>
       <tbody>
       {% for data in model_list[c*rows:(c+1)*rows] %}
-      <tr{% if data[2] > great_threshold %} class="great-model" {% endif %}>
-        <td>{{ eval_link(data[0], data[1] if is_sorted else data[0]) }}</a></td>
-        <td>{{ data[2]|round|int }}
-            {%- if data[3] > 80 %} (&plusmn;{{ data[3]|round|int }}){% endif -%}
+      <tr{% if data[3] > great_threshold %} class="great-model" {% endif %}>
+        <td>{{ eval_link(data[1], data[2] if is_sorted else data[1]) }}</a></td>
+        <td>{{ data[3]|round|int }}
+            {%- if data[4] > 80 %} (&plusmn;{{ data[4]|round|int }}){% endif -%}
         </td>
-        <td>{{ data[4] }}</td>
+        <td>{{ data[5] }}</td>
       </tr>
       {% endfor %}
       </tbody>
@@ -186,7 +186,7 @@
       var new_ratings = ratings.filter(function(r, i) {
         sawBetter = false;
         for (j = Math.max(0, i - 3); j < i; j++) {
-          if (ratings[j][2] > r[2]) {
+          if (ratings[j][3] > r[3]) {
             sawBetter = true;
           }
         }
@@ -207,8 +207,10 @@
       rating_scatter_plot(
           rating_svg,
           new_ratings,
-          function(d) { return d[2]; },
           function(d) { return d[3]; },
+          function(d) { return d[4]; },
+          function(d) { return d[0]; },
+          function(d) { return d[1]; },
           "Rating",
           "Model",
           "Rating (elo like)");

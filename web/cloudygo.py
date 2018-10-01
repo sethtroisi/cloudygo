@@ -1245,6 +1245,9 @@ class CloudyGo:
             min(model_nums, default=-1),
             max(model_nums, default=-1)))
 
+        ratings = CloudyGo.get_eval_ratings(model_nums, eval_games)
+        assert 0 not in ratings, ratings.keys()
+
         # black games, black wins,    white games, white wins
         model_evals = defaultdict(lambda: [0, 0, 0, 0])
 
@@ -1263,9 +1266,6 @@ class CloudyGo:
             # Update by pairing
             increment_record(model_evals[(white, black)], False, black_won)
             increment_record(model_evals[(black, white)], True, black_won)
-
-        ratings = CloudyGo.get_eval_ratings(model_nums, eval_games)
-        assert 0 not in ratings, ratings.keys()
 
         records = []
         for (m1, m2), (m1_b, m1_b_wins, m1_w, m1_w_wins) in model_evals.items():

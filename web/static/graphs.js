@@ -69,16 +69,16 @@ function add_labels(
 }
 
 
-function add_weighted_average(group, data, f1, x, y, alpha=0.15) {
+function add_weighted_average(group, data, fx, fy, x, y, stroke='#111', alpha=0.15) {
     var trailing_avg_data = [];
     for (i = 0; i < data.length; i++) {
         var m = 1;
         var t = 0;
         for (j = i; j >= 0 && m > 0.00001; j--) {
-            t += (j == 0 ? 1 : alpha) * m * f1(data[j]);
+            t += (j == 0 ? 1 : alpha) * m * fy(data[j]);
             m *= 1 - alpha;
         }
-        trailing_avg_data.push([data[i][0], t]);
+        trailing_avg_data.push([fx(data[i]), t]);
     }
 
     var line = d3.line()
@@ -88,7 +88,7 @@ function add_weighted_average(group, data, f1, x, y, alpha=0.15) {
     group.append('path')
         .data([trailing_avg_data])
         .attr('d', line)
-        .attr('stroke', '#111')
+        .attr('stroke', stroke)
         .attr('stroke-width', '2px')
         .attr('fill', 'none');
 }
@@ -115,10 +115,12 @@ function per_model_graph(
         .attr('height', height)
         .attr('fill', '#fff');
 
+    var fx = function(d) { return d[0]; };
+
     // Line
     function add_line(data, x, y, funct, stroke) {
         var line = d3.line()
-            .x(function(d) { return x(d[0]); })
+            .x(function(d) { return x(fx(d)); })
             .y(function(d) { return y(funct(d)); });
 
         return paths_group.append('path')
@@ -139,7 +141,7 @@ function per_model_graph(
     }
 
     x.range([0, width]);
-    var xd = d3.extent(data, function(d) { return d[0]; });
+    var xd = d3.extent(data, fx);
     x.domain(xd);
 
     var yMin = d3.min(lines, func => d3.min(data, func));
@@ -162,7 +164,9 @@ function per_model_graph(
     // Exponential moving average.
     if (lines.length && include_average) {
         var trailing_avg_data = add_weighted_average(
-            paths_group, data, lines[0], x, y);
+            paths_group, data,
+            fx, lines[0],
+            x, y);
     }
 
     if (y) {
@@ -295,7 +299,7 @@ function per_model_slider_graph_setup(
 
 
 function rating_scatter_plot(
-        svg, data, f1, f2,
+        svg, data, f1, f2, bucket_fn, model_fn,
         title_text, x_text, y_text) {
     var rightMargin = 20; // seperate incase we add a y2 axis label.
     var margin = {top: 25, right: rightMargin, bottom: 50, left: 60};
@@ -320,22 +324,21 @@ function rating_scatter_plot(
       .offset([8, 0])
       .direction('s')
       .html(function(d) {
-          return 'Model ' + d[0] +
-                 ' ranking: ' + Math.round(f1(d));
+          return 'Model ' + model_fn(d) + ' ranking: ' + Math.round(f1(d));
       });
 
-    function add_dots_and_bars(x, y, funct, error_funct, colorScale) {
+    function add_dots_and_bars(points, x, y, funct, error_funct, colorScale, size) {
         var entering = graph_group.selectAll('scatter-point')
-            .data(data).enter();
+            .data(points).enter();
 
         var g = entering.append('g');
         g.attr('transform', function(d) {
-                return translate(x(d[0]), y(funct(d)));
+                return translate(x(model_fn(d)), y(funct(d)));
             });
         g.call(tool_tip);
 
         g.append('circle')
-            .attr('r', 3)
+            .attr('r', size)
             .attr('fill', function(d) { return colorScale(funct(d)); });
         g.append('circle')
             .attr('r', 6)
@@ -381,7 +384,7 @@ function rating_scatter_plot(
 
     // Scale the range of the data
     var x = d3.scaleLinear().range([0, width]);
-    x.domain(d3.extent(data, function(d) { return d[0]; }));
+    x.domain(d3.extent(data, model_fn));
 
     var y1;
     if (f1) {
@@ -394,13 +397,59 @@ function rating_scatter_plot(
             .domain(data.map(f1))
             .range(['#F00', '#B00', '#222', '#2B2', '#2F2']);
 
-        add_dots_and_bars(x, y1, f1, f2, colorScale);
-    }
+        var bucket_data = d3.nest()
+            .key(bucket_fn)
+            .entries(data);
 
-    var trailing_avg_data = add_weighted_average(
-        graph_group,
-        data.filter(function(d) { return d[0] > 10 }),
-        f1, x, y1);
+        var bucket_color = d3.schemeCategory10;
+        var solo = bucket_data.length == 1;
+
+        bucket_data.forEach(function(d, i) {
+          var color = bucket_color[i];
+
+          add_dots_and_bars(
+              d.values,
+              x, y1,
+              f1, f2,
+              solo ? colorScale : function() { return color; },
+              solo ? 3 : 1);
+
+          var trailing_avg_data = add_weighted_average(
+              graph_group,
+              d.values.filter(function(d) { return model_fn(d) > 10; }),
+              model_fn, f1,
+              x, y1,
+              solo ? '#111' : color);
+        });
+
+        // Add legend.
+        if (!solo) {
+          var legend = graph_group.append("g")
+            .attr("class", "legend")
+            .attr("height", 100)
+            .attr("width", 100)
+            .attr('transform', 'translate(20, 10)')
+
+          legend.selectAll('rect')
+            .data(bucket_data)
+            .enter()
+            .append("rect")
+              .attr("x", 0)
+              .attr("y", function(d, i){ return i *  20;})
+              .attr("width", 10)
+              .attr("height", 10)
+              .style("fill", function(d, i) { return bucket_color[i]; });
+
+          legend.selectAll('text')
+            .data(bucket_data)
+            .enter()
+            .append("text")
+              .attr("x", 15)
+              .attr("y", function(d, i){ return i *  20 + 9;})
+              .text(function(d) { return d.key; })
+              .style("fill", function(d, i) { return bucket_color[i]; });
+        }
+    }
 
     add_labels(
         svg, margin, height, width,
