@@ -607,7 +607,7 @@ def eval_graphs(bucket):
 
     # If directory has auto-names then it's a dir_eval and not a run_eval
     max_model_id = max((m[0] for m in eval_models), default=0)
-    is_sorted = is_sorted or max_model_id >= CloudyGo.DIR_EVAL_START
+    is_sorted = is_sorted or max_model_id >= CloudyGo.CROSS_EVAL_START
 
     sort_by_rank = operator.itemgetter(2)
     eval_models_by_rank = sorted(eval_models, key=sort_by_rank, reverse=True)

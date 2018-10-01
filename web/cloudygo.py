@@ -38,7 +38,7 @@ from . import utils
 class CloudyGo:
     SALT_MULT = 10 ** 6
 
-    DIR_EVAL_START = 2500  # offset from SALT_MULT to start
+    CROSS_EVAL_START = 2500  # offset from SALT_MULT to start
 
     # FAST UPDATE HACK fastness
     FAST_UPDATE_HOURS = 12
@@ -794,10 +794,8 @@ class CloudyGo:
             model_range)
 
         num_to_name = {}
-        fallback = []
         for model_id, name in raw_names:
             if name.startswith(CloudyGo.MODEL_CKPT):
-                fallback.append((model_id, name))
                 continue
 
             if "ELF" in name:
@@ -811,10 +809,15 @@ class CloudyGo:
 
             num_to_name[model_id] = name
 
-        for model_id, name in fallback:
-            if model_id not in num_to_name:
-                print("error: {} didn't have no ckpt name ({})".format(
-                    model_id, name))
+        for model_id, name in raw_names:
+            if model_id in num_to_name:
+                continue
+
+            # if no name other than model.ckpt, use that name
+            if name.startswith(CloudyGo.MODEL_CKPT):
+                if model_id % CloudyGo.SALT_MULT < CloudyGo.CROSS_EVAL_START:
+                    print("error: {} only had ckpt name ({})".format(
+                        model_id, name))
                 num_to_name[model_id] = name
 
         return num_to_name
@@ -1117,7 +1120,7 @@ class CloudyGo:
                 print("get_or_add_name ckpt:", name, number)
                 return number
 
-            first_eval_model = bucket_salt + CloudyGo.DIR_EVAL_START
+            first_eval_model = bucket_salt + CloudyGo.CROSS_EVAL_START
             keys = set(name_to_num.values())
             for test_id in range(first_eval_model, model_range[1]):
                 if test_id not in keys:
