@@ -6,13 +6,18 @@ body {
     text-transform: capitalize;
 }
 
-/* It would be lovely to have this truncate at page thinned */
-.page-desc {
+
+nav.navbar {
+    border-bottom: 1px solid #e1e1e1;
+    border-radius: 1px;
+    margin-bottom: 1em;
 }
 
 /* Breadcrumbs are not working with this */
 nav.navbar a,
-nav.navbar p {
+nav.navbar p,
+nav.navbar .navbar-text,
+nav.navbar .breadcrumb-item.active {
     font-size: 1.5em;
     line-height: 1.5em;
 }
@@ -23,6 +28,6 @@ nav.navbar p {
 
 .navbar .breadcrumb {
     margin: 0;
-    padding: 0 0 0 1rem;
+    padding: 0.5rem 1rem;
     background-color: inherit;
 }
