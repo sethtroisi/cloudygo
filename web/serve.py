@@ -658,6 +658,8 @@ def all_eval_graphs():
     num_to_name = cloudy.get_model_names(model_range)
 
     duplicate_model_nums = {0, 117, 129, 266, 271, 321, 527, 588, 708}
+    # NOTE: Technically these models should not be considered when calculating
+    # ratings but keeping the list updated is hard and it has little effect.
 
     name_to_original_num = {}
     for b in other_buckets:

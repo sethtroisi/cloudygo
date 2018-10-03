@@ -262,6 +262,11 @@ class CloudyGo:
         model_nums = self.query_db(
             'SELECT num FROM models WHERE bucket = ? ORDER BY num DESC LIMIT 1',
             (bucket,))
+
+        # cross-eval does this and other things.
+        if len(model_nums) == 0:
+            return 1
+
         assert len(model_nums) > 0, model_nums
         return model_nums[0][0]
 
