@@ -249,7 +249,7 @@ class CloudyGo:
         deltaHours = str(round(delta.seconds / 3600, 1)) + ' hours ago'
 
         return [
-            was.date().isoformat(),
+            was.strftime("%Y-%m-%d %H:%M"),
             (deltaDays if delta.days > 0 else '') + deltaHours
         ]
 
