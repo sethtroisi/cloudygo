@@ -54,11 +54,12 @@
         }
 
         .mostly-wide-container {
-          padding: 0 100px;
+          padding: 0 50px;
         }
 
         .model-profile {
-          font-size: 170%;
+          font-size: 110%;
+          font-size: 1.7vw;
           border: 1px solid rgba(0, 0, 0, 0.125);
           border-radius: 0.5em;
           box-shadow: 3px 5px 10px -2px #ddd;
@@ -117,43 +118,43 @@
               model=name,
               other_page='models_details') }}
 
-    <div class="container-fluid mostly-wide-container justify-content-lg-center">
+    <div class="container-fluid mostly-wide-container justify-content-md-center">
       <div class="model-profile">
         <div class="row">
-          <div class="col-lg-4">
+          <div class="col-md-4">
             {# TODO auto generate something #}
             <div class="photo"><div class="photo-name">{{name}}</div></div>
           </div>
-          <div class="col-lg-8">
+          <div class="col-md-8">
             <div class="row title-row">
-              <div class="col-lg-4 bold-cell">{{name}}</div>
-              <div class="col-lg-4 bold-cell">Rating: {{ overall[2]|round|int }}</div>
-              <div class="col-lg-4">Uncertainty: {{ overall[3]|round(1) }}</div>
+              <div class="col-md-4 bold-cell">{{name}}</div>
+              <div class="col-md-4 bold-cell">Rating: {{ overall[2]|round|int }}</div>
+              <div class="col-md-4">Uncertainty: {{ overall[3]|round(1) }}</div>
             </div>
             <div class="row">
-              <div class="col-lg model-prop">
+              <div class="col-md model-prop">
                 <div>Win Overall</div>
                 <div>{{ WLR(overall[6] + overall[8], overall[5] + overall[7]) }}</div>
               </div>
-              <div class="col-lg model-prop">
+              <div class="col-md model-prop">
                 <div>As Black</div>&#x26AB;
                 <div>{{ WLR(overall[6], overall[5]) }}</div>
               </div>
-              <div class="col-lg model-prop">
+              <div class="col-md model-prop">
                 <div>As White</div>&#x26AA;
                 <div>{{ WLR(overall[8], overall[7]) }}</div>
               </div>
             </div>
             <div class="row">
-              <div class="col-lg model-prop">
+              <div class="col-md model-prop">
                 <div>Total Games</div>
                 <div>{{ overall[5] + overall[7] }}</div>
               </div>
-              <div class="col-lg model-prop">
+              <div class="col-md model-prop">
                 <div>vs Earlier</div>
                 <div>{{ WLR(earlier_models[1], earlier_models[0]) }}</div>
               </div>
-              <div class="col-lg model-prop">
+              <div class="col-md model-prop">
                 <div>vs Later</div>
                 <div>{{ WLR(later_models[1], later_models[0]) }}</div>
               </div>
@@ -161,11 +162,11 @@
           </div>
         </div>
         <div class="row final-row">
-          <div class="col-lg-4">
+          <div class="col-md-4">
               <div>Creation: {{ model[6] }}</div>
           </div>
-          <div class="row col-lg-8">
-            <div class="col-lg-4">
+          <div class="row col-md-8">
+            <div class="col-md-4">
                 <div>Rank: {{ rank }}</div>
             </div>
             <div class="col">
@@ -176,7 +177,7 @@
       </div>
     </div>
 
-    <div class="container-fluid mostly-wide-container justify-content-lg-center">
+    <div class="container-fluid mostly-wide-container justify-content-md-center">
       <table class="models-table">
         <thead>
           <th>VS</th>
