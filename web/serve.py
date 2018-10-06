@@ -657,7 +657,7 @@ def all_eval_graphs():
 
     num_to_name = cloudy.get_model_names(model_range)
 
-    duplicate_model_nums = {0, 117, 129, 266, 271, 321, 527, 588, 708}
+    duplicate_model_nums = {0, 117, 129, 266, 271, 321, 527, 573, 588, 708}
     # NOTE: Technically these models should not be considered when calculating
     # ratings but keeping the list updated is hard and it has little effect.
 
@@ -685,14 +685,15 @@ def all_eval_graphs():
             # Not sure which bucket this would have come from.
             print("Didn't find", model_id, name)
 
-        return (bucket, num, name) + m[2:]
+        metadata = (bucket, num, model_id % CloudyGo.SALT_MULT, name)
+        return metadata + m[2:]
 
     eval_models = map(eval_model_transform, eval_models)
     # Filter not found models
     eval_models = [e_m for e_m in eval_models if e_m[1] != 0]
     eval_models = sorted(eval_models, reverse=True)
 
-    sort_by_rank = operator.itemgetter(3)
+    sort_by_rank = operator.itemgetter(4)
     eval_models_by_rank = sorted(eval_models, key=sort_by_rank, reverse=True)
 
     return render_template('models-eval-cross.html',
@@ -704,19 +705,22 @@ def all_eval_graphs():
 
 @app.route('/<bucket>/eval-model/<model_name>')
 def model_eval(bucket, model_name):
+    bucket_salt = CloudyGo.bucket_salt(bucket)
     model, model_stats = cloudy.load_model(bucket, model_name)
+    date = "???"
     if model == None:
         try:
-            bucket_salt = CloudyGo.bucket_salt(bucket)
             model_id = bucket_salt + int(model_name)
-            model = [model_id]
+            model = [model_id, model_name, model_name, bucket,
+                     model_id, # num
+                     0, 0, 0,  # last updated, creation, training_time
+                     0, 0, 0]  # games, stat_games, eval_games
         except:
             return "Unsure of model id for \"{}\"".format(model_name)
 
-    is_sorted = get_bool_arg('sorted', request.args)
-
-    model_range = CloudyGo.bucket_model_range(bucket)
-    num_to_name = cloudy.get_model_names(model_range)
+    # Nicely format creation timestamp.
+    model = list(model)
+    model[6] = CloudyGo.time_stamp_age(model[6])[0] if model[6] else '???'
 
     eval_models = cloudy.query_db(
         'SELECT * FROM eval_models WHERE model_id_1 = ?',
@@ -726,12 +730,24 @@ def model_eval(bucket, model_name):
     if total_games == 0:
         return 'No games for ' + model_name
 
+    model_range = CloudyGo.bucket_model_range(bucket)
+    num_to_name = cloudy.get_model_names(model_range)
+
     overall = [e_m for e_m in eval_models if e_m[1] == 0][0]
     eval_models.remove(overall)
     overall = list(overall)
     overall[0] %= CloudyGo.SALT_MULT
     overall[1] = num_to_name.get(model[0], overall[0])
     rating = overall[2]
+
+    # TODO: Probably should be something better
+    rank = cloudy.query_db(
+        'SELECT 1 + count(*) '
+        'FROM eval_models '
+        'WHERE rankings > ? AND '
+        '      model_id_1 / 1000000 = ? AND '
+        '      model_id_2 = 0',
+        (rating, bucket_salt / CloudyGo.SALT_MULT))[0][0]
 
     updated = []
     played_better = 0
@@ -763,6 +779,7 @@ def model_eval(bucket, model_name):
         'WHERE model_id_1 = ? or model_id_2 = ?',
         (model[0], model[0]))
 
+    is_sorted = get_bool_arg('sorted', request.args)
     sort_by = operator.itemgetter(3 if is_sorted else 0)
 
     return render_template('model-eval.html',
@@ -771,6 +788,7 @@ def model_eval(bucket, model_name):
                            total_games=total_games,
                            model=model,
                            overall=overall,
+                           rank=rank,
                            played_better=played_better,
                            later_models=later_models,
                            earlier_models=earlier_models,

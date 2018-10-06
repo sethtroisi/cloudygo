@@ -18,22 +18,24 @@
   {% from "macros.html" import models_link,
       bootstrap_links, favicon_links, navbar, tip with context %}
   {% macro WLR(a, b, rounding=2) -%}
-    {% if b != 0 %}
-      {{ a }} / {{ b }}
-      {% if a == b %}
-        = <span class="winrate">100%</span>
-      {% elif a == 0 %}
-        = <span class="winrate">0%</span>
-      {% elif b != 0 %}
-        {% if rounding == 0 %}
-          = <span class="winrate">{{ (100 * a / b)|round|int }}%</span>
-        {% else %}
-          = <span class="winrate">{{ (100 * a / b)|round(rounding) }}%</span>
-        {% endif %}
-      {% endif %}
-    {% else %}
+    <div style="white-space: nowrap;">
+      {%- if b != 0 -%}
+        {{ a }} / {{ b }} =
+        {%- if a == b -%}
+          <span class="bold-cell"> 100%</span>
+        {%- elif a == 0 -%}
+          <span class="bold-cell"> 0%</span>
+        {%- else -%}
+          {%- if rounding == 0 -%}
+           <span class="bold-cell"> {{ (100 * a / b)|round|int }}%</span>
+          {%- else -%}
+           <span class="bold-cell"> {{ (100 * a / b)|round(rounding) }}%</span>
+          {%- endif -%}
+        {%- endif %}
+      {%- else %}
         0 played
-    {% endif %}
+      {% endif %}
+    </div>
   {%- endmacro %}
   <head lang="en">
       <meta charset="UTF-8">
@@ -47,18 +49,60 @@
       <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/table.css') }}">
 
       <style>
-        .models-table.overall {
-          font-size: 170%;
-          display: block;
-        }
-        .winrate, .rating {
+        .bold-cell {
           font-weight: bold;
         }
+
+        .mostly-wide-container {
+          padding: 0 100px;
+        }
+
+        .model-profile {
+          font-size: 170%;
+          border: 1px solid rgba(0, 0, 0, 0.125);
+          border-radius: 0.5em;
+          box-shadow: 3px 5px 10px -2px #ddd;
+          padding: 1em;
+          margin: 1em auto;
+        }
+        .photo {
+          border: 1px solid rgba(0, 0, 0, 0.125);
+          border-radius: 1em;
+          height: 100%;
+          width: 100%;
+          background-image: linear-gradient(to top right, #fbc0ee 0%, #aaccee 100%);
+          display: table;
+        }
+        .photo-name {
+          display: table-cell;
+          text-align: center;
+          vertical-align: middle;
+          font-weight: bold;
+          transform: rotate(5deg);
+        }
+        .title-row > div {
+          margin-bottom: 10px;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+        }
+
+        .model-prop > div:first-child {
+          display: inline-block;
+          opacity: 0.5;
+          border-bottom: 1px solid rgba(0,0,0, 0.05);
+        }
+        .model-prop > div:nth-child(2) {
+          margin-left: 1em;
+          /* text-align: right; */
+        }
+        .final-row {
+          margin: 1em 0;
+        }
+
         .opponent-link-column {
           white-space: nowrap;
         }
         .game-link-column {
-          max-width: 630px;
+          max-width: 930px;
           max-height: 200px;
           text-overflow: ellipsis;
           overflow: hidden;
@@ -73,95 +117,111 @@
               model=name,
               other_page='models_details') }}
 
-    <table class="models-table overall">
-        <tr>
-          <td class="rating">Rating</td>
-          <td class="rating">{{ overall[2]|round|int }}</td>
-        </tr>
-        <tr>
-          <td class="c-tooltip">
-            Uncertainty
-            {{ tip('Std error of rating param') }}
-          </td>
-          <td>{{ overall[3]|round(1) }}</td>
-        </tr>
-
-        <tr class="sep-top">
-          <td>Overall</td>
-          <td>{{ WLR(overall[6] + overall[8], overall[5] + overall[7]) }}</td>
-        <tr>
-          <td>As Black</td>
-          <td>{{ WLR(overall[6], overall[5]) }}</td>
-        </tr>
-        <tr class="sep-bot">
-          <td>As White</td>
-          <td>{{ WLR(overall[8], overall[7]) }}</td>
-        </tr>
-
-        <tr>
-          <td>vs Earlier Models</td>
-          <td>{{ WLR(earlier_models[1], earlier_models[0]) }}</td>
-        </tr>
-        <tr class="sep-bot">
-          <td>vs Later Models</td>
-          <td>{{ WLR(later_models[1], later_models[0]) }}</td>
-        </tr>
-
-        <tr>
-          <td class="c-tooltip" colspan="2">
-            Played {{ played_better }} stronger* ranked models
-            {{ tip('Stronger based on current Bradley-Terry rankings') }}
-          </td>
-        </tr>
-    </table>
-
-    <table class="models-table">
-      <thead>
-        <th>VS</th>
-        <th>As Black </th>
-        <th>As White </th>
-        <th>Total</th>
-      </thead>
-      <tbody>
-      {% for data in model_games[::-1] %}
-        <tr class="sep-top">
-          <td class="opponent-link-column" rowspan="2">
-            <a href="{{ url_for('model_eval',
-                                bucket=bucket,
-                                model_name=data[1],
-                                sorted=is_sorted) }}">
-              {{ data[2] if is_sorted else data[1] }}</a>
-            &nbsp;&nbsp;
-            {{- "{:+.0f}".format(data[3]) }} elo
-          </td>
-          <td>{{ WLR(data[7], data[6], 0) }}</td>
-          <td>{{ WLR(data[9], data[8], 0) }}</td>
-          <td>{{ WLR(data[7] + data[9], data[6] + data[8], 1) }}</td>
-        </tr>
-        <tr>
-          <td colspan="100">
-            <div class="game-link-column">
-              {% set count = namespace(displayed=0) %}
-              {% for eval_game in eval_games %}
-                {% if eval_game[0] == data[1] or eval_game[1] == data[1] %}
-                  {% set count.displayed = count.displayed + 1 %}
-                  {% if count.displayed <= 100 %}
-                    <a href="{{ url_for('eval_view',
-                                        bucket=bucket,
-                                        model=data[0],
-                                        filename=eval_game[2],
-                                        type='eval') }}">{{loop.index }}</a>,
-                  {% endif %}
-                {% endif %}
-              {% endfor %}
+    <div class="container-fluid mostly-wide-container justify-content-lg-center">
+      <div class="model-profile">
+        <div class="row">
+          <div class="col-lg-4">
+            {# TODO auto generate something #}
+            <div class="photo"><div class="photo-name">{{name}}</div></div>
+          </div>
+          <div class="col-lg-8">
+            <div class="row title-row">
+              <div class="col-lg-4 bold-cell">{{name}}</div>
+              <div class="col-lg-4 bold-cell">Rating: {{ overall[2]|round|int }}</div>
+              <div class="col-lg-4">Uncertainty: {{ overall[3]|round(1) }}</div>
             </div>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </body>
+            <div class="row">
+              <div class="col-lg model-prop">
+                <div>Win Overall</div>
+                <div>{{ WLR(overall[6] + overall[8], overall[5] + overall[7]) }}</div>
+              </div>
+              <div class="col-lg model-prop">
+                <div>As Black</div>&#x26AB;
+                <div>{{ WLR(overall[6], overall[5]) }}</div>
+              </div>
+              <div class="col-lg model-prop">
+                <div>As White</div>&#x26AA;
+                <div>{{ WLR(overall[8], overall[7]) }}</div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-lg model-prop">
+                <div>Total Games</div>
+                <div>{{ overall[5] + overall[7] }}</div>
+              </div>
+              <div class="col-lg model-prop">
+                <div>vs Earlier</div>
+                <div>{{ WLR(earlier_models[1], earlier_models[0]) }}</div>
+              </div>
+              <div class="col-lg model-prop">
+                <div>vs Later</div>
+                <div>{{ WLR(later_models[1], later_models[0]) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row final-row">
+          <div class="col-lg-4">
+              <div>Creation: {{ model[6] }}</div>
+          </div>
+          <div class="row col-lg-8">
+            <div class="col-lg-4">
+                <div>Rank: {{ rank }}</div>
+            </div>
+            <div class="col">
+                <div>Other Names: TBD</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <script type="text/javascript">
-  </script>
+    <div class="container-fluid mostly-wide-container justify-content-lg-center">
+      <table class="models-table">
+        <thead>
+          <th>VS</th>
+          <th>As Black &#x26AB;</th>
+          <th>As White &#x26AA;</th>
+          <th>Total</th>
+        </thead>
+        <tbody>
+        {% for data in model_games[::-1] %}
+          <tr class="sep-top">
+            <td class="opponent-link-column" rowspan="2">
+              <a href="{{ url_for('model_eval',
+                                  bucket=bucket,
+                                  model_name=data[1],
+                                  sorted=is_sorted) }}">
+                {{ data[2] if is_sorted else data[1] }}</a>
+              &nbsp;&nbsp;
+              {{- "{:+.0f}".format(data[3]) }} elo
+            </td>
+            <td>{{ WLR(data[7], data[6], 0) }}</td>
+            <td>{{ WLR(data[9], data[8], 0) }}</td>
+            <td>{{ WLR(data[7] + data[9], data[6] + data[8], 1) }}</td>
+          </tr>
+          <tr>
+            <td colspan="100">
+              <div class="game-link-column">
+                {% set count = namespace(displayed=0) %}
+                {% for eval_game in eval_games %}
+                  {% if eval_game[0] == data[1] or eval_game[1] == data[1] %}
+                    {% set count.displayed = count.displayed + 1 %}
+                    {% if count.displayed <= 100 %}
+                      <a href="{{ url_for('eval_view',
+                                          bucket=bucket,
+                                          model=data[0],
+                                          filename=eval_game[2],
+                                          type='eval') }}">{{loop.index }}</a>,
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </body>
 </html>
