@@ -57,10 +57,11 @@ class CloudyGo:
     DEFAULT_BUCKET = 'v12-19x19'
     LEELA_ID = 'leela-zero'
 
-    # NOTE: For v9, v10 sgf folder has timestamp instead of model directories
+    # NOTE: From v9 on sgf folders has timestamp instead of model directories
     # this radically complicates several parts of the update code. Those places
-    # should be documented either MINIGO_TS or MINIGO-HACK.
-    MINIGO_TS = ['v9-19x19', 'v10-19x19', 'v11-19x19', 'v12-19x19']
+    # should be documented with either MINIGO_TS or MINIGO-HACK.
+    MINIGO_TS = ['v9-19x19',  'v10-19x19', 'v11-19x19', 'v12-19x19',
+                 'v13-19x19', 'v14-19x19', 'v15-19x19', 'v16-19x19']
     MINIGO_GAME_LENGTH = 25 * 60
 
 
@@ -156,11 +157,13 @@ class CloudyGo:
 
         return list(reversed(self.query_db(query, args)))
 
-    def insert_rows_db(self, table, rows):
+    def insert_rows_db(self, table, rows, allow_existing=False):
         assert re.match('^[a-zA-Z_2]*$', table), table
         if len(rows) > 0:
             values = '({})'.format(','.join(['?'] * len(rows[0])))
-            query = 'INSERT INTO {} VALUES {}'.format(re.escape(table), values)
+            replace_text = 'OR REPLACE' if allow_existing else ''
+            query = 'INSERT {} INTO {} VALUES {}'.format(
+                replace_text, re.escape(table), values)
             self.db().executemany(query, rows)
 
     #### MORE UTILS ####
@@ -326,7 +329,6 @@ class CloudyGo:
             client = storage.Client(project="minigo-pub").bucket(cloud_bucket)
             self.storage_clients[bucket] = client
 
-
         # MINIGO-HACK
         if bucket in CloudyGo.MINIGO_TS:
             # Take a guess at based on timestamp
@@ -397,15 +399,19 @@ class CloudyGo:
 
         return data, view_type
 
+    def _get_existing_games(self, where, args):
+        query = ('SELECT timestamp, game_num, has_stats '
+                 'FROM games '
+                 'WHERE ' + where)
+        return {(ts,g_n): h_s for ts, g_n, h_s in self.query_db(query, args)}
+
     def _get_games_from_model(self, model_id):
-        query = 'SELECT timestamp, game_num FROM games WHERE model_id = ?'
-        return set(map(tuple, self.query_db(query, model_id)))
+        return self._get_existing_games('model_id = ?', model_id)
 
     def _get_games_from_ts(self, model_range, ts_range):
-        query = ('SELECT timestamp, game_num FROM games '
-                 'WHERE model_id  BETWEEN ? and ? AND '
-                 '      timestamp BETWEEN ? and ?')
-        return set(map(tuple, self.query_db(query, model_range + ts_range)))
+        return self._get_existing_games(
+            'model_id BETWEEN ? and ? AND timestamp BETWEEN ? and ?',
+            model_range + ts_range)
 
     def _get_eval_games(self, bucket):
         model_range = CloudyGo.bucket_model_range(bucket)
@@ -851,8 +857,10 @@ class CloudyGo:
 
     @staticmethod
     def _game_paths_to_to_process(
-            bucket, existing, model_lookup,
-            game_paths, max_inserts):
+            bucket, existing,
+            model_lookup,
+            game_paths,
+            max_inserts):
 
         bucket_salt = CloudyGo.bucket_salt(bucket)
         to_process = []
@@ -860,10 +868,14 @@ class CloudyGo:
         for game_path in sorted(game_paths):
             filename = os.path.basename(game_path)
             game_num = CloudyGo.get_game_num(bucket_salt, filename)
+            has_stats = '/full/' in game_path
 
-            if game_num in existing:
+            # Skip if already processed UNLESS was processed without stats.
+            current = existing.get(game_num, None)
+            if current or (current == False and not has_stats):
                 continue
-            existing.add(game_num)
+
+            existing[game_num] = has_stats
 
             # MINIGO-HACK, this would be easy otherwise
             model_id = model_lookup(filename)
@@ -903,23 +915,20 @@ class CloudyGo:
         if len(to_update) == 0:
             return
 
-        def get_folder_ts(func, comp):
+        def get_folder_ts(func):
             all_updates = [d for v in to_update.values() for d in v]
             folder = func(map(os.path.basename, all_updates))
             dt = datetime.strptime(folder, '%Y-%m-%d-%H')
             return int(dt.replace(tzinfo=timezone.utc).timestamp())
 
-        min_ts = get_folder_ts(min, model_range[0]) - 5
-        max_ts = get_folder_ts(max, model_range[1]) + 3605
+        min_ts = get_folder_ts(min) - 5
+        max_ts = get_folder_ts(max) + 3605
 
-        # TODO(sethtroisi): do better than getting all games,
-        #   filter by some reasonable timestamp or something.
         existing = self._get_games_from_ts(model_range, (min_ts, max_ts))
         print("{} existing games ({} to {})".format(
             len(existing), min_ts, max_ts))
 
         # TODO find a way to rsync faster
-        # TODO(sethtroisi): find a way to update clean with full.
         for d_type, time_dirs in to_update.items():
             for time_dir in time_dirs:
                 name = os.path.basename(time_dir)
@@ -946,9 +955,11 @@ class CloudyGo:
             model_lookup = lambda: model_id
 
             existing = self._get_games_from_model(model_id)
+            # TODO: Support update from clean if so desired.
             game_paths = self.all_games(bucket, model[2])
             to_process = CloudyGo._game_paths_to_to_process(
                 bucket, existing, model_lookup, game_paths, max_inserts)
+
             yield name, to_process, len(existing)
         if len(skipped) > 0:
             print('skipped {}, {}'.format(
@@ -978,9 +989,10 @@ class CloudyGo:
         updates = 0
         bucket_salt = CloudyGo.bucket_salt(bucket)
 
-        games_source = self._get_update_games_model(bucket, max_inserts)
         if bucket in CloudyGo.MINIGO_TS:
             games_source = self._get_update_games_time_dir(bucket, max_inserts)
+        else:
+            games_source = self._get_update_games_model(bucket, max_inserts)
 
         for model_name, to_process, len_existing in games_source:
             if len(to_process) > 0:
@@ -989,15 +1001,8 @@ class CloudyGo:
 
                 new_games = self.map_and_filter(CloudyGo.process_game, to_process)
 
-                # DARN YOU TIME BASED MODELS
-                #if bucket in CloudyGo.MINIGO_TS:
-                #    new_games = self.process_sgf_names(bucket, new_games)
-
-                #for g in new_games:
-                #    print("\t", g[:3])
-                #    print("SELECT * FROM games WHERE timestamp = {} AND game_num = {};".format(
-                #        *g[:2]))
-                self.insert_rows_db('games', new_games)
+                # Some Games were processed as clean may now have stats data.
+                self.insert_rows_db('games', new_games, allow_existing=True)
                 self.db().commit()
 
                 result = '{}: {} existing, {} inserts'.format(
