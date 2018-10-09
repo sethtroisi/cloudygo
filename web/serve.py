@@ -718,6 +718,8 @@ def model_eval(bucket, model_name):
         except:
             return "Unsure of model id for \"{}\"".format(model_name)
 
+    print ("Hi", model)
+
     # Nicely format creation timestamp.
     model = list(model)
     model[6] = CloudyGo.time_stamp_age(model[6])[0] if model[6] else '???'
@@ -774,10 +776,12 @@ def model_eval(bucket, model_name):
             later_models[1] += e_m[6] + e_m[8]
 
     eval_games = cloudy.query_db(
-        'SELECT model_id_1 % 10000, model_id_2 % 10000, filename '
+        'SELECT model_id_1 % 1000000, model_id_2 % 1000000, filename '
         'FROM eval_games '
         'WHERE model_id_1 = ? or model_id_2 = ?',
         (model[0], model[0]))
+
+    model[0] %= CloudyGo.SALT_MULT
 
     is_sorted = get_bool_arg('sorted', request.args)
     sort_by = operator.itemgetter(3 if is_sorted else 0)

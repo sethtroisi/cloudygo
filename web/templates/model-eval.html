@@ -180,7 +180,14 @@
     <div class="container-fluid mostly-wide-container justify-content-md-center">
       <table class="models-table">
         <thead>
-          <th>VS</th>
+          <th>
+            VS
+            <a href="{{ url_for(
+                  'model_eval', bucket=bucket,
+                  model_name=model[0], sorted=not is_sorted) }}">
+              Toggle sort
+            </a>
+          </th>
           <th>As Black &#x26AB;</th>
           <th>As White &#x26AA;</th>
           <th>Total</th>
