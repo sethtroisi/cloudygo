@@ -1,0 +1,196 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
+  {% from "macros.html" import models_link,
+      bootstrap_links, favicon_links, navbar, tip with context %}
+  {% macro eval_link(model, display) %}
+    <a href="{{ url_for('model_eval',
+                        bucket=bucket,
+                        model_name=model,
+                        sorted=is_sorted) }}">{{ display }}</a>
+  {% endmacro %}
+  <head lang="en">
+      <meta charset="UTF-8">
+      <meta name="google" content="notranslate">
+      <meta http-equiv="Content-Language" content="en">
+      <title>Minigo Model Eval</title>
+
+      {{ favicon_links() }}
+      {{ bootstrap_links() }}
+
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/table.css') }}">
+
+      <script src="https://d3js.org/d3.v4.min.js"></script>
+      <script type="text/javascript" src="{{ url_for('static',filename='d3-tip.js') }}"></script>
+      <script type="text/javascript" src="{{ url_for('static',filename='graphs.js') }}"></script>
+
+      <style>
+        .model-graph {
+          margin: 20px;
+          width: 600px;
+          height: 600px;
+        }
+        .filter-good-models,
+        .filter-recent-models,
+        .model-graph,
+        .rating-desc,
+        .ratings-scatter,
+        .winrate-scatter {
+          display: inline-block;
+        }
+        .rating-desc {
+          vertical-align: top;
+          margin-top: 50px;
+        }
+        .filter-good-models,
+        .filter-recent-models {
+          margin-top: 10px;
+        }
+
+
+        .great-model {
+          font-weight: bold;
+          color: #151;
+        }
+
+        .scatter-text {
+          color: white;
+          font-weight: bold;
+          background: #000;
+          padding: 4px;
+          border-radius: 4px;
+        }
+
+        .error-line {
+          stroke-dasharray: 2, 6;
+        }
+
+
+        /* Creates a small triangle extender for the tooltip */
+        .d3-tip.s:after {
+          position: absolute;
+          width: 100%;
+          text-align: center;
+          left: 0;
+          top: -14px;
+          color: #000;
+          content: "\25B2";
+        }
+
+      </style>
+  </head>
+  <body>
+    {{ navbar('eval_graphs', 'Evaluation ratings') }}
+
+    <div class="ratings-scatter">
+      <svg class="model-graph" id="rating-svg"></svg>
+      <div class="rating-desc">
+        <div>Ratings from {{ total_games }} games</div>
+        <label class="filter-good-models">
+            <input id="filter-good-models" type="checkbox">
+            Filter bad models
+        </label>
+        <label class="filter-recent-models">
+            <input id="filter-recent-models" type="checkbox">
+            Filter old models
+        </label>
+      </div>
+    </div>
+    <hr>
+    {% set model_list = sorted_models %}
+    {% set rows = 50 %}
+    {% set columns = (model_list|length - 1 + rows) // rows %}
+    {% for c in range(columns) %}
+    <table class="stripped models-table">
+      <thead>
+        <th>Model</th>
+        <th class="c-tooltip">
+          Rating
+          {{ tip("We use python choix to calculate bradley-terry model ratings then multiplying by 400 / ln(10) to approximate elo") }}
+        </th>
+        <th>Games</th>
+      </thead>
+      <tbody>
+      {% for data in model_list[c*rows:(c+1)*rows] %}
+      <tr>
+        <td>{{ eval_link(data[2], data[3]) }}</a></td>
+        <td>{{ data[4]|round|int }}
+            {%- if data[5] > 80 %} (&plusmn;{{ data[5]|round|int }}){% endif -%}
+        </td>
+        <td>{{ data[6] }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% endfor %}
+  </body>
+
+  <script type="text/javascript">
+    {# Have to reverse models so that filter works #}
+    var ratings = JSON.parse('{{ models[::-1] | tojson | safe }}');
+    var model_goodness_filter = d3.select("#filter-good-models")
+    var model_recency_filter = d3.select("#filter-recent-models")
+    var rating_svg = d3.select("#rating-svg");
+
+    function plot_ratings() {
+      var goodness_checked = model_goodness_filter.node().checked;
+      var recency_checked = model_recency_filter.node().checked;
+
+      var model_fn = function(d) { return d[1]; };
+
+      var max_model = d3.max(ratings, model_fn);
+
+      var new_ratings = ratings.filter(function(r, i) {
+        sawBetter = false;
+        for (j = Math.max(0, i - 3); j < i; j++) {
+          if (ratings[j][4] > r[4]) {
+            sawBetter = true;
+          }
+        }
+
+        var result = true;
+        if (goodness_checked) {
+          result &= !sawBetter;
+        }
+        if (recency_checked) {
+          result &= model_fn(r) * 100 > max_model * 40;
+        }
+        return result;
+      });
+
+      rating_svg.selectAll("*").remove();
+      d3.selectAll(".d3-tip.scatter-text").remove();
+
+      rating_scatter_plot(
+          rating_svg,
+          new_ratings,
+          function(d) { return d[4]; },
+          function(d) { return d[5]; },
+          function(d) { return d[0]; },
+          model_fn,
+          "Rating",
+          "Model",
+          "Rating (elo like)");
+    }
+
+    model_goodness_filter.on("change", plot_ratings);
+    model_recency_filter.on("change", plot_ratings);
+
+    plot_ratings();
+  </script>
+</html>
