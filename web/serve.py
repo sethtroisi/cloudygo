@@ -718,8 +718,6 @@ def model_eval(bucket, model_name):
         except:
             return "Unsure of model id for \"{}\"".format(model_name)
 
-    print ("Hi", model)
-
     # Nicely format creation timestamp.
     model = list(model)
     model[6] = CloudyGo.time_stamp_age(model[6])[0] if model[6] else '???'

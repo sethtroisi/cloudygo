@@ -47,12 +47,15 @@ class CloudyGo:
     INSTANCE_PATH = None
     DATA_DIR = None
 
-    # Set to 'minigo-pub' or similiar to serve debug games from the cloud.
-    DEBUG_GAME_CLOUD_BUCKET = 'minigo-pub'
+    # To avoid storing all full (AKA debug) games, hotlink from the projects
+    # Google Cloud Storage bucket. Some runs are in this public bucket, but
+    # the current run may not yet be rsynced so we have extra secret path
+    # described in the next comment.
+    FULL_GAME_CLOUD_BUCKET = 'minigo-pub'
 
-    # AMJ has asked me to keep this a secret
-    CURRENT_BUCKET_CLOUD_BUCKET = os.environ.get(
-        'CURRENT_CLOUD_BUCKET', DEBUG_GAME_CLOUD_BUCKET)
+    # AMJ has asked me to keep this a secret.
+    SECRET_CLOUD_BUCKET = os.environ.get(
+        'SECRET_CLOUD_BUCKET_PREFIX', FULL_GAME_CLOUD_BUCKET)
 
     DEFAULT_BUCKET = 'v12-19x19'
     LEELA_ID = 'leela-zero'
@@ -322,9 +325,10 @@ class CloudyGo:
 
         from google.cloud import storage
         if bucket not in self.storage_clients:
-            cloud_bucket = CloudyGo.DEBUG_GAME_CLOUD_BUCKET
-            if bucket == CloudyGo.DEFAULT_BUCKET:
-                cloud_bucket = CloudyGo.CURRENT_BUCKET_CLOUD_BUCKET
+            cloud_bucket = CloudyGo.SECRET_CLOUD_BUCKET
+            if cloud_bucket != CloudyGo.FULL_GAME_CLOUD_BUCKET:
+                # the secret bucket name includes part of the bucket name.
+                cloud_bucket += bucket.split('x')[0]
 
             client = storage.Client(project="minigo-pub").bucket(cloud_bucket)
             self.storage_clients[bucket] = client
@@ -335,8 +339,10 @@ class CloudyGo:
             hour_guess = CloudyGo.guess_hour_dir(filename)
             model = hour_guess
 
-            path_bucket = "" if bucket == CloudyGo.DEFAULT_BUCKET else bucket
-            path = os.path.join(path_bucket, 'sgf', 'full', hour_guess, filename)
+            path = os.path.join('sgf', 'full', hour_guess, filename)
+            if bucket == CloudyGo.FULL_GAME_CLOUD_BUCKET:
+                # MINIGO_PUB has an outer folder of the bucket name
+                path = os.path.join(bucket, path)
         else:
             path = os.path.join(bucket, 'sgf', model, 'full', filename)
 
@@ -387,7 +393,7 @@ class CloudyGo:
         else:
             if 'full' in view_type \
                     and CloudyGo.LEELA_ID not in bucket \
-                    and CloudyGo.DEBUG_GAME_CLOUD_BUCKET:
+                    and CloudyGo.FULL_GAME_CLOUD_BUCKET:
                 data = self.__get_gs_game(bucket, model, filename, view_type)
                 if data:
                     return data, view_type

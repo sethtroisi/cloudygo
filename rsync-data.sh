@@ -179,7 +179,7 @@ function gs_rsync() {
         echo "$(echo "$file_list" | head)"
         echo -e "\tfound: $found"
         if [[ $found -gt 10 ]]; then
-            partial_list="$(echo "$file_list" | shuf -n $MAX_COUNT | sorted)"
+            partial_list="$(echo "$file_list" | shuf -n $MAX_COUNT | sort)"
             gsutil -m cp $partial_list "$2"
         fi
     else
