@@ -43,7 +43,7 @@ DATABASE_PATH = os.path.join(INSTANCE_PATH, 'clouds.db')
 CURRENT_BUCKET = 'v12-19x19'
 
 # Note when importing a new DB consider lowing
-# for an initial pass to make sure everything is okayw
+# for an initial pass to make sure everything is okay.
 MAX_INSERTS = 50000
 
 

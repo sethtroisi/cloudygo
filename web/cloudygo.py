@@ -42,6 +42,7 @@ class CloudyGo:
 
     # FAST UPDATE HACK fastness
     FAST_UPDATE_HOURS = 12
+    MAX_INSERTS = 50000
 
     # set by __init__ but treated as constant
     INSTANCE_PATH = None
@@ -1215,6 +1216,9 @@ class CloudyGo:
                  eval_num,
                  black_model,
                  white_model))
+
+            if len(evals_to_process) >= CloudyGo.MAX_INSERTS:
+                break
 
         new_evals = []
         if len(evals_to_process) > 0:
