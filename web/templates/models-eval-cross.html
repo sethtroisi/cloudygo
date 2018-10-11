@@ -100,7 +100,32 @@
     <div class="ratings-scatter">
       <svg class="model-graph" id="rating-svg"></svg>
       <div class="rating-desc">
-        <div>Ratings from {{ total_games }} games</div>
+        <table class="stripped">
+          <tbody>
+          <tr>
+            <td>Ratings from</td>
+            <td>{{ total_games }} games</td>
+            <td>rating</td>
+            <td>uncertainty</td>
+          </tr>
+
+          {% for great in sorted_models[:15] %}
+          <tr class="great-model">
+            <td>{{ "Best model" if loop.index0 == 0 else loop.index }}</td>
+            <td>{{ eval_link(great[2], great[0] + "/" + great[3]) }}</td>
+            <td>{{great[4]|round|int }}</td>
+            <td>&plusmn; {{ great[5]|round|int }}</td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td>Worst model</td>
+            {% set worst = sorted_models[-1] %}
+            <td>{{ eval_link(worst[1], worst[2]) }}</td>
+            <td>{{ worst[3] }}</td>
+            <td>&plusmn; {{ worst[4] }}</td>
+          </tr>
+          </tbody>
+        </table>
         <label class="filter-good-models">
             <input id="filter-good-models" type="checkbox">
             Filter bad models
@@ -128,7 +153,7 @@
       <tbody>
       {% for data in model_list[c*rows:(c+1)*rows] %}
       <tr>
-        <td>{{ eval_link(data[2], data[3]) }}</a></td>
+        <td>{{ eval_link(data[2], data[0] + "/" + data[3]) }}</a></td>
         <td>{{ data[4]|round|int }}
             {%- if data[5] > 80 %} (&plusmn;{{ data[5]|round|int }}){% endif -%}
         </td>

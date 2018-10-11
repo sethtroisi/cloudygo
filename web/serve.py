@@ -618,8 +618,7 @@ def eval_graphs(bucket):
     sort_by_rank = operator.itemgetter(3)
     eval_models_by_rank = sorted(eval_models, key=sort_by_rank, reverse=True)
 
-    top_ten_models = eval_models_by_rank[:10]
-    top_ten_threshold = top_ten_models[:10][-1][3]
+    top_ten_threshold = eval_models_by_rank[10][3]
 
     older_newer_winrates = cloudy.query_db(
         'SELECT model_id_1 % 10000, '
@@ -639,7 +638,6 @@ def eval_graphs(bucket):
 
                            models=eval_models,
                            sorted_models=eval_models_by_rank,
-                           top_ten_models=top_ten_models,
                            great_threshold=top_ten_threshold,
 
                            older_newer_winrates=older_newer_winrates,
@@ -691,6 +689,9 @@ def all_eval_graphs():
         if num == 0 and int(name.split('-')[0]) not in duplicate_model_nums:
             # Not sure which bucket this would have come from.
             print("Didn't find", model_id, name)
+
+        # HACK: make v9 line up with v1X.
+        bucket = bucket.replace('v9', 'v09')
 
         metadata = (bucket, num, model_id % CloudyGo.SALT_MULT, name)
         return metadata + m[2:]

@@ -110,7 +110,7 @@
             <td>uncertainty</td>
           </tr>
 
-          {% for great in top_ten_models %}
+          {% for great in sorted_models[:15] %}
           <tr class="great-model">
             <td>{{ "Best model" if loop.index0 == 0 else loop.index }}</td>
             <td>{{ eval_link(great[1], great[2]) }}</td>
