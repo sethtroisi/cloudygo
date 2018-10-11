@@ -67,8 +67,18 @@
     'model_eval': ('eval_graphs', 'Evaluation'),
   } %}
 
+  {% set SEPARATOR = ('separator', '') %}
+
   {% set MODEL_PAGE_KEYS = dict(MODEL_PAGES).keys() %}
-  {% set ALL_PAGES = TOP_LEVEL_PAGES + [("separator","")] + MODEL_PAGES %}
+  {% set ALL_PAGES =
+      TOP_LEVEL_PAGES +
+      [SEPARATOR] +
+      MODEL_PAGES +
+      [
+        SEPARATOR,
+        ('all_eval_graphs', 'All Eval Graph'),
+      ]
+  %}
 
   {% set MINIGO_FULL_SIZE_RUNS = [
     ('v12-19x19', ' - 20x256 BS=2'),

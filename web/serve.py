@@ -94,6 +94,13 @@ def _jinja2_filter_strftime(time, fmt=None):
 
 #### PAGES ####
 
+@app.route('/readme')
+@app.route('/README')
+@app.route('/results')
+@app.route('/RESULTS')
+def readme():
+    return render_template('README.html')
+
 
 @app.route('/213-secret-site-nav')
 @app.route('/<bucket>/213-secret-site-nav')
