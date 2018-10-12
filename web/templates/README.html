@@ -25,79 +25,179 @@
       {{ favicon_links() }}
       {{ bootstrap_links() }}
       <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
+      <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/table.css') }}">
 
       <style>
       </style>
   </head>
   <body>
-    {{ navbar('debug', 'Secret Debug Page') }}
+    {{ navbar('readme', 'Results Summary') }}
 
     <div class="container-fluid">
       <h1>Cloudy Go README/RESULTS</h1>
 
-      <span>
+      <div>
         Andrew hasn't updated the MiniGo <a href="https://github.com/tensorflow/minigo/blob/master/RESULTS.md">RESULTS.md</a> in a long time, so here goes...
-      </span>
+      </div>
       <hr>
 
-      <span>
-        In the beginning there was
-        <strong><a href="/v3-9x9/eval-graphs">v3</a></strong>, a 9x9 run.
-        v2 and v1, if they exist, are lost to history.<br>
+      <div class="row">
+        <div class="col-lg-4">
+          <table class="table table-hover table-sm">
+            <tr>
+              <td>v3</td>
+              <td>9x9</td>
+              <td>10?</td>
+              <td>64???</td>
+              <td>CPU</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="5">
+              Successes: It ran, it trained
+            </td></tr>
 
-        After v3 there was <strong>v5.</strong> Note: we seem unable to start two runs
-        in a row so basically half the numbers are missing<br><br>
+            <tr>
+              <td>v5</td>
+              <td>19x19</td>
+              <td>10</td>
+              <td>128</td>
+              <td>GPU</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="5">
+              Successes: GPU cluster, Strong Amatuer
+            </td></tr>
 
-        Little is known about <strong><a href="/v5-19x19/eval-graphs">v5</a></strong>,
-        the archives suggest it's a <strong>10 block, 128 filter</strong> architecture,
-        5M games played.<br>
-        Oral history handed down site admin to site admin tells that the operator tested
-        several learning rate changes near the end.<br><br>
+            <tr class>
+              <td>v7</td>
+              <td>19x19</td>
+              <td>10</td>
+              <td>128</td>
+              <td>GPU</td>
+            </tr>
+            <tr><td colspan="5">
+                Successes: Golden Chunks for training, random rotation for training
+            </td></tr>
+            <tr class="sep-bot"><td colspan="5">
+              Failures: Forgot to write sgfs for start of run
+            </td></tr>
 
-        We all love Python it's a great language, but sometimes you crave speed.
-        <strong><a href="/v7-19x19/eval-graphs">v7</a></strong> used a C++ binary to go
-        direct quote <strong>"HyperSpeed"</strong>.<br>
-        v7 had its successes: better data marshalling, introduction of
-        <a href="/v7-19x19/figure-three">Figure 3</a>, bad resign rate graphs, ...<br>
-        And its issues: We forgot to write sgfs, we cut the learning rate early, ...<br><br>
+            <tr class>
+              <td>v8</td>
+              <td>19x19</td>
+              <td>10??</td>
+              <td>128</td>
+              <td>TPU</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="5">
+              Successes: Ran on TPU briefly
+            </td></tr>
 
-        It's better not to speak of v8 nor *shudder* mention its name <i>Gradients</i><br><br>
+            <tr class>
+              <td>v9</td>
+              <td>19x19</td>
+              <td>20</td>
+              <td>128</td>
+              <td>TPU</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="5">
+              Successes: Ran on TPU (very fast), We "finished" the run.
+            </td></tr>
 
-        <strong><a href="/v9-19x19/eval-graphs">v9</a></strong> was our first 20 layer model.
-        It was also the first model to train using the eight symmetries(?). Or was it?<br>
-        "I physically feel sick" - AMJ upon discovering use_random_rotation
-        defaults to False three days in.<br><br>
+            <tr class>
+              <td>v10</td>
+              <td>19x19</td>
+              <td>20</td>
+              <td>256</td>
+              <td>X00 TPU</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="5">
+              Successes: Ran on TPU (very fast), We "finished" the run.
+            </td></tr>
 
-        Never content, the MiniGo team pushed past "HyperSpeed" straight to
-        <strong><a href="https://cloud.google.com/blog/products/ai-machine-learning/cloud-tpus-in-kubernetes-engine-powering-minigo-are-now-available-in-beta">"PetaFlops Speed"</a></strong>
-        with <strong><a href="/v9-19x19/eval-graphs">v10</a></strong>.<br>
-        This was <strong>the Real Deal</strong> a <strong>20 layer, 256 filter</strong>
-        full sized model, <a href="https://bazel.build/">blazing</a> on 640
-        <a href="https://cloud.google.com/tpu/">Cloud TPUs</a>.<br>
-        I consider this our most serious attempt to reproduce AlphaZero:<br>
-        We used the published learning rate schedule, batch size, ... (TODO ANDREW).<br>
-        Andrew valiantly monitored the bad resign rate agrresively keeping it below 5%.<br>
-        Our eval showed this was a strong model, surpassing our previous top model, and reaching
-        pro strength (v7 may have too?).<br><br>
+            <tr class>
+              <td>v11</td>
+              <td>19x19</td>
+              <td>20</td>
+              <td>256</td>
+              <td>X00 TPU</td>
+            </tr>
+            <tr><td colspan="5">
+              Successes: Tested an experiment.
+            </td></tr>
+            <tr class="sep-bot"><td colspan="5">
+              Failures: Init to Q was very unstable and we stopped the run early.
+            </td></tr>
+
+            <tr class>
+              <td>v12</td>
+              <td>19x19</td>
+              <td>20</td>
+              <td>256</td>
+              <td>X00 TPU</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="5">
+              Successes: Reproducability of MiniGo
+            </td></tr>
+          </table>
+        </div>
+
+        <div class="col-lg-8">
+          In the beginning there was
+          <strong><a href="/v3-9x9/eval-graphs">v3</a></strong>, a 9x9 run.
+          v2 and v1, if they exist, are lost to history.<br>
+
+          After v3 there was <strong>v5.</strong> Note: we seem unable to start two runs
+          in a row so basically half the numbers are missing<br><br>
+
+          Little is known about <strong><a href="/v5-19x19/eval-graphs">v5</a></strong>,
+          the archives suggest it's a <strong>10 block, 128 filter</strong> architecture,
+          5M games played.<br>
+          Oral history handed down site admin to site admin tells that the operator tested
+          several learning rate changes near the end.<br><br>
+
+          We all love Python it's a great language, but sometimes you crave speed.
+          <strong><a href="/v7-19x19/eval-graphs">v7</a></strong> used a C++ binary to go
+          direct quote <strong>"HyperSpeed"</strong>.<br>
+          v7 had its successes: better data marshalling, introduction of
+          <a href="/v7-19x19/figure-three">Figure 3</a>, bad resign rate graphs, ...<br>
+          And its issues: We forgot to write sgfs, we cut the learning rate early, ...<br><br>
+
+          It's better not to speak of v8 nor *shudder* mention its name <i>Gradients</i><br><br>
+
+          <strong><a href="/v9-19x19/eval-graphs">v9</a></strong> was our first 20 layer model.
+          It was also the first model to train using the eight symmetries(?). Or was it?<br>
+          "I physically feel sick" - AMJ upon discovering use_random_rotation
+          defaults to False three days in.<br><br>
+
+          Never content, the MiniGo team pushed past "HyperSpeed" straight to
+          <strong><a href="https://cloud.google.com/blog/products/ai-machine-learning/cloud-tpus-in-kubernetes-engine-powering-minigo-are-now-available-in-beta">"PetaFlops Speed"</a></strong>
+          with <strong><a href="/v9-19x19/eval-graphs">v10</a></strong>.<br>
+          This was <strong>the Real Deal</strong> a <strong>20 layer, 256 filter</strong>
+          full sized model, <a href="https://bazel.build/">blazing</a> on 640
+          <a href="https://cloud.google.com/tpu/">Cloud TPUs</a>.<br>
+          I consider this our most serious attempt to reproduce AlphaZero:<br>
+          We used the published learning rate schedule, batch size, ... (TODO ANDREW).<br>
+          Andrew valiantly monitored the bad resign rate agrresively keeping it below 5%.<br>
+          Our eval showed this was a strong model, surpassing our previous top model, and reaching
+          pro strength (v7 may have too?).<br><br>
 
 
-        I told Andrew <strong>"Init to 0 is stupid"</strong>.<br>
-        Init to 0 means initializing a new node's value (Q) to 0 (an even position).<br>
-        I said it then and I'll say it now, this is a bad idea, it leads a weird behavior:<br>
-        MCTS explores all 361 moves before using a 2nd readout on the top policy node.<br>
-        Still it's what the paper says and we expected it to fail quickly so we tested it.<br>
-        <strong>TL;DR: <a href="/v11-19x19/eval-graphs">v11</a></strong> failed.
-        <a href="v11-19x19/graphs">Win rate wasn't stable</a> and bad resign
-        was impossible to control.<br><br>
+          I told Andrew <strong>"Init to 0 is stupid"</strong>.<br>
+          Init to 0 means initializing a new node's value (Q) to 0 (an even position).<br>
+          I said it then and I'll say it now, this is a bad idea, it leads a weird behavior:<br>
+          MCTS explores all 361 moves before using a 2nd readout on the top policy node.<br>
+          Still it's what the paper says and we expected it to fail quickly so we tested it.<br>
+          <strong>TL;DR: <a href="/v11-19x19/eval-graphs">v11</a></strong> failed.
+          <a href="v11-19x19/graphs">Win rate wasn't stable</a> and bad resign
+          was impossible to control.<br><br>
 
-        For <strong><a href="/v12-19x19/eval-graphs">v12</a></strong> we tested
-        reproducibility of our model.<br>
-        We reverted the v11 changes and ran v10 again (we change virtual_loss=2).<br>
-        virtual_loss is a parameter we use to speed up the model by batching 8 (or now 2)
-        positions and evaluating them at the same time.<br>
-        <strong>TL;DR:</strong> v11 is similar to v10, this reaffirms our confidence in RL.<br>
-
-      </span>
+          For <strong><a href="/v12-19x19/eval-graphs">v12</a></strong> we tested
+          reproducibility of our model.<br>
+          We reverted the v11 changes and ran v10 again (we change virtual_loss=2).<br>
+          virtual_loss is a parameter we use to speed up the model by batching 8 (or now 2)
+          positions and evaluating them at the same time.<br>
+          <strong>TL;DR:</strong> v11 is similar to v10, this reaffirms our confidence in RL.<br>
+        </div>
+      </div>
 
       <br><br><br><br><hr>
       <span>Sad stuff</span>
