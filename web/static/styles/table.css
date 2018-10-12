@@ -2,22 +2,25 @@ table {
     border-collapse: collapse;
 }
 
-tr th {
-    padding: 6px 5px;
-    background: #ccc;
+table.table {
+    width: initial;
 }
 
-th, td {
+table.table tr th,
+tr th {
+    border: 1px solid #ddd;
+    padding: 6px 5px;
+}
+
+table.table tr td,
+td {
     border: 1px solid #ddd;
     padding: 2px 5px;
 }
 
-.stripped tr { background: #fff; }
-.stripped tr:nth-child(even) { background: #dadada; }
 
 tr.sep-bot td { padding-bottom: 20px; }
 tr.sep-top td { padding-top: 20px; }
-
 
 .debug-sep {
     border-left: 5px solid black

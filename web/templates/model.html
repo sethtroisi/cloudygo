@@ -57,6 +57,13 @@
         .wgo-diagram .wgo-board {
             border-bottom: none;
         }
+
+        /* A little darker on this page. */
+        table.table .thead-light th {
+          background-color: #ccc;
+          color: #333;
+        }
+
       </style>
   </head>
   <body>
@@ -67,8 +74,8 @@
        ) }}
     {# TODO(sethtroisi): prev, next, newest links #}
 
-    <table>
-      <thead>
+    <table class="table">
+      <thead class="thead-light">
         <th colspan="2">
             Stats for {{model[4]}} - {{model[1]}}</th>
         <th colspan="1">
@@ -88,12 +95,12 @@
       </tr>
     </table>
     <br>
-    <table class="stripped">
+    <table class="table">
       {% if model_stats is not none -%}
-      <thead>
+      <thead class="thead-light">
         <th colspan="10">All stats taken from games where perspective won</th>
       </thead>
-      <thead>
+      <thead class="thead-light">
         <th>Player</th>
         <th>Wins</th>
         <th>Wins by resign</th>
@@ -152,14 +159,14 @@
       <div class="wgo-diagram" id="policy-diagram"></div>
       {%- endif %}
     <hr>
-    <table class="stripped">
-      <thead>
+    <table class="table table-striped table-hover">
+      <thead class="thead-light">
         <th colspan="7">{{ games|length }}{{ " Random" if is_random else "" }} games</th>
         {%- if 'leela' not in bucket -%}
         <th class="debug-sep" colspan="5">Debug (hover headers for definition)</th>
         {%- endif -%}
       </thead>
-      <thead>
+      <thead class="thead-light">
         <th>Name</th>
         <th>Viewer</th>
         <th>Raw SGF</th>

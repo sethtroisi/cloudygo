@@ -101,7 +101,7 @@
     <div class="ratings-scatter">
       <svg class="model-graph" id="rating-svg"></svg>
       <div class="rating-desc">
-        <table class="stripped">
+        <table class="table table-striped table-hover">
           <tbody>
           <tr>
             <td>Ratings from</td>
@@ -147,8 +147,8 @@
     {% set rows = 50 %}
     {% set columns = (model_list|length - 1 + rows) // rows %}
     {% for c in range(columns) %}
-    <table class="stripped models-table">
-      <thead>
+    <table class="table table-striped table-hover models-table">
+      <thead class="thead-light">
         <th>Model</th>
         <th class="c-tooltip">
           Rating

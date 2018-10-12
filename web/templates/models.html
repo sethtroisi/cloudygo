@@ -41,7 +41,7 @@
 
         body table:first-of-type tr:first-of-type td {
           font-weight: bold;
-          background-color: #bababa;
+          background-color: rgba(0, 0, 0, 0.1);
         }
 
         .c-tooltip:hover .tooltiptext:hover {
@@ -55,8 +55,8 @@
     {% set rows = 30 %}
     {% set columns = (models|length - 1 + rows) // rows %}
     {% for c in range(columns) %}
-    <table class="stripped models-table">
-      <thead>
+    <table class="table table-striped table-hover models-table">
+      <thead class="thead-light">
           <th>Model</th>
           <th class="model-name-col">Name</th>
           <th>Trained</th>
