@@ -746,8 +746,6 @@ class CloudyGo:
         if not result:
             return None
 
-        # TODO compare sgf_model with model_id
-
         # MINIGO-HACK
         is_ts_game = any(b in game_path for b in CloudyGo.MINIGO_TS)
         if sgf_model.isdigit() and is_ts_game:
@@ -820,7 +818,7 @@ class CloudyGo:
                 continue
 
             if model_id in num_to_name:
-                # TODO(sethtroisi): Models having multiple names complicates
+                # NOTE(sethtroisi): Models having multiple names complicates
                 # things, e.g. eval page.
                 print("ERROR: {}, multiple names: {}, {}".format(
                     model_id, name, num_to_name[model_id]))
@@ -1036,7 +1034,7 @@ class CloudyGo:
             n = None
             sgf = None
 
-            # TODO if pv has ~81 moves this can result in an error.
+            # NOTE: If pv has ~82 moves exactly this can result in an error.
             if len(values) in (9*9+1, 19*19+1):
                 assert group == 'policy', (group, filename)
 

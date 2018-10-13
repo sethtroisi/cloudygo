@@ -193,7 +193,7 @@ do
     echo -e "\e[1;32mSyncing $model $(date)\e[0m"
     if [[ -z "$DRY_RUN" ]]; then
         if [[ "$TIME_BASED_NAMES" ]]; then
-            # NOTE: Wait one hour To ensure uniform sample of TIME_BASED_NAMES
+            # NOTE: Wait one hour to ensure uniform sample of TIME_BASED_NAMES
             last_model=$(echo "$models" | tail -n 1)
             if [[ "$MAX_COUNT" ]] && [[ "$last_model" == "$model" ]]; then
                 echo -e "\tSkipping recent model: $model"
@@ -211,7 +211,7 @@ do
             gs_rsync "$cloud_path/$clean_path" "$partial_dest/$clean_path"
         fi
         if [[ "$FULL" ]]; then
-            # TODO syncing this before the end of the hour leads to problems :/
+            # NOTE: Syncing this before the end of the hour leads to problems :/
             # especially given how cron runs right at the start of the hour.
             gs_rsync "$cloud_path/$full_path" "$partial_dest/$full_path"
         fi

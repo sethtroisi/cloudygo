@@ -80,6 +80,11 @@ cloudy = CloudyGo(
 
 #### UTILS ####
 
+def is_naughty(filepath, basepath, suffix):
+    base_dir_abs = os.path.abspath(basepath)
+    file_path_abs = os.path.abspath(filepath)
+    return not file_path_abs.startswith(base_dir_abs) or \
+           not file_path_abs.endswith(suffix)
 
 def get_bool_arg(name, args):
     value = args.get(name, 'false').lower()
@@ -158,9 +163,10 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
 
 @app.route('/openings/<filename>')
 def opening_image(filename):
-    # TODO: add naughty check
     path = os.path.join(app.instance_path, 'openings', filename)
-    if not os.path.exists(path) or not path.endswith('png'):
+    if not os.path.exists(path) or not path.endswith('.png'):
+        return ''
+    if is_naughty(path, app.instance_path, '.png'):
         return ''
 
     return send_file(
@@ -171,13 +177,12 @@ def opening_image(filename):
 
 @app.route('/eval/<bucket>/<filename>')
 def eval_image(bucket, filename):
-    # TODO: add naughty check
-
-    if not filename.endswith('png'):
+    filepath = os.path.join(LOCAL_EVAL_DIR, bucket, filename),
+    if is_naughty(filepath, LOCAL_EVAL_DIR, '.png'):
         return ''
 
     return send_file(
-        os.path.join(LOCAL_EVAL_DIR, bucket, filename),
+        filepath,
         mimetype='image/png',
         cache_timeout=30*60)
 
@@ -245,10 +250,12 @@ def game_view(bucket, model, filename):
 
 @app.route('/sgf/<path:filename>')
 def send_game(filename):
-    # TODO: add naughty check
     path = os.path.join(LOCAL_DATA_DIR, filename)
     if not os.path.exists(path):
         return 'Not Found'
+
+    if is_naughty(path, LOCAL_DATA_DIR, ''):
+        return ''
 
     mimetypes = {
         '.png': 'image/png',
@@ -270,15 +277,11 @@ def pro_game_view(filename):
     file_path = os.path.join(base_dir, filename)
 
     # make sure filename is in pro directory
-    base_dir_abs = os.path.abspath(base_dir)
-    file_path_abs = os.path.abspath(file_path)
-
-    if not file_path_abs.startswith(base_dir_abs) or \
-       not file_path_abs.endswith('.sgf'):
+    if is_naughty(file_path, base_dir, '.sgf'):
         return 'being naughty?'
 
     data = ''
-    with open(file_path_abs, 'r') as f:
+    with open(file_path, 'r') as f:
         data = f.read()
 
     is_raw = get_bool_arg('raw', request.args)
@@ -556,7 +559,7 @@ def position_comparison(bucket, model_name_a, model_name_b):
     if model_a is None or model_b is None:
         return 'Model {} or {} not found'.format(model_name_a, model_name_b)
 
-    rule_group = ('policy' if '/policy/' in request.url_rule.rule else 'pv')
+    rule_group = 'policy' if '/policy/' in request.url_rule.rule else 'pv'
     arg_group = request.args.get('group', None)
     group = arg_group or rule_group
 
@@ -937,6 +940,7 @@ def model_graphs(bucket, model_name):
                            opening_responses=favorite_response,
                            position_sgfs=sgfs,
                            )
+
 
 def _embedding_serve_path(f, bucket):
     short_path = f[f.index(bucket):]

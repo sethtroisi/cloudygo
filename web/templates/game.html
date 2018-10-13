@@ -15,12 +15,16 @@
 -->
 <!DOCTYPE html>
 <html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
-  {% from "macros.html" import models_link with context %}
+  {% from "macros.html" import models_link,
+      bootstrap_links, favicon_links, navbar, tip with context %}
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width" />
     <meta http-equiv="Content-Language" content="en">
     <title>Minigo Game viewer</title>
+
+    {{ favicon_links() }}
+    {{ bootstrap_links() }}
 
     <script src="https://d3js.org/d3.v4.min.js"></script>
 
@@ -48,15 +52,18 @@
             white-space: pre-wrap;
             font-size: 0.7em;
         }
-        .sorry {
-          text-align: center;
-          margin: 10px;
-          font-weight: bold;
-        }
+    </style>
+    {% endif %}
+    <style>
         #eval-graph {
           margin: 20px;
           width: 800px;
           height: 200px;
+        }
+        .sorry {
+          text-align: center;
+          margin: 10px;
+          font-weight: bold;
         }
         .data-line {
           fill: none;
@@ -66,13 +73,16 @@
           text-align: center;
         }
     </style>
-    {% endif %}
 
   </head>
   <body>
     <div>
-      {# TODO(sethtroisi): nav-bar here #}
-      <h2>
+      {{ navbar('game', 'Game',
+                model=model,
+                other_page='models_details',
+      ) }}
+
+      <h2 class="centered">
           {{ models_link() }}
           | <a href="{{ url_for('model_details', bucket=bucket, model_name=model) }}">Details</a>
           {% if is_eval %}
@@ -88,7 +98,7 @@
                                 bucket=bucket,
                                 model=model,
                                 filename=filename,
-                                type="" if is_full else "full") }}">
+                                type="clean" if is_full else "full") }}">
                 {{ "Game-Only" if is_full else "Debug" }}
             </a>
           {% endif %}
