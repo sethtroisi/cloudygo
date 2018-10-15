@@ -20,8 +20,9 @@ import os
 import sqlite3
 import sys
 import time
-
 from multiprocessing import Pool
+
+from tqdm import tqdm
 
 from web import sgf_utils
 from web.cloudygo import CloudyGo
@@ -72,12 +73,23 @@ def update_position_eval(cloudy, bucket, group):
 
     models = cloudy.get_models(bucket)
     model_ids = {model[4]: model[0] for model in models}
+    model_range = CloudyGo.bucket_model_range(bucket)
 
     count_per_model = len(position_paths) / max(1, len(models))
     print("{}: Updating {} {} position evals ({:.2f}/model)".format(
         bucket, group, len(position_paths), count_per_model))
 
-    updates = 0
+    existing = cloudy.query_db(
+        'SELECT '
+        '    model_id, type, name '
+        'FROM position_eval_part '
+        'WHERE model_id BETWEEN ? and ? AND type = ?',
+        model_range + (group,))
+
+    print ("\tloaded {} existing {} position_evals".format(
+        group, len(existing)))
+
+    to_process = []
     for position_path in position_paths:
         assert position_path.endswith('.csv'), position_path
         position_name = os.path.basename(position_path[:-4])
@@ -86,13 +98,15 @@ def update_position_eval(cloudy, bucket, group):
         name = raw_name.split('-', 1)[1]
 
         model_id = model_ids.get(int(model_num), None)
-        if model_id:
-            # TODO(sethtroisi): Don't update every time?
-            cloudy.update_position_eval(
-                position_path, bucket, model_id, group, name)
-            updates += 1
+        if model_id and (model_id, group, name) not in existing:
+            to_process.append((position_path, bucket, model_id, group, name))
 
-    return updates
+    # Avoid tqdm output if no entries.
+    if to_process:
+        for entry in tqdm(to_process):
+            cloudy.update_position_eval(*entry)
+
+    return len(to_process)
 
 
 def update_position_setups(cloudy, bucket):
