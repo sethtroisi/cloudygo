@@ -84,7 +84,8 @@ def is_naughty(filepath, basepath, suffix):
     base_dir_abs = os.path.abspath(basepath)
     file_path_abs = os.path.abspath(filepath)
     return not file_path_abs.startswith(base_dir_abs) or \
-           not file_path_abs.endswith(suffix)
+           not file_path_abs.endswith(suffix) or \
+           not os.path.exists(file_path_abs)
 
 def get_bool_arg(name, args):
     value = args.get(name, 'false').lower()
@@ -164,9 +165,19 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
 @app.route('/openings/<filename>')
 def opening_image(filename):
     path = os.path.join(app.instance_path, 'openings', filename)
-    if not os.path.exists(path) or not path.endswith('.png'):
-        return ''
     if is_naughty(path, app.instance_path, '.png'):
+        return ''
+
+    return send_file(
+        path,
+        mimetype='image/png',
+        cache_timeout=60*60)
+
+
+@app.route('/photos/thumbs/<name>')
+def model_thumb(name):
+    path = os.path.join(app.instance_path, 'photos', 'thumbs', name)
+    if is_naughty(path, app.instance_path, '.jpg'):
         return ''
 
     return send_file(
@@ -177,7 +188,7 @@ def opening_image(filename):
 
 @app.route('/eval/<bucket>/<filename>')
 def eval_image(bucket, filename):
-    filepath = os.path.join(LOCAL_EVAL_DIR, bucket, filename),
+    filepath = os.path.join(LOCAL_EVAL_DIR, bucket, filename)
     if is_naughty(filepath, LOCAL_EVAL_DIR, '.png'):
         return ''
 

@@ -73,6 +73,8 @@
           width: 100%;
           background-image: linear-gradient(to top right, #fbc0ee 0%, #aaccee 100%);
           display: table;
+
+          overflow: hidden;
         }
         .photo-name {
           display: table-cell;
@@ -81,6 +83,10 @@
           font-weight: bold;
           transform: rotate(5deg);
         }
+        .model-thumb {
+          width: 100%;
+        }
+
         .title-row > div {
           margin-bottom: 10px;
           border-bottom: 1px solid rgba(0, 0, 0, 0.125);
@@ -112,6 +118,7 @@
   </head>
   <body>
     {% set name = overall[1] if is_sorted else model[2] %}
+    {% set model_name = (name|string).split('-')[-1] %}
     {% set display_name = (name|string).replace('000', '') %}
     {{ navbar('model_eval',
               'evaluation stats and crosstable',
@@ -123,7 +130,15 @@
         <div class="row">
           <div class="col-md-4">
             {# TODO auto generate something #}
-            <div class="photo"><div class="photo-name">{{name}}</div></div>
+            <div class="photo">
+              <div class="photo-name">{{display_name}}</div>
+              <img src="/photos/thumbs/{{model_name}}.jpg"
+                   title="Source Wikipedia Search: 'HMS {{model_name}}' link: TBD"
+                   alt="{{display_name}}"
+                   class="model-thumb"
+                   onerror="this.style.display='none'"
+                   onload="this.parentNode.children[0].style.display='none'">
+            </div>
           </div>
           <div class="col-md-8">
             <div class="row title-row">
