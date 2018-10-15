@@ -27,7 +27,8 @@ cd instance/photos
 mkdir -p temp
 ls *jpg| xargs -I{} aspectcrop -a 2:1 -g c "{}" "temp/{}"
 # These don't do well with center gravity
-ls vanguard.jpg victory.jpg | xargs -I{} aspectcrop -a 2:1 -g s "{}" "temp/{}"
+ls sans-pareil.jpg seagull.jpg sultan.jpg two-lion.jpg vanguard.jpg victory.jpg | xargs -I{} aspectcrop -a 2:1 -g s "{}" "temp/{}"
+ls unite.jpg | xargs -I{} aspectcrop -a 2:1 -g w "{}" "temp/{}"
 
 # Downsize any really large images to ~(600x300)
 mkdir -p thumbs
