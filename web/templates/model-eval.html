@@ -102,7 +102,7 @@
           /* text-align: right; */
         }
         .final-row {
-          margin: 1em 0;
+          margin: 1em 0 0;
         }
 
         .opponent-link-column {
@@ -143,8 +143,12 @@
           <div class="col-md-8">
             <div class="row title-row">
               <div class="col-md-4 bold-cell">{{name}}</div>
-              <div class="col-md-4 bold-cell">Rating: {{ overall[2]|round|int }}</div>
-              <div class="col-md-4">Uncertainty: {{ overall[3]|round(1) }}</div>
+              <div class="col-md-4 bold-cell">
+                Rating: {{ overall[2]|round|int }} &plusmn; {{ overall[3]|round(1) }}
+              </div>
+              <div class="col-md-4">
+                  <div>Rank: {{ rank }}</div>
+              </div>
             </div>
             <div class="row">
               <div class="col-md model-prop">
@@ -176,19 +180,18 @@
             </div>
           </div>
         </div>
+        {#
         <div class="row final-row">
           <div class="col-md-4">
               <div>Creation: {{ model[6] }}</div>
           </div>
           <div class="row col-md-8">
-            <div class="col-md-4">
-                <div>Rank: {{ rank }}</div>
-            </div>
             <div class="col">
                 <div>Other Names: TBD</div>
             </div>
           </div>
         </div>
+        #}
       </div>
     </div>
 
