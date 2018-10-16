@@ -118,7 +118,7 @@
   </head>
   <body>
     {% set name = overall[1] if is_sorted else model[2] %}
-    {% set model_name = (name|string).split('-')[-1] %}
+    {% set model_name = (name|string).split('-',1)[-1] %}
     {% set display_name = (name|string).replace('000', '') %}
     {{ navbar('model_eval',
               'evaluation stats and crosstable',

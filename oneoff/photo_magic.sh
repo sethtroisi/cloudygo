@@ -20,15 +20,34 @@ set -e
 
 cd instance/photos
 
+# pngs to jpg
+#mogrify -format jpg *.png
+
 # Requires one of Fred's excellent ImageMagick scripts ('aspectcrop')
 # See: http://www.fmwconcepts.com/imagemagick/aspectcrop/index.php
 
 # Cut to the right aspect ratio (2:1)
 mkdir -p temp
-ls *jpg| xargs -I{} aspectcrop -a 2:1 -g c "{}" "temp/{}"
+#ls *jpg| xargs -I{} aspectcrop -a 2:1 -g c "{}" "temp/{}"
+
 # These don't do well with center gravity
-ls sans-pareil.jpg seagull.jpg sultan.jpg two-lion.jpg vanguard.jpg victory.jpg | xargs -I{} aspectcrop -a 2:1 -g s "{}" "temp/{}"
-ls unite.jpg | xargs -I{} aspectcrop -a 2:1 -g w "{}" "temp/{}"
+echo "andrew
+batavier
+bellerophon
+cormorant
+coronation
+courageux
+culloden
+repulse
+royal-sovereign
+sans-pareil
+seagull
+sultan
+two-lion
+vanguard
+victory" | xargs -I{} aspectcrop -a 2:1 -g s "{}.jpg" "temp/{}.jpg"
+echo "unite
+dispatch" | xargs -I{} aspectcrop -a 2:1 -g w "{}.jpg" "temp/{}.jpg"
 
 # Downsize any really large images to ~(600x300)
 mkdir -p thumbs
