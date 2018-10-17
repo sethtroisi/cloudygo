@@ -44,14 +44,25 @@
       <div class="row">
         <div class="col-lg-4">
           <table class="table table-hover table-sm">
+            <thead>
+              <th>run</th>
+              <th>board_size</th>
+              <th>blocks</th>
+              <th>filters</th>
+              <th>played on</th>
+              <th>Number of models</th>
+              <th>Number of games</th>
+            </thead>
             <tr>
               <td>v3</td>
               <td>9x9</td>
               <td>10?</td>
               <td>64???</td>
               <td>CPU</td>
+              <td>496</td>
+              <td>3.3M</td>
             </tr>
-            <tr class="sep-bot"><td colspan="5">
+            <tr class="sep-bot"><td colspan="7">
               Successes: It ran, it trained
             </td></tr>
 
@@ -61,34 +72,40 @@
               <td>10</td>
               <td>128</td>
               <td>GPU</td>
+              <td>581</td>
+              <td>4.8M</td>
             </tr>
-            <tr class="sep-bot"><td colspan="5">
+            <tr class="sep-bot"><td colspan="7">
               Successes: GPU cluster, Strong Amatuer
             </td></tr>
 
             <tr class>
               <td>v7</td>
               <td>19x19</td>
-              <td>10</td>
+              <td>20??</td>
               <td>128</td>
               <td>GPU</td>
+              <td>529</td>
+              <td>7.8M</td>
             </tr>
-            <tr><td colspan="5">
+            <tr><td colspan="7">
                 Successes: Golden Chunks for training, random rotation for training
             </td></tr>
-            <tr class="sep-bot"><td colspan="5">
+            <tr class="sep-bot"><td colspan="7">
               Failures: Forgot to write sgfs for start of run
             </td></tr>
 
             <tr class>
               <td>v8</td>
               <td>19x19</td>
-              <td>10??</td>
-              <td>128</td>
+              <td>20</td>
+              <td>256</td>
               <td>TPU</td>
+              <td>5</td>
+              <td>100K</td>
             </tr>
-            <tr class="sep-bot"><td colspan="5">
-              Successes: Ran on TPU briefly
+            <tr class="sep-bot"><td colspan="7">
+              Successes: Proved our TPU kubernetes cluster works.
             </td></tr>
 
             <tr class>
@@ -97,8 +114,10 @@
               <td>20</td>
               <td>128</td>
               <td>TPU</td>
+              <td>737</td>
+              <td>14.0M</td>
             </tr>
-            <tr class="sep-bot"><td colspan="5">
+            <tr class="sep-bot"><td colspan="7">
               Successes: Ran on TPU (very fast), We "finished" the run.
             </td></tr>
 
@@ -108,8 +127,10 @@
               <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
+              <td>865</td>
+              <td>22.3M</td>
             </tr>
-            <tr class="sep-bot"><td colspan="5">
+            <tr class="sep-bot"><td colspan="7">
               Successes: Ran on TPU (very fast), We "finished" the run.
             </td></tr>
 
@@ -119,11 +140,13 @@
               <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
+              <td>171</td>
+              <td>6.6M</td>
             </tr>
-            <tr><td colspan="5">
+            <tr><td colspan="7">
               Successes: Tested an experiment.
             </td></tr>
-            <tr class="sep-bot"><td colspan="5">
+            <tr class="sep-bot"><td colspan="7">
               Failures: Init to Q was very unstable and we stopped the run early.
             </td></tr>
 
@@ -133,9 +156,11 @@
               <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
+              <td>970+</td>
+              <td>24M+</td>
             </tr>
-            <tr class="sep-bot"><td colspan="5">
-              Successes: Reproducability of MiniGo
+            <tr class="sep-bot"><td colspan="7">
+              Successes: Reproducability of v11: proved RL is stable.
             </td></tr>
           </table>
         </div>
@@ -163,7 +188,7 @@
 
           It's better not to speak of v8 nor *shudder* mention its name <i>Gradients</i><br><br>
 
-          <strong><a href="/v9-19x19/eval-graphs">v9</a></strong> was our first 20 layer model.
+          <strong><a href="/v9-19x19/eval-graphs">v9</a></strong> was a 20 layer model.
           It was also the first model to train using the eight symmetries(?). Or was it?<br>
           "I physically feel sick" - AMJ upon discovering use_random_rotation
           defaults to False three days in.<br><br>
@@ -195,7 +220,9 @@
           We reverted the v11 changes and ran v10 again (we change virtual_loss=2).<br>
           virtual_loss is a parameter we use to speed up the model by batching 8 (or now 2)
           positions and evaluating them at the same time.<br>
-          <strong>TL;DR:</strong> v11 is similar to v10, this reaffirms our confidence in RL.<br>
+          <strong>TL;DR:</strong> v11 is similar to v10, this was a test of stability andbootstrap
+          conditions.<br>
+          We didn't see any measureable differences so we feel good that our RL setup is stable.
         </div>
       </div>
 
