@@ -1101,12 +1101,28 @@ def eval_json(bucket):
 def ratings(bucket):
     # Not used by CloudyGo but easy to support for external people
 
-    model_range = CloudyGo.bucket_model_range(bucket)
-
     ratings = cloudy.query_db(
         'SELECT model_id_1 % 10000, round(rankings, 3), round(std_err,3) '
         'FROM eval_models '
         'WHERE model_id_2 == 0 AND '
-        '      model_id_1 >= ? AND model_id_1 < ?',
+        '      model_id_1 BETWEEN ? and ?',
         model_range)
     return jsonify(ratings)
+
+
+@app.route('/<bucket>/json/move-distribution-last-fifty-models.json')
+def move_length_dist(bucket):
+    model_range = CloudyGo.bucket_model_range(bucket)
+    newest_model = cloudy.get_newest_model_num(bucket) + model_range[0]
+
+    count_per_length = cloudy.query_db(
+        'SELECT '
+        '    result not like "_+R", 5 * cast(num_moves/5 as integer), count(*) '
+        'FROM games '
+        'WHERE model_id BETWEEN ? and ? and not has_stats '
+        'GROUP BY 1,2 '
+        'ORDER BY 1,2 asc ',
+        (newest_model - 50, newest_model))
+
+    return jsonify(count_per_length)
+
