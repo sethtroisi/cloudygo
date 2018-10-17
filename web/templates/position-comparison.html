@@ -98,7 +98,7 @@
   <script>
     function player(elem) {
         var player = new WGo.BasicPlayer(elem, {
-            move: 99,
+            move: 999,
             board: {
               stoneHandler: WGo.Board.drawHandlers.MONO,
               theme: {font: 'arial' },
@@ -145,8 +145,8 @@
         // TODO(sethtroisi): add Q?
         titleA.text("{{ group|title }} for " + rA[0] + " " + modelA);
         titleB.text("{{ group|title }} for " + rB[0] + " " + modelB);
-        playerA.loadSgf(rA[groupIndex], 99);
-        playerB.loadSgf(rB[groupIndex], 99);
+        playerA.loadSgf(rA[groupIndex], 999);
+        playerB.loadSgf(rB[groupIndex], 999);
 
         playerA.config.markLastMove=false;
         playerA.marker.clearDefaultSytle();

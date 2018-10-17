@@ -102,7 +102,7 @@
   <script>
     function player(elem) {
         var player = new WGo.BasicPlayer(elem, {
-            move: 99,
+            move: 999,
             board: {
               stoneHandler: WGo.Board.drawHandlers.MONO,
               theme: {font: 'arial' },
@@ -154,8 +154,8 @@
         titleB.text(pos_text);
         titleC.text(model_text + " " + pos_text);
         titleD.text("Q: " + r[2] + ", " + r[4]);
-        playerA.loadSgf(r[1], 99);
-        playerB.loadSgf(r[3], 99);
+        playerA.loadSgf(r[1], 999);
+        playerB.loadSgf(r[3], 999);
 
         playerB.config.markLastMove=false;
         playerB.marker.clearDefaultSytle();
