@@ -71,10 +71,14 @@
           border-radius: 1em;
           height: 100%;
           width: 100%;
-          background-image: linear-gradient(to top right, #fbc0ee 0%, #aaccee 100%);
-          display: table;
-
           overflow: hidden;
+          position: relative;
+        }
+        .name-bg {
+          background-image: linear-gradient(to top right, #fbc0ee 0%, #aaccee 100%);
+          height: 100%;
+          width: 100%;
+          display: table;
         }
         .photo-name {
           display: table-cell;
@@ -84,7 +88,16 @@
           transform: rotate(5deg);
         }
         .model-thumb {
-          width: 100%;
+          max-height: 100%;
+          max-width: 100%;
+          width: auto;
+          height: auto;
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          margin: auto;
         }
 
         .title-row > div {
@@ -131,7 +144,9 @@
           <div class="col-md-4">
             {# TODO auto generate something #}
             <div class="photo">
-              <div class="photo-name">{{display_name}}</div>
+              <div class="name-bg">
+                <div class="photo-name">{{display_name}}</div>
+              </div>
               <img src="/photos/thumbs/{{model_name}}.jpg"
                    title="Source Wikipedia Search: 'HMS {{model_name}}' link: TBD"
                    alt="{{display_name}}"
