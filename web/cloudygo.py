@@ -41,7 +41,7 @@ class CloudyGo:
     CROSS_EVAL_START = 2500  # offset from SALT_MULT to start
 
     # FAST UPDATE HACK fastness
-    FAST_UPDATE_HOURS = 12
+    FAST_UPDATE_HOURS = 6
     MAX_INSERTS = 50000
 
     # set by __init__ but treated as constant
@@ -58,7 +58,7 @@ class CloudyGo:
     SECRET_CLOUD_BUCKET = os.environ.get(
         'SECRET_CLOUD_BUCKET_PREFIX', FULL_GAME_CLOUD_BUCKET)
 
-    DEFAULT_BUCKET = 'v12-19x19'
+    DEFAULT_BUCKET = 'v13-19x19'
     LEELA_ID = 'leela-zero'
 
     # NOTE: From v9 on sgf folders has timestamp instead of model directories
@@ -359,7 +359,7 @@ class CloudyGo:
     @staticmethod
     def guess_hour_dir(filename):
         file_time = int(filename.split('-', 1)[0])
-        assert 1520000000 < file_time < 1540000000, file_time
+        assert 1520000000 < file_time < 1550000000, file_time
         dt = datetime.utcfromtimestamp(file_time)
         return dt.strftime("%Y-%m-%d-%H")
 
@@ -855,7 +855,7 @@ class CloudyGo:
     def _model_guesser(filename, model_mtimes, model_ids):
         game_time = int(filename.split('-', 1)[0])
         game_time -= CloudyGo.MINIGO_GAME_LENGTH
-        assert 1520000000 < game_time < 1540000000, game_time
+        assert 1520000000 < game_time < 1550000000, game_time
         model_num = bisect.bisect(model_mtimes, game_time, 1) - 1
         assert model_num >= 0, model_num
         return model_ids[model_num]

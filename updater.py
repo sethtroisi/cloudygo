@@ -41,7 +41,8 @@ DATABASE_PATH = os.path.join(INSTANCE_PATH, 'clouds.db')
 #CURRENT_BUCKET = 'v9-19x19'
 #CURRENT_BUCKET = 'v10-19x19'
 #CURRENT_BUCKET = 'v11-19x19'
-CURRENT_BUCKET = 'v12-19x19'
+#CURRENT_BUCKET = 'v12-19x19'
+CURRENT_BUCKET = 'v13-19x19'
 
 # Note when importing a new DB consider lowing
 # for an initial pass to make sure everything is okay.
@@ -186,7 +187,7 @@ if __name__ == "__main__":
 
     # Always update names
     cloudy.update_model_names()
-    #cloudy.update_bucket_ranges(buckets)
+    cloudy.update_bucket_ranges(buckets)
 
     T1 = time.time()
     delta = T1 - T0
