@@ -100,11 +100,9 @@ def _jinja2_filter_strftime(time, fmt=None):
 
 #### PAGES ####
 
-@app.route('/readme')
-@app.route('/README')
 @app.route('/results')
 @app.route('/RESULTS')
-def readme():
+def results():
     return render_template('README.html')
 
 

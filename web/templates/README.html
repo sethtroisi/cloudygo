@@ -31,7 +31,7 @@
       </style>
   </head>
   <body>
-    {{ navbar('readme', 'Results Summary') }}
+    {{ navbar('results', 'Results Summary') }}
 
     <div class="container-fluid">
       <h1>Cloudy Go README/RESULTS</h1>
@@ -53,85 +53,31 @@
               <th>Number of models</th>
               <th>Number of games</th>
             </thead>
-            <tr>
-              <td>v3</td>
-              <td>9x9</td>
-              <td>10?</td>
-              <td>64???</td>
-              <td>CPU</td>
-              <td>496</td>
-              <td>3.3M</td>
-            </tr>
-            <tr class="sep-bot"><td colspan="7">
-              Successes: It ran, it trained
-            </td></tr>
-
-            <tr>
-              <td>v5</td>
-              <td>19x19</td>
-              <td>10</td>
-              <td>128</td>
-              <td>GPU</td>
-              <td>581</td>
-              <td>4.8M</td>
-            </tr>
-            <tr class="sep-bot"><td colspan="7">
-              Successes: GPU cluster, Strong Amatuer
-            </td></tr>
 
             <tr class>
-              <td>v7</td>
-              <td>19x19</td>
-              <td>20??</td>
-              <td>128</td>
-              <td>GPU</td>
-              <td>529</td>
-              <td>7.8M</td>
-            </tr>
-            <tr><td colspan="7">
-                Successes: Golden Chunks for training, random rotation for training
-            </td></tr>
-            <tr class="sep-bot"><td colspan="7">
-              Failures: Forgot to write sgfs for start of run
-            </td></tr>
-
-            <tr class>
-              <td>v8</td>
-              <td>19x19</td>
-              <td>20</td>
-              <td>256</td>
-              <td>TPU</td>
-              <td>5</td>
-              <td>100K</td>
-            </tr>
-            <tr class="sep-bot"><td colspan="7">
-              Successes: Proved our TPU kubernetes cluster works.
-            </td></tr>
-
-            <tr class>
-              <td>v9</td>
-              <td>19x19</td>
-              <td>20</td>
-              <td>128</td>
-              <td>TPU</td>
-              <td>737</td>
-              <td>14.0M</td>
-            </tr>
-            <tr class="sep-bot"><td colspan="7">
-              Successes: Ran on TPU (very fast), We "finished" the run.
-            </td></tr>
-
-            <tr class>
-              <td>v10</td>
+              <td>v13</td>
               <td>19x19</td>
               <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
-              <td>865</td>
-              <td>22.3M</td>
+              <td></td>
+              <td></td>
             </tr>
             <tr class="sep-bot"><td colspan="7">
-              Successes: Ran on TPU (very fast), We "finished" the run.
+              Successes: Started from Supervised Model similar to AlphaGo Master.
+            </td></tr>
+
+            <tr class>
+              <td>v12</td>
+              <td>19x19</td>
+              <td>20</td>
+              <td>256</td>
+              <td>X00 TPU</td>
+              <td>1000 (exactly)</td>
+              <td>24.6M</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="7">
+              Successes: Reproducability of v11: proved RL is stable.
             </td></tr>
 
             <tr class>
@@ -151,29 +97,85 @@
             </td></tr>
 
             <tr class>
-              <td>v12</td>
+              <td>v10</td>
               <td>19x19</td>
               <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
-              <td>970+</td>
-              <td>24M+</td>
+              <td>865</td>
+              <td>22.3M</td>
             </tr>
             <tr class="sep-bot"><td colspan="7">
-              Successes: Reproducability of v11: proved RL is stable.
+              Successes: Ran on TPU (very fast), We "finished" the run.
             </td></tr>
 
             <tr class>
-              <td>v13</td>
+              <td>v9</td>
+              <td>19x19</td>
+              <td>20</td>
+              <td>128</td>
+              <td>TPU</td>
+              <td>737</td>
+              <td>14.0M</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="7">
+              Successes: Ran on TPU (very fast), We "finished" the run.
+              Learned about the important of random rotation.
+            </td></tr>
+
+            <tr class>
+              <td>v8</td>
               <td>19x19</td>
               <td>20</td>
               <td>256</td>
-              <td>X00 TPU</td>
-              <td></td>
-              <td></td>
+              <td>TPU</td>
+              <td>5</td>
+              <td>100K</td>
             </tr>
             <tr class="sep-bot"><td colspan="7">
-              Successes: Started from Supervised Model similar to AlphaGo Master.
+              Successes: Proved our TPU kubernetes cluster works.
+            </td></tr>
+
+            <tr class>
+              <td>v7</td>
+              <td>19x19</td>
+              <td>20??</td>
+              <td>128</td>
+              <td>GPU</td>
+              <td>529</td>
+              <td>7.8M</td>
+            </tr>
+            <tr><td colspan="7">
+                Successes: Golden Chunks for training, random rotation for training
+            </td></tr>
+            <tr class="sep-bot"><td colspan="7">
+              Failures: Forgot to write sgfs for start of run
+            </td></tr>
+
+            <tr>
+              <td>v5</td>
+              <td>19x19</td>
+              <td>10</td>
+              <td>128</td>
+              <td>GPU</td>
+              <td>581</td>
+              <td>4.8M</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="7">
+              Successes: GPU cluster, Strong Amatuer
+            </td></tr>
+
+            <tr>
+              <td>v3</td>
+              <td>9x9</td>
+              <td>10?</td>
+              <td>64???</td>
+              <td>CPU</td>
+              <td>496</td>
+              <td>3.3M</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="7">
+              Successes: Code all ran and model trained
             </td></tr>
           </table>
         </div>
