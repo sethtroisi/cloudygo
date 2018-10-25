@@ -458,6 +458,9 @@ class CloudyGo:
         for model_id, name, group, sgf, value in sgfs:
             assert group in ('pv', 'policy'), group
             model_id %= CloudyGo.SALT_MULT
+            if model_id == 80:
+                print (model_id, name, group, len(sgf), value)
+
             names.add(name)
             arranged[model_id][name][group] = (sgf, value)
             count += 1
@@ -1034,9 +1037,8 @@ class CloudyGo:
             n = None
             sgf = None
 
-            # NOTE: If pv has ~82 moves exactly this can result in an error.
-            if len(values) in (9*9+1, 19*19+1):
-                assert group == 'policy', (group, filename)
+            if group == 'policy':
+                assert len(values) in (9*9+1, 19*19+1), (group, filename)
 
                 render = (name == 'empty' and group == 'policy')
                 filename = '-'.join([str(model_id), group, name + '.png'])

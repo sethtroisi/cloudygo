@@ -73,7 +73,6 @@ def update_position_eval(cloudy, bucket, group):
     position_paths = glob.glob(os.path.join(INSTANCE_PATH, group, bucket, '*'))
 
     models = cloudy.get_models(bucket)
-    model_ids = {model[4]: model[0] for model in models}
     model_range = CloudyGo.bucket_model_range(bucket)
 
     count_per_model = len(position_paths) / max(1, len(models))
@@ -98,7 +97,7 @@ def update_position_eval(cloudy, bucket, group):
         assert raw_name.startswith("heatmap-") or raw_name.startswith("pv-")
         name = raw_name.split('-', 1)[1]
 
-        model_id = model_ids.get(int(model_num), None)
+        model_id = model_range[0] + int(model_num)
         if model_id and (model_id, group, name) not in existing:
             to_process.append((position_path, bucket, model_id, group, name))
 
