@@ -434,8 +434,8 @@ function rating_scatter_plot(
             .data(bucket_data)
             .enter()
             .append("rect")
-              .attr("x", 0)
-              .attr("y", function(d, i){ return i *  20;})
+              .attr("x", 20)
+              .attr("y", function(d, i){ return height - i * 20 - 50;})
               .attr("width", 10)
               .attr("height", 10)
               .style("fill", function(d, i) { return bucket_color[i]; });
@@ -444,8 +444,8 @@ function rating_scatter_plot(
             .data(bucket_data)
             .enter()
             .append("text")
-              .attr("x", 15)
-              .attr("y", function(d, i){ return i *  20 + 9;})
+              .attr("x", 35)
+              .attr("y", function(d, i){ return height - i *  20 - 40;})
               .text(function(d) { return d.key; })
               .style("fill", function(d, i) { return bucket_color[i]; });
         }
