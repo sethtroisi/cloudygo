@@ -110,21 +110,15 @@
             <td>uncertainty</td>
           </tr>
 
-          {% for great in sorted_models[:15] %}
-          <tr class="great-model">
-            <td>{{ "Best model" if loop.index0 == 0 else loop.index }}</td>
-            <td>{{ eval_link(great[1], great[2]) }}</td>
-            <td>{{great[3]|round|int }}</td>
-            <td>&plusmn; {{ great[4]|round|int }}</td>
+          {% for model in sorted_models[:15] + sorted_models[-1:] %}
+          <tr class={{"great-model" if not loop.last else ""}}>
+            <td>{{ "Best model" if loop.first else
+                  ("Worst model" if loop.last else loop.index) }}</td>
+            <td>{{ eval_link(model[1], model[2]) }}</td>
+            <td>{{model[3]|round|int }}</td>
+            <td>&plusmn; {{ model[4]|round|int }}</td>
           </tr>
           {% endfor %}
-          <tr>
-            <td>Worst model</td>
-            {% set worst = sorted_models[-1] %}
-            <td>{{ eval_link(worst[1], worst[2]) }}</td>
-            <td>{{ worst[3]|round|int }}</td>
-            <td>&plusmn; {{ worst[4]|round|int }}</td>
-          </tr>
           </tbody>
         </table>
         {# TODO re check checkbox #}
