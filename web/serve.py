@@ -1037,6 +1037,64 @@ def tsne(bucket, embedding_type="value_conv"):
         bucket=bucket,
         results=results)
 
+@app.route('/<bucket>/puzzles/')
+@app.route('/<bucket>/puzzles/<number>')
+def puzzles(bucket=CloudyGo.DEFAULT_BUCKET, number=0):
+    puzzle_bytes = cache.get('puzzle_bytes')
+    with open(os.path.join(app.static_folder, "SVM_data.json")) as SVM_data:
+        puzzle_bytes = SVM_data.read()
+        print("puzzle {} bytes".format(len(puzzle_bytes)))
+        cache.set('puzzle_bytes', puzzle_bytes, timeout=5 * 60)
+
+    try:
+        puzzles = json.loads(puzzle_bytes)
+        sgf = sorted(puzzles.keys())[int(number)]
+        puzzle = puzzles[sgf]
+
+        # TODO(sethtroisi): Consider using original SGF and setting move num.
+        sgf_path = os.path.join(
+            app.instance_path, 'pro', 'problem-collection2', sgf)
+
+        data = ''
+        with open(sgf_path, 'r') as f:
+            data = f.read()
+        data = data.strip()
+    except:
+        return "Did not find puzzle " + str(number)
+
+    # TODO augment
+    show = get_bool_arg('show', request.args)
+    if show:
+        assert data[-1] == ")"
+        data = data[:-1]
+
+        top_moves, coefs = puzzle
+        assert len(coefs) == 10
+        move_coefs = coefs[6:6+3]
+
+        data += ';LB'
+        for top_move, coef in zip(top_moves, move_coefs):
+            # TODO correctly handle pass
+            if top_move == 361:
+                continue
+
+            j, i = divmod(top_move, 19)
+            cord = sgf_utils.ij_to_cord(19, (i, j))
+            label = '[{}:{:.1f}]'.format(sgf_utils.cord_to_sgf(19, cord), coef)
+            data += label
+
+        data += ')'
+
+    print (data)
+
+    return render_template('puzzle.html',
+                           bucket=bucket,
+                           name=sgf,
+                           data=data,
+                           svm_stuff=puzzle,
+                           )
+
+
 
 @app.route('/<bucket>/json/missing-ratings.json')
 def ratings_json(bucket):
@@ -1099,6 +1157,7 @@ def eval_json(bucket):
 def ratings(bucket):
     # Not used by CloudyGo but easy to support for external people
 
+    model_range = CloudyGo.bucket_model_range(bucket)
     ratings = cloudy.query_db(
         'SELECT model_id_1 % 10000, round(rankings, 3), round(std_err,3) '
         'FROM eval_models '

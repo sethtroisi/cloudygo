@@ -1,0 +1,68 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
+  {% from "macros.html" import models_link,
+      bootstrap_links, favicon_links, navbar, tip with context %}
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Language" content="en">
+    <title>Minigo Game viewer</title>
+
+    {{ favicon_links() }}
+    {{ bootstrap_links() }}
+
+    <script type="text/javascript" src="/static/wgo/wgo.min.js"></script>
+    <script type="text/javascript" src="/static/wgo/wgo.player.min.js"></script>
+    <script type="text/javascript" src="{{ url_for('static',filename='graphs.js') }}"></script>
+
+    <link type="text/css" href="/static/wgo/wgo.player.css" rel="stylesheet" />
+    <link media="only screen and (max-width: 480px)" type="text/css"
+          href="{{ url_for('static',filename='styles/wgo-mobile.css') }}"
+          rel="stylesheet" />
+
+    <style>
+        .centered {
+          text-align: center;
+        }
+    </style>
+
+  </head>
+  <body>
+    <div>
+      {% set model = '100' %}
+      {{ navbar('puzzle', 'Puzzle ' + name,
+                model=model,
+                other_page='models_details',
+      ) }}
+    </div>
+    <div id="game-player"
+         data-wgo-move="{{ request.args.get('M', '') }}"
+         style="width: 800px">
+      Sorry, your browser doesn't support WGo.js.
+    </div>
+    </div>
+  </body>
+  <script type="text/javascript">
+    var elem = document.getElementById("game-player");
+    var player = new WGo.BasicPlayer(elem, {
+      move: 1000,
+      sgf: "{{ data.replace('\n', '\\n') }}",
+    });
+    player.setCoordinates(true);
+  </script>
+</html>
