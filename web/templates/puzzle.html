@@ -38,7 +38,9 @@
     <style>
         .centered {
           text-align: center;
+          margin-top: 15px;
         }
+
     </style>
 
   </head>
@@ -55,6 +57,27 @@
          style="width: 800px">
       Sorry, your browser doesn't support WGo.js.
     </div>
+    {% if coef_text %}
+      {% for text in coef_text %}
+      <div class="centered h3">
+        {{ text }}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="centered h3">
+        <form method='post'>
+          <input type="text" id="value" name="value"
+                 placeholder="1 is certian black win, 0 is white win, 0.5 is even"
+                 style="width:600px"/>
+          <input type="text" id="move" name="move" value="" style="width:80px"/>
+          <button type="submit" >Submit</button>
+        </form>
+      </div>
+    {% endif %}
+    <div class="centered h2">
+      <a href="{{ url_for('puzzles',
+                          number=(number|int + 1)|string,
+                          bucket=bucket) }}">Next</a>
     </div>
   </body>
   <script type="text/javascript">

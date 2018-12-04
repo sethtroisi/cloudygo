@@ -1038,7 +1038,8 @@ def tsne(bucket, embedding_type="value_conv"):
         results=results)
 
 @app.route('/<bucket>/puzzles/')
-@app.route('/<bucket>/puzzles/<number>')
+@app.route('/<bucket>/puzzles/<number>',
+            methods=['GET', 'POST'])
 def puzzles(bucket=CloudyGo.DEFAULT_BUCKET, number=0):
     puzzle_bytes = cache.get('puzzle_bytes')
     with open(os.path.join(app.static_folder, "SVM_data.json")) as SVM_data:
@@ -1062,9 +1063,11 @@ def puzzles(bucket=CloudyGo.DEFAULT_BUCKET, number=0):
     except:
         return "Did not find puzzle " + str(number)
 
-    # TODO augment
+    coef_text = []
+    rating_delta = []
+
     show = get_bool_arg('show', request.args)
-    if show:
+    if show or request.method == 'POST':
         assert data[-1] == ")"
         data = data[:-1]
 
@@ -1072,25 +1075,61 @@ def puzzles(bucket=CloudyGo.DEFAULT_BUCKET, number=0):
         assert len(coefs) == 10
         move_coefs = coefs[6:6+3]
 
+        move_text = []
         data += ';LB'
         for top_move, coef in zip(top_moves, move_coefs):
-            # TODO correctly handle pass
-            if top_move == 361:
-                continue
-
             j, i = divmod(top_move, 19)
             cord = sgf_utils.ij_to_cord(19, (i, j))
-            label = '[{}:{:.1f}]'.format(sgf_utils.cord_to_sgf(19, cord), coef)
-            data += label
 
+            move_text.append("{} {:.1f}".format(cord, coef))
+            # TODO correctly handle pass
+            if top_move != 361:
+                label = '[{}:{:.1f}]'.format(
+                    sgf_utils.cord_to_sgf(19, cord), coef)
+                data += label
         data += ')'
+
+        value_text = ", ".join("{:.1f}".format(v) for v in coefs[1:6])
+        coef_text = [
+            "Value Coef: {:.1f} + {}".format(coefs[0], value_text),
+            "Move Coefs: {}".format(",  ".join(move_text)),
+        #    "Sharpness: {:.1f}".format(coefs[9])
+        ]
+    if request.method == 'POST':
+        top_moves, coefs = puzzle
+
+        print (request.form)
+
+        value = request.form.get('value', 0.5)
+        move = request.form.get('move', 'pass')
+        coef_text.append("You calculated " + value)
+        coef_text.append("And Played " + move)
+
+        value = min(1, max(0, float(value)))
+        print ("Hi", value)
+        value_0 = value * coefs[0]
+        value_1 = coefs[1:6][int(4.99 * value)]
+        move_v = 0
+        for top_move, coef in zip(top_moves, coefs[6:6+3]):
+            j, i = divmod(top_move, 19)
+            cord = sgf_utils.ij_to_cord(19, (i, j))
+            move_v += coef * (cord.lower() == move.lower())
+
+        rating_delta = value_0 + value_1 + move_v
+
+        float1 = "{:.1f}"
+        format_str = (" + ".join([float1] * 3)) + " = " + float1
+        coef_text.append(format_str.format(
+            value_0, value_1, move_v, rating_delta))
 
     print (data)
 
     return render_template('puzzle.html',
                            bucket=bucket,
+                           number=number,
                            name=sgf,
                            data=data,
+                           coef_text=coef_text,
                            svm_stuff=puzzle,
                            )
 
