@@ -1037,10 +1037,11 @@ def tsne(bucket, embedding_type="value_conv"):
         bucket=bucket,
         results=results)
 
-@app.route('/<bucket>/puzzles/')
+@app.route('/<bucket>/puzzles/',
+            methods=['GET', 'POST'])
 @app.route('/<bucket>/puzzles/<number>',
             methods=['GET', 'POST'])
-def puzzles(bucket=CloudyGo.DEFAULT_BUCKET, number=0):
+def puzzles(number=0, bucket=CloudyGo.DEFAULT_BUCKET):
     puzzle_bytes = cache.get('puzzle_bytes')
     with open(os.path.join(app.static_folder, "SVM_data.json")) as SVM_data:
         puzzle_bytes = SVM_data.read()
@@ -1049,12 +1050,11 @@ def puzzles(bucket=CloudyGo.DEFAULT_BUCKET, number=0):
 
     try:
         puzzles = json.loads(puzzle_bytes)
-        sgf = sorted(puzzles.keys())[int(number)]
-        puzzle = puzzles[sgf]
+        sgf, puzzle = puzzles[int(number)]
 
         # TODO(sethtroisi): Consider using original SGF and setting move num.
         sgf_path = os.path.join(
-            app.instance_path, 'pro', 'problem-collection2', sgf)
+            app.instance_path, 'pro', 'problem-collection4', sgf)
 
         data = ''
         with open(sgf_path, 'r') as f:
@@ -1073,56 +1073,74 @@ def puzzles(bucket=CloudyGo.DEFAULT_BUCKET, number=0):
 
         top_moves, coefs = puzzle
         assert len(coefs) == 10
-        move_coefs = coefs[6:6+3]
+        move_coefs = coefs[6:6+4]
 
         move_text = []
         data += ';LB'
         for top_move, coef in zip(top_moves, move_coefs):
             j, i = divmod(top_move, 19)
-            cord = sgf_utils.ij_to_cord(19, (i, j))
+            if top_move in (361, -1):
+                cord = "pass"
+            else:
+                cord = sgf_utils.ij_to_cord(19, (i, j))
 
-            move_text.append("{} {:.1f}".format(cord, coef))
-            # TODO correctly handle pass
-            if top_move != 361:
-                label = '[{}:{:.1f}]'.format(
-                    sgf_utils.cord_to_sgf(19, cord), coef)
-                data += label
+            move_text.append("{:.1f} for {}".format(coef, cord))
+
+            label = '[{}:{:.1f}]'.format(
+                sgf_utils.cord_to_sgf(19, cord),
+                coef)
+            data += label
+
+
         data += ')'
 
+        move_text.append("other {:.1f}".format(move_coefs[-1]))
         value_text = ", ".join("{:.1f}".format(v) for v in coefs[1:6])
         coef_text = [
-            "Value Coef: {:.1f} + {}".format(coefs[0], value_text),
-            "Move Coefs: {}".format(",  ".join(move_text)),
-        #    "Sharpness: {:.1f}".format(coefs[9])
+            "Value Coef: {:.1f} + buckets [{}]".format(coefs[0], value_text),
+            "{}".format(",  ".join(move_text)),
         ]
     if request.method == 'POST':
         top_moves, coefs = puzzle
 
-        print (request.form)
+        value = request.form.get('value') or 50
+        move = request.form.get('move') or 'pass'
 
-        value = request.form.get('value', 0.5)
-        move = request.form.get('move', 'pass')
-        coef_text.append("You calculated " + value)
-        coef_text.append("And Played " + move)
+        value = float(value)
+        if value > 0 and value < 1:
+            value = 100 * value
 
-        value = min(1, max(0, float(value)))
-        print ("Hi", value)
-        value_0 = value * coefs[0]
-        value_1 = coefs[1:6][int(4.99 * value)]
-        move_v = 0
+        value = min(100, max(0, float(value)))
+        coef_text.append('You calculated {} winrate for black '
+                         'and would have played "{}"'.format(value, move))
+
         for top_move, coef in zip(top_moves, coefs[6:6+3]):
             j, i = divmod(top_move, 19)
             cord = sgf_utils.ij_to_cord(19, (i, j))
-            move_v += coef * (cord.lower() == move.lower())
+            if (cord.lower() == move.lower()):
+                move_v = coef
+                break
+        else:
+            move_v = coefs[6+3]
+
+        value_0 = (2 * (value/100) - 1) * coefs[0]
+        value_bucket = int(4.9999 * (value/100))
+        value_1 = coefs[1:6][value_bucket]
 
         rating_delta = value_0 + value_1 + move_v
+        desc = ("(2 * {:.2f} - 1) * {:.1f} + "
+                "{:.1f} (from bucket {} ({:.1f} to {:.1f})) + "
+                "{:.1f} (from move {}) =")
 
-        float1 = "{:.1f}"
-        format_str = (" + ".join([float1] * 3)) + " = " + float1
-        coef_text.append(format_str.format(
-            value_0, value_1, move_v, rating_delta))
+        coef_text.append(desc.format(
+            value/100, coefs[0], value_1,
+            value_bucket, 0.2 * value_bucket, 0.2 * (value_bucket+1),
+            move_v, move))
+        coef_text.append("{:.1f} rating {}".format(
+            rating_delta, ["lost", "gained"][rating_delta > 0]))
 
-    print (data)
+    # TODO: remove
+    print ("SGF:", data)
 
     return render_template('puzzle.html',
                            bucket=bucket,
