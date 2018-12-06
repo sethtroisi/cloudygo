@@ -1054,7 +1054,7 @@ def puzzles(number=0, bucket=CloudyGo.DEFAULT_BUCKET):
 
         # TODO(sethtroisi): Consider using original SGF and setting move num.
         sgf_path = os.path.join(
-            app.instance_path, 'pro', 'problem-collection4', sgf)
+            app.instance_path, 'pro', 'problem-collection3', sgf)
 
         data = ''
         with open(sgf_path, 'r') as f:
@@ -1063,8 +1063,8 @@ def puzzles(number=0, bucket=CloudyGo.DEFAULT_BUCKET):
     except:
         return "Did not find puzzle " + str(number)
 
-    coef_text = []
-    rating_delta = []
+    result_text = []
+    rating_deltas = []
 
     show = get_bool_arg('show', request.args)
     if show or request.method == 'POST':
@@ -1075,7 +1075,7 @@ def puzzles(number=0, bucket=CloudyGo.DEFAULT_BUCKET):
         assert len(coefs) == 10
         move_coefs = coefs[6:6+4]
 
-        move_text = []
+        moves = []
         data += ';LB'
         for top_move, coef in zip(top_moves, move_coefs):
             j, i = divmod(top_move, 19)
@@ -1084,22 +1084,24 @@ def puzzles(number=0, bucket=CloudyGo.DEFAULT_BUCKET):
             else:
                 cord = sgf_utils.ij_to_cord(19, (i, j))
 
-            move_text.append("{:.1f} for {}".format(coef, cord))
+            moves.append("{:.1f} for {}".format(coef, cord))
 
             label = '[{}:{:.1f}]'.format(
                 sgf_utils.cord_to_sgf(19, cord),
                 coef)
             data += label
-
-
         data += ')'
 
-        move_text.append("other {:.1f}".format(move_coefs[-1]))
-        value_text = ", ".join("{:.1f}".format(v) for v in coefs[1:6])
-        coef_text = [
-            "Value Coef: {:.1f} + buckets [{}]".format(coefs[0], value_text),
-            "{}".format(",  ".join(move_text)),
-        ]
+        black_90_value = 0.8 * coefs[0] + coefs[5]
+        white_90_value = -.8 * coefs[0] + coefs[1]
+        even_value = coefs[3]
+
+        value_text = "Belief in black {:.0f}, even {:.0f}, white {:.0f}".format(
+            black_90_value, even_value, white_90_value)
+        moves.append("other {:.1f}".format(move_coefs[-1]))
+        moves_text = ", ".join(moves)
+
+        result_text = [value_text, moves_text]
     if request.method == 'POST':
         top_moves, coefs = puzzle
 
@@ -1110,8 +1112,8 @@ def puzzles(number=0, bucket=CloudyGo.DEFAULT_BUCKET):
         if value > 0 and value < 1:
             value = 100 * value
 
-        value = min(100, max(0, float(value)))
-        coef_text.append('You calculated {} winrate for black '
+        value = int(min(100, max(0, float(value))))
+        result_text.append('You calculated {}% winrate for black '
                          'and would have played "{}"'.format(value, move))
 
         for top_move, coef in zip(top_moves, coefs[6:6+3]):
@@ -1127,30 +1129,21 @@ def puzzles(number=0, bucket=CloudyGo.DEFAULT_BUCKET):
         value_bucket = int(4.9999 * (value/100))
         value_1 = coefs[1:6][value_bucket]
 
-        rating_delta = value_0 + value_1 + move_v
-        desc = ("(2 * {:.2f} - 1) * {:.1f} + "
-                "{:.1f} (from bucket {} ({:.1f} to {:.1f})) + "
-                "{:.1f} (from move {}) =")
-
-        coef_text.append(desc.format(
-            value/100, coefs[0], value_1,
-            value_bucket, 0.2 * value_bucket, 0.2 * (value_bucket+1),
-            move_v, move))
-        coef_text.append("{:.1f} rating {}".format(
-            rating_delta, ["lost", "gained"][rating_delta > 0]))
-
-    # TODO: remove
-    print ("SGF:", data)
+        rating_deltas = [
+            value,
+            value_0 + value_1,
+            move,
+            move_v,
+        ]
 
     return render_template('puzzle.html',
                            bucket=bucket,
                            number=number,
                            name=sgf,
                            data=data,
-                           coef_text=coef_text,
-                           svm_stuff=puzzle,
+                           result_text=result_text,
+                           rating_deltas=rating_deltas,
                            )
-
 
 
 @app.route('/<bucket>/json/missing-ratings.json')

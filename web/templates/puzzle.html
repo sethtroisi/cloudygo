@@ -36,11 +36,14 @@
           rel="stylesheet" />
 
     <style>
-        .centered {
-          text-align: center;
+        .centered:first-of-type {
           margin-top: 15px;
         }
-
+        .centered {
+          margin-bottom: 0;
+          margin-top: 0;
+          text-align: center;
+        }
     </style>
 
   </head>
@@ -57,27 +60,44 @@
          style="width: 800px">
       Sorry, your browser doesn't support WGo.js.
     </div>
-    {% if coef_text %}
-      {% for text in coef_text %}
-      <div class="centered h3">
-        {{ text }}
+    <div>
+      {% if result_text %}
+        {% for text in result_text %}
+        <div class="centered h4">
+          {{ text }}
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="centered h3">
+          <form method='post'>
+            <input type="text" id="value" name="value" style="width:600px"
+                   placeholder="Black estimated winrate (0 to 100)"/>
+            <input type="text" id="move" name="move" style="width:80px"
+                   placeholder="Move"/>
+            <button type="submit" >Submit</button>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+    <div>
+      {% if rating_deltas %}
+        {%- macro rating_text(value) -%}
+            <span class="font-weight-bold {{ "text-success" if value > 0 else "text-danger" }}">
+              {{ value|round|int }}
+            </span>
+        {%- endmacro -%}
+        <div class="centered h3">
+          <span>For evaluation</span>
+          {{ rating_text(rating_deltas[1]) }}
+          <span>For {{ rating_deltas[2] }} </span>
+          {{ rating_text(rating_deltas[3]) }}
+        <div class="centered h3">
+      {% endif %}
+        <div class="centered h2">
+        <a href="{{ url_for('puzzles',
+                            number=(number|int + 1)|string,
+                            bucket=bucket) }}">Next</a>
       </div>
-      {% endfor %}
-    {% else %}
-      <div class="centered h3">
-        <form method='post'>
-          <input type="text" id="value" name="value" style="width:600px"
-                 placeholder="Black estimated winrage (0 to 100)"/>
-          <input type="text" id="move" name="move" style="width:80px"
-                 placeholder="Move"/>
-          <button type="submit" >Submit</button>
-        </form>
-      </div>
-    {% endif %}
-    <div class="centered h2">
-      <a href="{{ url_for('puzzles',
-                          number=(number|int + 1)|string,
-                          bucket=bucket) }}">Next</a>
     </div>
   </body>
   <script type="text/javascript">
