@@ -659,7 +659,8 @@ def eval_graphs(bucket):
 def all_eval_graphs():
     # unify with thing class above
     bucket = 'synced-eval'
-    other_buckets = ['v9-19x19', 'v10-19x19', 'v12-19x19', 'v13-19x19']
+    other_buckets = ['v9-19x19', 'v10-19x19', 'v12-19x19',
+                     'v13-19x19', 'v14-19x19']
 
     model_range = CloudyGo.bucket_model_range(bucket)
     bucket_salt = CloudyGo.bucket_salt(bucket)
