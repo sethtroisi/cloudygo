@@ -1261,12 +1261,24 @@ class CloudyGo:
             set(e[1] for e in eval_games)
         )
 
+        previous_rating = dict(self.query_db(
+            'SELECT model_id_1, rankings '
+            'FROM eval_models '
+            'WHERE model_id_1 BETWEEN ? AND ? and model_id_2 = 0',
+            model_range))
+
         print('loaded {} evals for {} models ({} to {})'.format(
             total_games, len(model_nums),
             min(model_nums, default=-1),
             max(model_nums, default=-1)))
 
-        ratings = CloudyGo.get_eval_ratings(model_nums, eval_games)
+        print('\t{} evals, {:.0f} to {:.0f}'.format(
+            len(previous_rating),
+            min(previous_rating.values()),
+            max(previous_rating.values())))
+
+        ratings = CloudyGo.get_eval_ratings(
+            model_nums, eval_games, previous_rating)
         assert 0 not in ratings, ratings.keys()
 
         # black games, black wins,    white games, white wins
@@ -1320,12 +1332,21 @@ class CloudyGo:
         return len(records) - removed
 
     @staticmethod
-    def get_eval_ratings(model_nums, eval_games):
+    def get_eval_ratings(model_nums, eval_games, priors):
+
         # Map model_nums to a contigious range.
         ordered = sorted(set(model_nums))
         new_num = {}
         for i, m in enumerate(ordered):
             new_num[m] = i
+
+        # Transform priors (previous_ratings) (~elo~) back to Luce Spectral
+        # Elo conversion
+        elo_mult = 400 / math.log(10)
+        init = None
+        if priors:
+            avg = np.average(list(priors.values()))
+            init = [(priors.get(o, avg) / elo_mult) - avg for o in ordered]
 
         def ilsr_data(eval_game):
             p1, p2, black_won = eval_game
@@ -1340,14 +1361,12 @@ class CloudyGo:
         ilsr_param = choix.ilsr_pairwise(
             len(ordered),
             pairs,
+            initial_params=init,
             alpha=0.0001,
-            max_iter=200)
+            max_iter=1000)
 
         hessian = choix.opt.PairwiseFcts(pairs, penalty=.1).hessian(ilsr_param)
         std_err = np.sqrt(np.diagonal(np.linalg.inv(hessian)))
-
-        # Elo conversion
-        elo_mult = 400 / math.log(10)
 
         min_rating = min(ilsr_param)
         ratings = {}

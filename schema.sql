@@ -119,7 +119,8 @@ CREATE TABLE IF NOT EXISTS eval_models (
   model_id_1 integer not null,
   model_id_2 integer not null,
 
-  /* average of rank (or model_1_rank */
+  /* average of rank (or model_1_rank if model_id_2 == 0) */
+  /* TODO rename rating */
   rankings float,
   std_err float,
 
