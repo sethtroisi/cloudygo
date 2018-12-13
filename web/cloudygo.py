@@ -669,10 +669,11 @@ class CloudyGo:
                                       if '+R' not in game[5])
 
                 resign_rates = Counter(game[17] for game in wins)
-                if len(resign_rates) > 2 and CloudyGo.LEELA_ID not in bucket:
-                    if perspective == 'all':
-                        print('{} has multiple Resign rates: {}'.format(
-                            raw_name, resign_rates))
+                # TOO NOISE: v13 had one rate per cluster, v14 was dynamic.
+                # if len(resign_rates) > 2 and CloudyGo.LEELA_ID not in bucket:
+                #     if perspective == 'all':
+                #         print('{} has multiple Resign rates: {}'.format(
+                #             raw_name, resign_rates))
                 resign_rates.pop(-1, None)  # remove -1 if it's present
 
                 # Note resign_rates are negative, max gets the value closest to zero.
