@@ -21,14 +21,14 @@ set -e
 cd instance/photos
 
 # pngs to jpg
-#mogrify -format jpg *.png
+mogrify -format jpg *.png
 
 # Requires one of Fred's excellent ImageMagick scripts ('aspectcrop')
 # See: http://www.fmwconcepts.com/imagemagick/aspectcrop/index.php
 
 # Cut to the right aspect ratio (2:1)
 mkdir -p temp
-#ls *jpg| xargs -I{} aspectcrop -a 2:1 -g c "{}" "temp/{}"
+ls *jpg| xargs -I{} aspectcrop -a 2:1 -g c "{}" "temp/{}"
 
 # These don't do well with center gravity
 echo "andrew
@@ -38,6 +38,7 @@ cormorant
 coronation
 courageux
 culloden
+duke
 repulse
 royal-sovereign
 sans-pareil
