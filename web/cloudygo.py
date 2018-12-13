@@ -42,7 +42,7 @@ class CloudyGo:
 
     # FAST UPDATE HACK fastness
     FAST_UPDATE_HOURS = 6
-    MAX_INSERTS = 50000
+    MAX_INSERTS = 200000
 
     # set by __init__ but treated as constant
     INSTANCE_PATH = None
@@ -66,8 +66,11 @@ class CloudyGo:
     # should be documented with either MINIGO_TS or MINIGO-HACK.
     MINIGO_TS = ['v9-19x19',  'v10-19x19', 'v11-19x19', 'v12-19x19',
                  'v13-19x19', 'v14-19x19', 'v15-19x19', 'v16-19x19']
+    # Average length of game in seconds, used to attribute game to previous model.
     MINIGO_GAME_LENGTH = 25 * 60
 
+    CROSS_EVAL_BUCKET_MODEL = re.compile(
+        r'1[0-9]{9}.*(v[0-9]+)-([0-9]*)-(?:vs-)*(v[0-9]*)-([0-9]*)')
 
     MODEL_CKPT = 'model.ckpt-'
 
@@ -229,6 +232,7 @@ class CloudyGo:
 
         # MG: 1527290396-000241-archer-vs-000262-ship-long-0.sgf
         # LZ: 000002-88-fast-vs-18-fast-202.sgf
+        # TODO compile this
         is_run = re.match(
             r'^[0-9]+-[0-9]+-[a-z-]+-vs-[0-9]+-[a-z-]+-[0-9]+\.sgf$',
             filename)
@@ -458,8 +462,6 @@ class CloudyGo:
         for model_id, name, group, sgf, value in sgfs:
             assert group in ('pv', 'policy'), group
             model_id %= CloudyGo.SALT_MULT
-            if model_id == 80:
-                print (model_id, name, group, len(sgf), value)
 
             names.add(name)
             arranged[model_id][name][group] = (sgf, value)
@@ -1147,14 +1149,71 @@ class CloudyGo:
                     return test_id
             assert False
 
+        if bucket == "synced-eval":
+           #Look up all model names so we can v10-250 vs v12-250.
+            name_to_bucket = self.query_db(
+                'SELECT name, bucket '
+                'FROM name_to_model_id join bucket_model_range '
+                'WHERE model_id BETWEEN model_id_1 and model_id_2 '
+                '   AND bucket like "v%"')
+            name_to_buckets = defaultdict(list)
+            for name, b in name_to_bucket:
+                name_to_buckets[name].append(b)
+            print("\t{} names, {} unique".format(
+                len(name_to_bucket), len(name_to_buckets)))
+
+        def bucket_from_name(filename, PB, PW):
+            # Attempt to find what bucket PB and PW belong too
+            # TODO: load bucket names from bucket_model_range.
+            first_folder = filename.split('/')[0]
+            if first_folder in CloudyGo.MINIGO_TS:
+                prefix = first_folder + '/'
+                return prefix + PB, prefix + PW
+            else:
+                # Probably cross-eval look for vXX-MMM-vs-vYY-NNN
+                match = CloudyGo.CROSS_EVAL_BUCKET_MODEL.search(filename)
+                if match:
+                    xB, xN, yB, yN = match.groups()
+                    assert len(xB) in (2,3) and len(yB) in (2,3), (xB, yB)
+                    xB += '-19x19'
+                    yB += '-19x19'
+
+                    # Find what buckets this model name belongs too.
+                    pB_B = name_to_buckets[PB]
+                    pW_B = name_to_buckets[PW]
+
+                    x_is_b = xB in pB_B
+                    x_is_w = xB in pW_B
+                    assert x_is_b or x_is_w, filename
+                    y_is_b = yB in pB_B
+                    y_is_w = yB in pW_B
+                    assert y_is_b or y_is_w, filename
+
+                    if x_is_b and y_is_w and not (x_is_w and y_is_b):
+                        return xB + "/" + PB, yB + "/" + PW
+                    elif x_is_w and y_is_b and not (x_is_b and y_is_w):
+                        return yB + "/" + PB, xB + "/" + PW
+                    else:
+                        print ("Utter confusion", filename, pB, pW, pB_B, pW_B)
+
+            return None, None
+
         new_records = []
         for record in records:
             # Eval records
             if bucket_salt == record[2] == record[3]:
                 new_record = list(record[:-2])
                 PB, PW = record[-2:]
+                # HACK: add the bucket name avoid name collusions
+                if bucket == "synced-eval":
+                    PB, PW = bucket_from_name(record[1], PB, PW)
+                    if PB == None or PW == None:
+                        print("Skipping", record)
+                        continue
+
                 new_record[2] = get_or_add_name(PB)
                 new_record[3] = get_or_add_name(PW)
+
             elif ckpt_num(record[1]) is not None:
                 # MINIGO-HACK
                 new_record = list(record)
@@ -1272,10 +1331,10 @@ class CloudyGo:
             min(model_nums, default=-1),
             max(model_nums, default=-1)))
 
-        print('\t{} evals, {:.0f} to {:.0f}'.format(
+        print('\t{} evals, ratings {:.0f} to {:.0f}'.format(
             len(previous_rating),
-            min(previous_rating.values()),
-            max(previous_rating.values())))
+            min(previous_rating.values(), default=0),
+            max(previous_rating.values(), default=1)))
 
         ratings = CloudyGo.get_eval_ratings(
             model_nums, eval_games, previous_rating)
@@ -1352,8 +1411,8 @@ class CloudyGo:
             p1, p2, black_won = eval_game
             p1 = new_num[p1]
             p2 = new_num[p2]
-            assert 0 <= p1 <= 3500
-            assert 0 <= p2 <= 3500
+            assert 0 <= p1 <= 4000
+            assert 0 <= p2 <= 4000
 
             return (p1, p2) if black_won else (p2, p1)
 

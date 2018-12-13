@@ -136,7 +136,8 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
         return random.randrange(150) == 0 or \
             all(not pattern.match(line) for pattern in patterns)
 
-    log_files = ['cloudy-rsync-cron.log', 'cloudy-eval.log']
+    log_files = ['cloudy-rsync-cron.log', 'cloudy-eval.log',
+                 'cloudy-sync-all.log']
     log_datas = []
     for log in log_files:
         log_filename = os.path.join(app.instance_path, 'debug', log)
@@ -675,43 +676,23 @@ def all_eval_graphs():
 
     num_to_name = cloudy.get_model_names(model_range)
 
-    duplicate_model_nums = {0, 117, 129, 266, 271, 321, 527, 573, 588, 708}
-    # NOTE: Technically these models should not be considered when calculating
-    # ratings but keeping the list updated is hard and it has little effect.
-
-    name_to_original_num = {}
-    for b in other_buckets:
-        raw = cloudy.get_model_names(CloudyGo.bucket_model_range(b))
-        for num, name in raw.items():
-            num %= CloudyGo.SALT_MULT
-
-            # NOTE: Some model names are shared between runs.
-            if num in duplicate_model_nums:
-                continue
-
-            if name in name_to_original_num:
-                print("Duplicate name", name)
-
-            name_to_original_num[name] = (b, num)
-
-    # Replace model_id_2 with name
     def eval_model_transform(m):
         model_id = m[0]
         name = num_to_name.get(model_id, str(model_id))
-        bucket, num = name_to_original_num.get(name, ("?", 0))
-        if num == 0 and int(name.split('-')[0]) not in duplicate_model_nums:
-            # Not sure which bucket this would have come from.
-            print("Didn't find", model_id, name)
 
-        # HACK: make v9 line up with v1X.
+        test = re.split(r'[/-]', name)
+        assert len(test) >= 4, (name, test)
+        bucket = '-'.join(test[0:2])
+        num = int(test[2])
+        name = '-'.join(test[2:])
+
         bucket = bucket.replace('v9', 'v09')
+        model_id %= CloudyGo.SALT_MULT
 
-        metadata = (bucket, num, model_id % CloudyGo.SALT_MULT, name)
+        metadata = (bucket, num, model_id, name)
         return metadata + m[2:]
 
     eval_models = map(eval_model_transform, eval_models)
-    # Filter not found models
-    eval_models = [e_m for e_m in eval_models if e_m[1] != 0]
     eval_models = sorted(eval_models, reverse=True)
 
     sort_by_rank = operator.itemgetter(4)

@@ -59,7 +59,7 @@ def setup():
         LOCAL_DATA_DIR,
         lambda: db,
         None,  # cache
-        Pool(3)
+        Pool(4)
     )
     return cloudy
 
