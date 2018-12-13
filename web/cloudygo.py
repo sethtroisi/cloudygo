@@ -41,7 +41,7 @@ class CloudyGo:
     CROSS_EVAL_START = 2500  # offset from SALT_MULT to start
 
     # FAST UPDATE HACK fastness
-    FAST_UPDATE_HOURS = 600
+    FAST_UPDATE_HOURS = 6
     MAX_INSERTS = 50000
 
     # set by __init__ but treated as constant

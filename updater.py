@@ -41,6 +41,7 @@ CURRENT_BUCKET = 'v14-19x19'
 
 # Note when importing a new DB consider lowing
 # for an initial pass to make sure everything is okay.
+# TODO use cloudygo.py version
 MAX_INSERTS = 50000
 
 

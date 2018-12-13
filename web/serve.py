@@ -1061,7 +1061,8 @@ def puzzles(number=0, bucket=CloudyGo.DEFAULT_BUCKET):
         with open(sgf_path, 'r') as f:
             data = f.read()
         data = data.strip()
-    except:
+    except Exception as e:
+        print (e)
         return "Did not find puzzle " + str(number)
 
     result_text = []
