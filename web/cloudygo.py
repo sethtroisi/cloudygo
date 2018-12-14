@@ -1405,7 +1405,7 @@ class CloudyGo:
         init = None
         if priors:
             avg = np.average(list(priors.values()))
-            init = [(priors.get(o, avg) / elo_mult) - avg for o in ordered]
+            init = [(priors.get(o, avg) - avg) / elo_mult for o in ordered]
 
         def ilsr_data(eval_game):
             p1, p2, black_won = eval_game

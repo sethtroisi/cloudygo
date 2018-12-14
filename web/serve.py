@@ -660,8 +660,6 @@ def eval_graphs(bucket):
 def all_eval_graphs():
     # unify with thing class above
     bucket = 'synced-eval'
-    other_buckets = ['v9-19x19', 'v10-19x19', 'v12-19x19',
-                     'v13-19x19', 'v14-19x19']
 
     model_range = CloudyGo.bucket_model_range(bucket)
     bucket_salt = CloudyGo.bucket_salt(bucket)
@@ -695,14 +693,27 @@ def all_eval_graphs():
     eval_models = map(eval_model_transform, eval_models)
     eval_models = sorted(eval_models, reverse=True)
 
-    sort_by_rank = operator.itemgetter(4)
-    eval_models_by_rank = sorted(eval_models, key=sort_by_rank, reverse=True)
+    def sorted_by(column):
+        return sorted(
+            eval_models,
+            key=operator.itemgetter(column),
+            reverse=True)
+
+    eval_models_by_rank = sorted_by(4)
+
+    # Make sure each bucket has at least a couple
+    eval_models_by_games = sorted_by(6)
+    other_buckets = sorted(set(m[0] for m in eval_models_by_games))
+    top_by_bucket = [[m for m in eval_models_by_games if m[0] == b][:3]
+                        for b in other_buckets]
+    eval_models_by_games = sum(top_by_bucket, [])
 
     return render_template('models-eval-cross.html',
                            bucket=bucket,
                            total_games=total_games,
                            models=eval_models,
                            sorted_models=eval_models_by_rank,
+                           well_played_models=eval_models_by_games,
                            )
 
 @app.route('/<bucket>/eval-model/<model_name>')

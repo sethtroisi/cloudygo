@@ -49,7 +49,7 @@
         .filter-recent-models,
         .model-graph,
         .rating-desc,
-        .ratings-scatter,
+        .rating-graphs,
         .winrate-scatter {
           display: inline-block;
         }
@@ -110,7 +110,7 @@
   <body>
     {{ navbar('eval_graphs', 'Evaluation ratings') }}
 
-    <div class="ratings-scatter">
+    <div class="ratings-graphs">
       <svg class="model-graph" id="rating-svg"></svg>
       <div class="rating-desc">
         <table class="table table-striped table-hover">
@@ -141,6 +141,25 @@
             <input id="filter-recent-models" type="checkbox">
             Filter old models
         </label>
+      </div>
+      <div class="rating-desc">
+        <table class="table table-striped table-hover">
+          <tbody>
+          <tr>
+            <td>Games</td>
+            <td>Models with many games</td>
+            <td>rating</td>
+          </tr>
+
+          {% for model in well_played_models[:16] %}
+          <tr class="great-model">
+            <td>{{ model[6] }}</td>
+            <td>{{ eval_link(model[2], model[0] + "/" + model[3]) }}</td>
+            <td>{{model[4]|round|int }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
     <hr>
