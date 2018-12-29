@@ -55,13 +55,30 @@
             </thead>
 
             <tr class>
-              <td>v13</td>
+              <td>v14</td>
               <td>19x19</td>
               <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
               <td></td>
               <td></td>
+            </tr>
+            <tr class="sep-bot"><td colspan="7">
+              Running: Started as a test of our new data pipeline using
+              <a href="https://cloud.google.com/bigtable/">Cloud Bigtable</a>,
+              Around model 475 Andrew changed from using init Q to parent to init Q to loss.
+              This seems to have made a postitive impact on policy and value sharpness, similiar
+              to what's seen in ELF.
+            </td></tr>
+
+            <tr class>
+              <td>v13</td>
+              <td>19x19</td>
+              <td>20</td>
+              <td>256</td>
+              <td>X00 TPU</td>
+              <td>704</td>
+              <td>23.0M</td>
             </tr>
             <tr class="sep-bot"><td colspan="7">
               Successes: Started from Supervised Model similar to AlphaGo Master.
