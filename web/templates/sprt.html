@@ -16,7 +16,7 @@
 <!DOCTYPE html>
 <html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
   {% from "macros.html" import models_link,
-      bootstrap_links, favicon_links, navbar, tip with context %}
+      bootstrap_links, favicon_links, jstat_link, navbar, tip with context %}
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width" />
@@ -25,6 +25,7 @@
 
     {{ favicon_links() }}
     {{ bootstrap_links() }}
+    {{ jstat_link() }}
 
     <style>
         .input-col {
@@ -38,10 +39,10 @@
     <div class="container">
         <div class="text-center">
             <h1>Go SPRT Calculator</h1>
-            <h4>
+            <div>
                 Modeled after Henri's
                 <a href="http://chess-sprt-calc.azurewebsites.net/">Chess SPRT Calculator</a>
-            </h4>
+            </div>
             <br>
         </div>
 
@@ -51,31 +52,35 @@
                       <strong><div class="form-row">
                           <div class="form-group mr-3">
                               <label for="elo0">elo0 (lower elo -20 to -1)</label>
-                              <input id="elo0" value="-5" type="number" class="form-control">
+                              <input id="elo0" value="-5" type="number" class="form-control" required>
                           </div>
                           <div class="form-group">
                               <label for="elo1">elo1 (upper elo 1 to 100)</label>
-                              <input id="elo1"  value="5" type="number" class="form-control">
+                              <input id="elo1"  value="5" type="number" class="form-control" required>
                           </div>
                       </div></strong>
                       <div class="form-row">
                           <div class="form-group mr-3">
                             <label for="model-winrate">Model Winrate</label>
-                            <input id="model-winrate" type="number" class="form-control" placeholder="Estimated Winrate 1-99%">
+                            <input id="model-winrate" type="number" class="form-control"
+                                   min="0.5" step="0.1" {# max="99" TODO this resizes the control #}
+                                   placeholder="Estimated Winrate 1-99%">
                           </div>
                           <div class="form-group">
                             <label for="model-elo"><strong>Or</strong> Model Elo</label>
-                            <input id="model-elo" type="number" class="form-control" placeholder="Elo Difference -100 to 100">
+                            <input id="model-elo" type="number" class="form-control"
+                                   min="-999.9" step="0.1" {#max="999.9" TODO this resizes the control #}
+                                   placeholder="Elo Difference">
                           </div>
                       </div>
                       <div class="form-row">
                           <div class="form-group mr-3">
                               <label for="wins">Current Wins</label>
-                              <input id="wins"   value="0" type="number" class="form-control">
+                              <input id="wins"   value="1" type="number" class="form-control">
                           </div>
                           <div class="form-group">
                               <label for="losses">Current Losses</label>
-                              <input id="losses" value="0" type="number" class="form-control">
+                              <input id="losses" value="1" type="number" class="form-control">
                           </div>
                       </div>
                       <button type="submit" id="calculate">Calculate</button>
@@ -89,7 +94,7 @@
                       <tr><td>SPRT</td><td id="sprt"></td></tr>
                       <tr><td>LLR</td><td id="LLR"></td></tr>
                       <tr><td>Elo</td><td id="elo"></td></tr>
-                      <tr><td>P(z>0)</td><td id="pval"></td></tr>
+                      <tr><td>p-value</td><td id="pval"></td></tr>
                       <tr><td></td><td></td></tr> <!-- empty row to get border top -->
                   </table>
               </div>
@@ -103,50 +108,118 @@
   </body>
   <script type="text/javascript">
 
+var elo0 = $("#elo0");
+var elo1 = $("#elo1");
+
+elo0.add(elo1).change(function() {
+  if ( !elo0[0].checkValidity() || !elo1[0].checkValidity() ) {
+      this.setCustomValidity('');
+  } else {
+    val0 = Number(elo0.val());
+    val1 = Number(elo1.val());
+    if (val1 <= val0) {
+      this.setCustomValidity('elo1 must be greater than elo0');
+    } else {
+      this.setCustomValidity('');
+    }
+  }
+});
+
 $( "#sqrt" ).submit(function( event ) {
-    calculate();
     event.preventDefault();
+    calculate();
 });
 
 // TODO(sethtroisi): listen for model-winrate and set model-elo (and vis-vera)
+
+var m_win_input = $("#model-winrate");
+var m_elo_input = $("#model-elo");
+
+m_win_input.change(function() {
+  if (m_win_input.val() != "") {
+    m_elo_input.val(eloFrom(getNumber("model-winrate") / 100).toFixed(1));
+  }
+});
+
+m_elo_input.change(function() {
+  if (m_elo_input.val() != "") {
+    m_win_input.val(100 * winProb(getNumber("model-elo")).toFixed(3));
+  }
+});
+
+
+/********** FUNCTION **********/
+
 
 function getNumber(id, defaultval) {
   var val =  $("#" + id).val();
   return val == null ? defaultval : Number(val);
 }
 
+
+// See my writeup in https://github.com/gcp/leela-zero/issues/378#issuecomment-351639093
 function calculate() {
   /****** INPUTS ******/
-  // TODO(sethtroisi): validate elo0 < elo1
-  elo0 = getNumber("elo0", -10);
-  elo1 = getNumber("elo1", 10);
+  var elo0 = getNumber("elo0", -10);
+  var elo1 = getNumber("elo1", 10);
 
-  // For preticting model passrate / expected number of games.
-  m_winrate = getNumber("model-winrate", 50);
-  m_elo     = getNumber("model-elo", 0);
+  // For predicting model passrate / expected number of games.
+  var m_winrate = getNumber("model-winrate", 50) / 100;
+  var m_elo     = getNumber("model-elo", 0);
 
   // For current status
-  c_wins    = getNumber("wins", 0);
-  c_losses  = getNumber("losses", 0);
-
+  var c_wins    = getNumber("wins", 0);
+  var c_losses  = getNumber("losses", 0);
 
   /****** DERIVED ******/
-  alpha = 0.05;
-  beta  = 0.05;
+  var alpha = 0.05;
+  var beta  = 0.05;
 
-  p0 = winProb(elo0);
-  p1 = winProb(elo1);
+  var p0 = winProb(elo0);
+  var p1 = winProb(elo1);
 
-  win_log = Math.log(p1 / p0);
-  loss_log = Math.log((1 - p1) / (1 - p0));
+  var lower_bound = Math.log(beta / (1 - alpha));
+  var upper_bound = Math.log((1 - beta) / alpha);
 
-  lower_bound = Math.log(beta / (1 - alpha));
-  upper_bound = Math.log((1 - beta) / alpha);
+  var c_games = c_wins + c_losses
 
-  llr = c_wins * win_log + c_losses * loss_log;
+  // oberserved_winrate
+  var o_winrate = c_wins / c_games
+  var elo = eloFrom(o_winrate);
 
-  c_games = c_wins + c_losses
-  elo = (c_games == 0) ? NaN : eloFrom(c_wins / c_games);
+  var variance = o_winrate * (1 - o_winrate) / c_games;
+  var sigma = Math.sqrt(variance);
+
+  // one proportion test
+  var z_prop = (o_winrate - 0.5) / sigma;
+  var p_val = 1 - jStat.normal.cdf(z_prop, 0, 1);
+
+  // 1.96 from 95% interval
+  var elo_ci_lower = eloFrom(o_winrate - 1.96 * sigma);
+  var elo_ci_upper = eloFrom(o_winrate + 1.96 * sigma);
+
+  // Simplified from https://www.chessprogramming.org/Match_Statistics#SPRT
+  // and http://hardy.uhasselt.be/Toga/GSPRT_approximation.pdf
+  var llr = 0.5 * (p1 - p0) * (2 - o_winrate - p0 - p1) / variance;
+
+  // TODO given c_games
+  // TODO given model_winrate
+
+  // From https://nowak.ece.wisc.edu/ece830/ece830_fall11_lecture9.pdf
+  // joined with https://math.stackexchange.com/questions/2214993/kullback-leibler-divergence-for-binomial-distributions-p-and-q
+  //var expected_games = -(lower_bound * upper_bound) / variance
+
+
+  /****** OUTPUT ******/
+
+  var decision = "";
+  if (llr < lower_bound) {
+    decision = "failed (elo < " + elo0.toFixed(1) + ")";
+  } else if (llr > upper_bound) {
+    decision = "accepted (elo > " + elo1.toFixed(1) + ")";
+  } else {
+    decision = "continue testing";
+  }
 
   $("#games").text(
       c_games + "  (" +
@@ -166,27 +239,38 @@ function calculate() {
       llr.toFixed(2) + " " +
       "[" + lower_bound.toFixed(2) + " " +
       ", " + upper_bound.toFixed(2) + "] " +
-      " => TODO: decision"
+      " => " + decision
   );
 
-  $("#elo").text(
-      elo ? elo.toFixed(1) : "???"
-  );
+  if (c_games == 0) {
+    $("#elo").text("???");
+  } else {
+    $("#elo").text(
+        elo.toFixed(1) + " [" +
+        elo_ci_lower.toFixed(1) + ", " +
+        elo_ci_upper.toFixed(1) + "] (95%)"
+    );
+  }
 
-  $("#pval").text("TODO");
+  $("#pval").text(
+      "P(p>0.5) = " + p_val.toFixed(3) + " " +
+      "given " + (100*o_winrate).toFixed(0) + "% winrate " +
+      "over " + c_games + " games"
+  );
 }
 
-// See my writeup in https://github.com/gcp/leela-zero/issues/378#issuecomment-351639093
 function winProb(elo) {
   win_prob = Math.min(Math.max(elo, -500), 500);
   return 1 / (1 + Math.pow(10, elo / -400));
 }
+
 
 function eloFrom(win_prob) {
   win_prob = Math.min(Math.max(win_prob, 0.01), 0.99);
   return -400 * Math.log10(1 / win_prob - 1);
 }
 
+// TODO load from params
 
   </script>
 </html>
