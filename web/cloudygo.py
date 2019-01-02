@@ -1411,8 +1411,8 @@ class CloudyGo:
             p1, p2, black_won = eval_game
             p1 = new_num[p1]
             p2 = new_num[p2]
-            assert 0 <= p1 <= 4000
-            assert 0 <= p2 <= 4000
+            assert 0 <= p1 <= 6000
+            assert 0 <= p2 <= 6000
 
             return (p1, p2) if black_won else (p2, p1)
 
