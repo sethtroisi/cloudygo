@@ -1,0 +1,192 @@
+<!--
+  Copyright 2018 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
+  {% from "macros.html" import models_link,
+      bootstrap_links, favicon_links, navbar, tip with context %}
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Language" content="en">
+    <title>SPRT calculator</title>
+
+    {{ favicon_links() }}
+    {{ bootstrap_links() }}
+
+    <style>
+        .input-col {
+          border-right: 1px solid #aaa
+        }
+
+    </style>
+
+  </head>
+  <body>
+    <div class="container">
+        <div class="text-center">
+            <h1>Go SPRT Calculator</h1>
+            <h4>
+                Modeled after Henri's
+                <a href="http://chess-sprt-calc.azurewebsites.net/">Chess SPRT Calculator</a>
+            </h4>
+            <br>
+        </div>
+
+          <div class="row">
+              <div class="col input-col">
+                  <form id="sqrt" class="form">
+                      <strong><div class="form-row">
+                          <div class="form-group mr-3">
+                              <label for="elo0">elo0 (lower elo -20 to -1)</label>
+                              <input id="elo0" value="-5" type="number" class="form-control">
+                          </div>
+                          <div class="form-group">
+                              <label for="elo1">elo1 (upper elo 1 to 100)</label>
+                              <input id="elo1"  value="5" type="number" class="form-control">
+                          </div>
+                      </div></strong>
+                      <div class="form-row">
+                          <div class="form-group mr-3">
+                            <label for="model-winrate">Model Winrate</label>
+                            <input id="model-winrate" type="number" class="form-control" placeholder="Estimated Winrate 1-99%">
+                          </div>
+                          <div class="form-group">
+                            <label for="model-elo"><strong>Or</strong> Model Elo</label>
+                            <input id="model-elo" type="number" class="form-control" placeholder="Elo Difference -100 to 100">
+                          </div>
+                      </div>
+                      <div class="form-row">
+                          <div class="form-group mr-3">
+                              <label for="wins">Current Wins</label>
+                              <input id="wins"   value="0" type="number" class="form-control">
+                          </div>
+                          <div class="form-group">
+                              <label for="losses">Current Losses</label>
+                              <input id="losses" value="0" type="number" class="form-control">
+                          </div>
+                      </div>
+                      <button type="submit" id="calculate">Calculate</button>
+                  </form>
+              </div>
+              <div class="col">
+                  <!-- modeled after fishtest e.g.
+                       tests.stockfishchess.org/html/live_elo.html?5c2b048f0ebc592815d81fa8 -->
+                  <table id="data" class="table table-sm">
+                      <tr><td>Games</td><td id="games"></td></tr>
+                      <tr><td>SPRT</td><td id="sprt"></td></tr>
+                      <tr><td>LLR</td><td id="LLR"></td></tr>
+                      <tr><td>Elo</td><td id="elo"></td></tr>
+                      <tr><td>P(z>0)</td><td id="pval"></td></tr>
+                      <tr><td></td><td></td></tr> <!-- empty row to get border top -->
+                  </table>
+              </div>
+          </div>
+          <div>
+              <hr>
+              <svg id=pass-prob-chart style="float: left;"></svg>
+              <svg id=num-games-chart style="float: left;"></svg>
+          </div>
+      </div>
+  </body>
+  <script type="text/javascript">
+
+$( "#sqrt" ).submit(function( event ) {
+    calculate();
+    event.preventDefault();
+});
+
+// TODO(sethtroisi): listen for model-winrate and set model-elo (and vis-vera)
+
+function getNumber(id, defaultval) {
+  var val =  $("#" + id).val();
+  return val == null ? defaultval : Number(val);
+}
+
+function calculate() {
+  /****** INPUTS ******/
+  // TODO(sethtroisi): validate elo0 < elo1
+  elo0 = getNumber("elo0", -10);
+  elo1 = getNumber("elo1", 10);
+
+  // For preticting model passrate / expected number of games.
+  m_winrate = getNumber("model-winrate", 50);
+  m_elo     = getNumber("model-elo", 0);
+
+  // For current status
+  c_wins    = getNumber("wins", 0);
+  c_losses  = getNumber("losses", 0);
+
+
+  /****** DERIVED ******/
+  alpha = 0.05;
+  beta  = 0.05;
+
+  p0 = winProb(elo0);
+  p1 = winProb(elo1);
+
+  win_log = Math.log(p1 / p0);
+  loss_log = Math.log((1 - p1) / (1 - p0));
+
+  lower_bound = Math.log(beta / (1 - alpha));
+  upper_bound = Math.log((1 - beta) / alpha);
+
+  llr = c_wins * win_log + c_losses * loss_log;
+
+  c_games = c_wins + c_losses
+  elo = (c_games == 0) ? NaN : eloFrom(c_wins / c_games);
+
+  $("#games").text(
+      c_games + "  (" +
+      "W: " + (100*c_wins/c_games).toFixed(1) + "% " +
+      "L: " + (100*c_losses/c_games).toFixed(1) + "%" +
+      ")"
+  );
+
+  $("#sprt").text(
+      "elo0: "  + elo0.toFixed(1) + " " +
+      "alpha: " + alpha.toFixed(2) + " " +
+      "elo1: "  + elo1.toFixed(1) + " " +
+      "beta: " + beta.toFixed(2)
+  );
+
+  $("#LLR").text(
+      llr.toFixed(2) + " " +
+      "[" + lower_bound.toFixed(2) + " " +
+      ", " + upper_bound.toFixed(2) + "] " +
+      " => TODO: decision"
+  );
+
+  $("#elo").text(
+      elo ? elo.toFixed(1) : "???"
+  );
+
+  $("#pval").text("TODO");
+}
+
+// See my writeup in https://github.com/gcp/leela-zero/issues/378#issuecomment-351639093
+function winProb(elo) {
+  win_prob = Math.min(Math.max(elo, -500), 500);
+  return 1 / (1 + Math.pow(10, elo / -400));
+}
+
+function eloFrom(win_prob) {
+  win_prob = Math.min(Math.max(win_prob, 0.01), 0.99);
+  return -400 * Math.log10(1 / win_prob - 1);
+}
+
+
+  </script>
+</html>

@@ -106,6 +106,14 @@ def results():
     return render_template('README.html')
 
 
+@app.route('/sprt')
+@app.route('/calc')
+def SPRT():
+    # Consider adding params for a,b, wins, losses, ...
+    return render_template('sprt.html')
+
+
+
 @app.route('/213-secret-site-nav')
 @app.route('/<bucket>/213-secret-site-nav')
 def debug(bucket=CloudyGo.DEFAULT_BUCKET):
