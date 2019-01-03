@@ -40,7 +40,7 @@
         <div class="text-center">
             <h1>Go SPRT Calculator</h1>
             <div>
-                Modeled after Henri's
+                Modeled after vdbergh and Henri's
                 <a href="http://chess-sprt-calc.azurewebsites.net/">Chess SPRT Calculator</a>
             </div>
             <br>
@@ -130,8 +130,6 @@ $( "#sqrt" ).submit(function( event ) {
     calculate();
 });
 
-// TODO(sethtroisi): listen for model-winrate and set model-elo (and vis-vera)
-
 var m_win_input = $("#model-winrate");
 var m_elo_input = $("#model-elo");
 
@@ -159,6 +157,12 @@ function getNumber(id, defaultval) {
 
 // See my writeup in https://github.com/gcp/leela-zero/issues/378#issuecomment-351639093
 function calculate() {
+  function LLR(elo_diff) {
+    var loss_log = Math.log((1 - p1) / (1 - p0));
+    var win_log = Math.log(p1 / p0);
+    return [loss_log, win_log];
+  }
+
   /****** INPUTS ******/
   var elo0 = getNumber("elo0", -10);
   var elo1 = getNumber("elo1", 10);
@@ -202,13 +206,44 @@ function calculate() {
   // and http://hardy.uhasselt.be/Toga/GSPRT_approximation.pdf
   var llr = 0.5 * (p1 - p0) * (2 - o_winrate - p0 - p1) / variance;
 
-  // TODO given c_games
-  // TODO given model_winrate
+  // From
+  // https://github.com/official-stockfish/Stockfish/issues/1859#issuecomment-449876350
+  //
+  // Van Den Bergh, Michel. Normalized Elo
+  // http://hardy.uhasselt.be/Toga/normalized_elo.pdf
+  //
+  // Wald, A. Sequential Tests of Statistical Hypotheses. Ann. Math. Statist. 16 (1945), no. 2, 117--186.
+  // doi:10.1214/aoms/1177731118. https://projecteuclid.org/euclid.aoms/1177731118
+  //
+  function expectedGames(elo_diff) {
+    if (Math.abs(elo_diff) < 0.2) {
+      return NaN;
+    }
 
-  // From https://nowak.ece.wisc.edu/ece830/ece830_fall11_lecture9.pdf
-  // joined with https://math.stackexchange.com/questions/2214993/kullback-leibler-divergence-for-binomial-distributions-p-and-q
-  //var expected_games = -(lower_bound * upper_bound) / variance
+    var llr = LLR(elo_diff);
+    var lLog = llr[0];
+    var wLog = llr[1];
 
+    // win_prop
+    var wp = winProb(elo_diff);
+    // mean (in terms of change to LLR)
+    var mu = lLog * (1-wp) + wLog * (wp);
+    // variance (in terms of change to LLR)
+    var variance = (lLog*lLog*(1-wp) + wLog*wLog*(wp)) - (mu * mu)
+
+    // mean = Brownian drift
+    // variance = Brownian variance
+    var gamma = 2 * mu / variance
+
+    // "expected boundary crossing time"
+    var A = lower_bound;
+    var B = upper_bound;
+    var expA = Math.exp(-gamma * A);
+    var expB = Math.exp(-gamma * B);
+
+    var N = -(1/mu) * (B*expA - A*expB - (B - A))/(expB - expA);
+    return N;
+  }
 
   /****** OUTPUT ******/
 
@@ -221,11 +256,17 @@ function calculate() {
     decision = "continue testing";
   }
 
+  var expected = " ";
+  if (m_elo) {
+    var expected_games = expectedGames(m_elo);
+    expected += "(" + expected_games.toFixed(0) + " expected games)";
+  }
+
   $("#games").text(
       c_games + "  (" +
       "W: " + (100*c_wins/c_games).toFixed(1) + "% " +
       "L: " + (100*c_losses/c_games).toFixed(1) + "%" +
-      ")"
+      ")" + expected
   );
 
   $("#sprt").text(
