@@ -28,10 +28,10 @@ fi
 run=$1
 echo "Setting up run: \"$1\""
 
-mkdir "instance/data/$run"
-mkdir "instance/data/$run/models"
-mkdir "instance/data/$run/sgf"
-mkdir "instance/data/$run/eval"
+mkdir -p "instance/data/$run"
+mkdir -p "instance/data/$run/models"
+mkdir -p "instance/data/$run/sgf"
+mkdir -p "instance/data/$run/eval"
 mkdir -p "instance/eval/$run"
 mkdir -p "instance/policy/$run"
 mkdir -p "instance/pv/$run"

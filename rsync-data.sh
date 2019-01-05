@@ -133,9 +133,9 @@ fi
 # SYNC GAMES
 cloud_path="${base_cloud_path}sgf"
 partial_dest="$DEST/$RUN/sgf"
-echo "Getting models list from $cloud_path"
+echo "Getting models list from $cloud_path ($TIME_BASED_NAMES)"
 if [[ "$TIME_BASED_NAMES" ]]; then
-    models=$(gsutil ls "$cloud_path/clean" | grep -o "2018-[0-9-]\{8\}/")
+    models=$(gsutil ls "$cloud_path/clean" | grep -o "201[89]-[0-9-]\{8\}/")
 else
     models=$(gsutil ls "$cloud_path" | grep -o "00[0-9]\{4\}-[a-z-]*/")
 fi

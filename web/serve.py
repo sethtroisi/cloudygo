@@ -145,7 +145,8 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
             all(not pattern.match(line) for pattern in patterns)
 
     log_files = ['cloudy-rsync-cron.log', 'cloudy-eval.log',
-                 'cloudy-sync-all.log']
+                 'cloudy-sync-all.log', 'cloudy-heatmap.log',
+    ]
     log_datas = []
     for log in log_files:
         log_filename = os.path.join(app.instance_path, 'debug', log)

@@ -41,7 +41,7 @@ class CloudyGo:
     CROSS_EVAL_START = 2500  # offset from SALT_MULT to start
 
     # FAST UPDATE HACK fastness
-    FAST_UPDATE_HOURS = 6
+    FAST_UPDATE_HOURS = 12
     MAX_INSERTS = 200000
 
     # set by __init__ but treated as constant
@@ -58,7 +58,7 @@ class CloudyGo:
     SECRET_CLOUD_BUCKET = os.environ.get(
         'SECRET_CLOUD_BUCKET_PREFIX', FULL_GAME_CLOUD_BUCKET)
 
-    DEFAULT_BUCKET = 'v14-19x19'
+    DEFAULT_BUCKET = 'v15-19x19'
     LEELA_ID = 'leela-zero'
 
     # NOTE: From v9 on sgf folders has timestamp instead of model directories
@@ -936,8 +936,8 @@ class CloudyGo:
         max_ts = get_folder_ts(max) + 3605
 
         existing = self._get_games_from_ts(model_range, (min_ts, max_ts))
-        print("{} existing games ({} to {})".format(
-            len(existing), min_ts, max_ts))
+        print("{} existing games in last {}ish hours ({} to {})".format(
+            len(existing), CloudyGo.FAST_UPDATE_HOURS, min_ts, max_ts))
 
         # TODO find a way to rsync faster
         for d_type, time_dirs in to_update.items():

@@ -37,7 +37,7 @@ DATABASE_PATH = os.path.join(INSTANCE_PATH, 'clouds.db')
 #CURRENT_BUCKET = 'leela-zero-v1'
 #CURRENT_BUCKET = 'v3-9x9'
 #CURRENT_BUCKET = 'v13-19x19'
-CURRENT_BUCKET = 'v14-19x19'
+CURRENT_BUCKET = CloudyGo.DEFAULT_BUCKET
 
 # Note when importing a new DB consider lowing
 # for an initial pass to make sure everything is okay.

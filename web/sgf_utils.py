@@ -102,7 +102,7 @@ def commented_squares(board_size, setup, data, include_move, is_pv):
         return '[{}:{}]'.format(cord_to_sgf(board_size, d[0]), d[1])
 
     labels = '' if is_pv else ';LB' + ''.join(map(label, data))
-    return '(;DT[2018]SZ[{}]KM[7.5]{}{}{})'.format(
+    return '(;DT[2019]SZ[{}]KM[7.5]{}{}{})'.format(
         board_size, setup, squares, labels)
 
 
@@ -417,7 +417,7 @@ def parse_game(game_path):
     number_of_visits_early_w = sum(
         count for count in top_move_visit_count[1:30:2])
 
-    if has_stats:
+    if has_stats and len(parsed_comments) > 2:
         resign_threshold = parsed_comments[0][0][1]
         assert resign_threshold is not None
 
