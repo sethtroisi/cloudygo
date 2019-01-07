@@ -51,28 +51,14 @@
                   <form id="sqrt" class="form">
                       <strong><div class="form-row">
                           <div class="form-group mr-3">
-                              <label for="elo0">elo0 (lower elo -20 to -1)</label>
+                              <label for="elo0">elo0 (lower elo)</label>
                               <input id="elo0" value="-5" type="number" class="form-control" required>
                           </div>
                           <div class="form-group">
-                              <label for="elo1">elo1 (upper elo 1 to 100)</label>
+                              <label for="elo1">elo1 (upper elo)</label>
                               <input id="elo1"  value="5" type="number" class="form-control" required>
                           </div>
                       </div></strong>
-                      <div class="form-row">
-                          <div class="form-group mr-3">
-                            <label for="model-winrate">Model Winrate</label>
-                            <input id="model-winrate" type="number" class="form-control"
-                                   min="0.5" step="0.1" {# max="99" TODO this resizes the control #}
-                                   placeholder="Estimated Winrate 1-99%">
-                          </div>
-                          <div class="form-group">
-                            <label for="model-elo"><strong>Or</strong> Model Elo</label>
-                            <input id="model-elo" type="number" class="form-control"
-                                   min="-999.9" step="0.1" {#max="999.9" TODO this resizes the control #}
-                                   placeholder="Elo Difference">
-                          </div>
-                      </div>
                       <div class="form-row">
                           <div class="form-group mr-3">
                               <label for="wins">Current Wins</label>
@@ -81,6 +67,20 @@
                           <div class="form-group">
                               <label for="losses">Current Losses</label>
                               <input id="losses" value="1" type="number" class="form-control">
+                          </div>
+                      </div>
+                      <div class="form-row">
+                          <div class="form-group mr-3">
+                            <label for="model-winrate">Winrate (for expected games)</label>
+                            <input id="model-winrate" type="number" class="form-control"
+                                   min="0.5" step="0.1" {# max="99" TODO this resizes the control #}
+                                   placeholder="Estimated Winrate 1-99%">
+                          </div>
+                          <div class="form-group">
+                            <label for="model-elo"><strong>Or</strong> Elo</label>
+                            <input id="model-elo" type="number" class="form-control"
+                                   min="-999.9" step="0.1" {#max="999.9" TODO this resizes the control #}
+                                   placeholder="Elo Difference">
                           </div>
                       </div>
                       <button type="submit" id="calculate">Calculate</button>
@@ -101,6 +101,15 @@
           </div>
           <div>
               <hr>
+              <div>
+                <div>For Background on SPRT</div>
+                <ul>
+<li><a href="https://www.chessprogramming.org/Match_Statistics#SPRT">ChessProgramming</a></li>
+<li><a href="https://github.com/glinscott/leela-chess/pull/174">Leela-Chess Github</a></li>
+<li><a href="https://github.com/gcp/leela-zero/issues/545">Leela-Zero Github</a></li>
+<li><a href="https://github.com/sethtroisi/cloudygo/issues/34">Cloudygo Github</a></li>
+                </ul>
+              <div>
               <svg id=pass-prob-chart style="float: left;"></svg>
               <svg id=num-games-chart style="float: left;"></svg>
           </div>
