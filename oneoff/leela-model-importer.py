@@ -19,20 +19,22 @@ import os
 import re
 import urllib.request
 
-BUCKET = 'leela-zero-v2'
-BUCKET_NUM = 50
+BUCKET = 'leela-zero-v3'
+BUCKET_NUM = 87
 
 URL = 'http://zero.sjeng.org'
 MODEL_DIR = os.path.join('instance', 'data', BUCKET, 'models')
 FILE = os.path.join('instance', 'data', BUCKET, 'zero-sjeng-org.html')
 INSERTS = os.path.join('instance', 'data', BUCKET, 'inserts.csv')
+DOWNLOADER = os.path.join('instance', 'data', BUCKET, 'download.sh')
+
 INSERT = ','.join(['{}'] * 11)
 
 #urllib.request.urlretrieve(URL, FILE)
 with open(FILE) as f:
     data = f.read()
 
-with open(INSERTS, 'w') as inserts:
+with open(INSERTS, 'w') as inserts, open(DOWNLOADER, 'w') as downloader:
     for num in range(1000):
         # check if we can find num in the model table
         match = re.search('<tr><td>{}</td>.*</tr>'.format(num), data)
@@ -50,18 +52,27 @@ with open(INSERTS, 'w') as inserts:
         date = datetime.datetime.strptime(date, '%Y-%m-%d %H:%M')
         epoch = int(date.strftime('%s'))
 
+        display_name = 'LZ{}_{}'.format(num, name)
+
         fname = os.path.join(MODEL_DIR, full_name)
         if not os.path.exists(fname):
             open(fname, 'a').close()
             os.utime(fname, (epoch, epoch))
 
+        display_name = 'LZ{}_{}'.format(num, name)
         row = INSERT.format(
             BUCKET_NUM * 10 ** 6 + num,
-            name, name,
+            display_name, display_name,
             BUCKET, num,
             epoch, epoch,
             0, games, 0, 0)
         inserts.write(row + '\n')
+
+        model_path = 'models/' + display_name
+        download_command = (
+            '[ -f {} ] || (wget {}/networks/{}.gz -O {} && sleep 10)'.format(
+                model_path, URL, full_name, model_path))
+        downloader.write(download_command + '\n')
         print(row)
 
 

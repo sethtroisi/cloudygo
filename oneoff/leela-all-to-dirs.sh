@@ -23,7 +23,7 @@ mkdir -p eval models
 # curl http://zero.sjeng.org/ > zero-sjeng-org.html
 # cd models
 # cat ../zero-sjeng-org.html | grep -o '<td>[0-9]\{1,3\}</td>.*networks/[a-f0-9]\{64\}.gz' | grep -o '[a-f0-9]\{64\}' | xargs touch -a
-# cat ../zero-sjeng-org.html | grep -o '<td>[0-9]\{1,3\}</td>.*networks/[a-f0-9]\{64\}.gz' | grep -o '[a-f0-9]\{64\}' | xargs touch -a
+# cat zero-sjeng-org.html | grep -o '<td>[0-9]\{1,3\}</td>.*networks/[a-f0-9]\{64\}.gz' | sed -n 's#^<td>\([0-9]\{1,3\}\)</td><td>\(20[0-9 :-]*\)</td>.*/networks/\([0-9a-f]\{64\}.gz\)#\1\t\2\t\3#p' > names.txt
 # cd ..
 
 

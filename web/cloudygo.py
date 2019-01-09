@@ -230,19 +230,19 @@ class CloudyGo:
         # TODO(sethtroisi): What is a better way to determine if this is part
         # of a run (e.g. LZ, MG) or a test eval dir?
 
+        SEP = 1000
+
         # MG: 1527290396-000241-archer-vs-000262-ship-long-0.sgf
         # LZ: 000002-88-fast-vs-18-fast-202.sgf
         # TODO compile this
         is_run = re.match(
             r'^[0-9]+-[0-9]+-[a-z-]+-vs-[0-9]+-[a-z-]+-[0-9]+\.sgf$',
             filename)
-
         if is_run:
             # make sure no dir_eval games end up here
             raw = re.split(r'[._-]+', filename)
             nums = [int(part) for part in raw if part.isnumeric()]
             assert len(nums) == 4, '{} => {}'.format(filename, raw)
-            SEP = 1000
             assert max(nums[1:]) < SEP, nums
             multed = sum(num * SEP ** i for i, num in enumerate(nums[::-1]))
             return [multed, nums[1], nums[2]]
@@ -1139,6 +1139,11 @@ class CloudyGo:
                 new_names.append((name, number))
                 print("get_or_add_name ckpt:", name, number)
                 return number
+
+            # LEELA-HACK: leela-zero-v3-eval hack.
+            is_lz_name = re.match(r'^LZ([0-9]+)_[0-9a-f]{8,}_', name)
+            if is_lz_name:
+                return bucket_salt + int(is_lz_name.group(1))
 
             first_eval_model = bucket_salt + CloudyGo.CROSS_EVAL_START
             keys = set(name_to_num.values())
