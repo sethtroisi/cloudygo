@@ -713,7 +713,7 @@ def all_eval_graphs():
     # Make sure each bucket has at least a couple
     eval_models_by_games = sorted_by(6)
     other_buckets = sorted(set(m[0] for m in eval_models_by_games))
-    top_by_bucket = [[m for m in eval_models_by_games if m[0] == b][:3]
+    top_by_bucket = [[m for m in eval_models_by_games if m[0] == b][:2]
                         for b in other_buckets]
     eval_models_by_games = sum(top_by_bucket, [])
 
@@ -804,7 +804,8 @@ def model_eval(bucket, model_name):
     model[0] %= CloudyGo.SALT_MULT
 
     is_sorted = get_bool_arg('sorted', request.args)
-    sort_by = operator.itemgetter(3 if is_sorted else 0)
+    sort_by = operator.itemgetter(3 if is_sorted else 1)
+    model_games = sorted(updated, key=sort_by)
 
     return render_template('model-eval.html',
                            bucket=bucket,
@@ -816,9 +817,9 @@ def model_eval(bucket, model_name):
                            played_better=played_better,
                            later_models=later_models,
                            earlier_models=earlier_models,
-                           model_games=sorted(updated, key=sort_by),
+                           model_games=model_games,
                            eval_games=eval_games,
-                           )
+    )
 
 
 # Supports full name (0000102-monarch as well as 102)
