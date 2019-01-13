@@ -261,6 +261,10 @@ def fully_parse_comment(comment):
 
     model = ""
     if not re.match(r'^-?[01].[0-9]*$', tokens[0]):
+        # MINIGO-HACK for https://github.com/tensorflow/minigo/issues/652
+        if re.match(r'^[0-9]{6}-[a-z-]*$', tokens[0]):
+            model = tokens.pop(0)
+
         # Assume it's model name and drop for now
         raw_model = tokens.pop(0)
         if raw_model == 'models':
