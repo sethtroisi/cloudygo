@@ -1030,55 +1030,55 @@ class CloudyGo:
         with open(filename) as eval_file:
             values = list(map(str.strip, eval_file.read().strip().split(',')))
 
-            # Files start with model_id (idx)
-            test = values.pop(0)
-            assert test in str(model_id), \
-                '{} not in {}'.format(test, model_id)
+        # Files start with model_id (idx)
+        test = values.pop(0)
+        assert test in str(model_id), \
+            '{} not in {}'.format(test, model_id)
 
-            value = values.pop(0)
-            policy = None
-            n = None
-            sgf = None
+        value = values.pop(0)
+        policy = None
+        n = None
+        sgf = None
 
-            if group == 'policy':
-                assert len(values) in (9*9+1, 19*19+1), (group, filename)
+        if group == 'policy':
+            assert len(values) in (9*9+1, 19*19+1), (group, filename)
 
-                render = (name == 'empty' and group == 'policy')
-                filename = '-'.join([str(model_id), group, name + '.png'])
-                filepath = os.path.join(
-                    self.INSTANCE_PATH, 'openings', filename)
+            render = (name == 'empty' and group == 'policy')
+            filename = '-'.join([str(model_id), group, name + '.png'])
+            filepath = os.path.join(
+                self.INSTANCE_PATH, 'openings', filename)
 
-                data = [(cord, float(policy), 0)
-                        for cord, policy in enumerate(values)]
+            data = [(cord, float(policy), 0)
+                    for cord, policy in enumerate(values)]
 
-                sgf = self.render_position_eval(
-                    bucket, model_id,
-                    group, name, data,
-                    filename=filepath if render else None)
-            else:
-                assert group == 'pv', '{} {} {}'.format(
-                    group, len(values), filename)
-                assert len(values) % 2 == 0, values
+            sgf = self.render_position_eval(
+                bucket, model_id,
+                group, name, data,
+                filename=filepath if render else None)
+        else:
+            assert group == 'pv', '{} {} {}'.format(
+                group, len(values), filename)
+            assert len(values) % 2 == 0, values
 
-                data = []
-                for i in range(0, len(values), 2):
-                    cord = int(values[i])
-                    count = int(values[i+1])
-                    data.append((cord, 0, count))
+            data = []
+            for i in range(0, len(values), 2):
+                cord = int(values[i])
+                count = int(values[i+1])
+                data.append((cord, 0, count))
 
-                sgf = self.render_position_eval(
-                    bucket, model_id, group, name, data)
+            sgf = self.render_position_eval(
+                bucket, model_id, group, name, data)
 
-            sgf = sgf_utils.canonical_sgf(board_size, sgf)
-            insert = (model_id, -2, group, name, policy, value, n, sgf)
+        sgf = sgf_utils.canonical_sgf(board_size, sgf)
+        insert = (model_id, -2, group, name, policy, value, n, sgf)
 
-            self.db().execute(
-                'DELETE FROM position_eval_part '
-                'WHERE model_id = ? AND type = ? AND name = ?',
-                (model_id, group, name))
+        self.db().execute(
+            'DELETE FROM position_eval_part '
+            'WHERE model_id = ? AND type = ? AND name = ?',
+            (model_id, group, name))
 
-            self.insert_rows_db('position_eval_part', [insert])
-            self.db().commit()
+        self.insert_rows_db('position_eval_part', [insert])
+        self.db().commit()
 
     @staticmethod
     def process_eval(data):
