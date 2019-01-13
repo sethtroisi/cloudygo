@@ -266,9 +266,8 @@ def fully_parse_comment(comment):
             model = tokens.pop(0)
 
         # Assume it's model name and drop for now
-        raw_model = tokens.pop(0)
-        if raw_model == 'models':
-            # TODO: assert tokens[0] == 'gs'
+        if tokens[0] == 'models':
+            raw_model = tokens.pop(0)
             while tokens[0] == 'gs':
                 temp = tokens.pop(0)
                 temp = tokens.pop(0)
