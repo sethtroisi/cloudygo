@@ -262,7 +262,7 @@ def fully_parse_comment(comment):
     model = ""
     if not re.match(r'^-?[01].[0-9]*$', tokens[0]):
         # MINIGO-HACK for https://github.com/tensorflow/minigo/issues/652
-        if re.match(r'^[0-9]{6}-[a-z-]*$', tokens[0]):
+        if re.match(r'^[0-9]{6}-[a-z-]*(.pb)?$', tokens[0]):
             model = tokens.pop(0)
 
         # Assume it's model name and drop for now
@@ -273,6 +273,9 @@ def fully_parse_comment(comment):
                 temp = tokens.pop(0)
                 model = os.path.basename(temp)
                 assert model.startswith('model.ckpt'), model
+
+            if tokens[0].endswith('.pb'):
+                model = tokens.pop(0)
 
     Q_0 = float(tokens.pop(0))
 
