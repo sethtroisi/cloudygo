@@ -1060,16 +1060,10 @@ class CloudyGo:
                     group, len(values), filename)
                 assert len(values) % 2 == 0, values
 
-                cords = set()
                 data = []
                 for i in range(0, len(values), 2):
                     cord = int(values[i])
                     count = int(values[i+1])
-                    if cord in cords:
-                        # TODO remove this constraint
-                        # Playing at a previous location (AKA fighting a ko)
-                        continue
-                    cords.add(cord)
                     data.append((cord, 0, count))
 
                 sgf = self.render_position_eval(
