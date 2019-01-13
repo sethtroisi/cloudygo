@@ -410,12 +410,12 @@ def models_graphs(bucket):
     if graphs is None:
         win_rate = cloudy.bucket_query_db(
             bucket,
-            'SELECT model_id % 10000, round(1.0*wins/num_games,3)',
+            'SELECT model_id % 1000000, round(1.0*wins/num_games,3)',
             'model_stats', 'WHERE perspective = "black"', 1, model_limit)
 
         bad_resign_rate = cloudy.bucket_query_db(
             bucket,
-            'SELECT model_id % 10000, round(1.0*bad_resigns/hold_out_resigns,3)',
+            'SELECT model_id % 1000000, round(1.0*bad_resigns/hold_out_resigns,3)',
             'model_stats',
             'WHERE hold_out_resigns > 0 and perspective = "all" ',
             1,
@@ -423,7 +423,7 @@ def models_graphs(bucket):
 
         newest_model = cloudy.get_newest_model_num(bucket) + model_range[0]
         alternative_resign_rate = cloudy.query_db(
-            'SELECT model_id % 10000, '
+            'SELECT model_id % 1000000, '
             '   black_won * -bleakest_eval_black + '
             '   (1-black_won) * bleakest_eval_white '
             'FROM games '
@@ -445,12 +445,12 @@ def models_graphs(bucket):
 
         game_length_simple = cloudy.bucket_query_db(
             bucket,
-            'SELECT model_id % 10000, round(1.0*num_moves/num_games,3)',
+            'SELECT model_id % 1000000, round(1.0*num_moves/num_games,3)',
             'model_stats', 'WHERE perspective = "all"', 1, model_limit)
 
         num_games = cloudy.bucket_query_db(
             bucket,
-            'SELECT model_id % 10000, num_games, stats_games',
+            'SELECT model_id % 1000000, num_games, stats_games',
             'model_stats', 'WHERE perspective = "all"', 1, model_limit)
 
         games_per_day = cloudy.bucket_query_db(
@@ -460,12 +460,12 @@ def models_graphs(bucket):
 
         num_visits = cloudy.bucket_query_db(
             bucket,
-            'SELECT model_id % 10000, number_of_visits/stats_games',
+            'SELECT model_id % 1000000, number_of_visits/stats_games',
             'model_stats', 'WHERE perspective = "all"', 1, model_limit)
 
         sum_unluck = cloudy.bucket_query_db(
             bucket,
-            'SELECT model_id % 10000, round(sum_unluckiness/stats_games,2)',
+            'SELECT model_id % 1000000, round(sum_unluckiness/stats_games,2)',
             'model_stats', 'WHERE perspective = "all"', 1, model_limit)
 
         half_curve_rating_delta = cloudy.query_db(
@@ -479,7 +479,7 @@ def models_graphs(bucket):
             model_range)
 
         rating_delta = cloudy.query_db(
-            'SELECT m.model_id_1 % 10000, m.rankings - m2.rankings '
+            'SELECT m.model_id_1 % 1000000, m.rankings - m2.rankings '
             'FROM eval_models m INNER JOIN eval_models m2 '
             'WHERE m.model_id_2 = 0 AND m2.model_id_2 = 0 '
             '   AND m2.model_id_1 = m.model_id_1 - 1 '
@@ -530,13 +530,13 @@ def models_graphs_sliders(bucket):
         # Divide by four to help avoid the 'only black can win on even moves'
         game_length = cloudy.bucket_query_db(
             bucket,
-            'SELECT model_id % 10000, black_won, 4*(num_moves/4), count(*)',
-            'games', 'WHERE model_id % 10000 >= 50 ', 3, limit=20000)
+            'SELECT model_id % 1000000, black_won, 4*(num_moves/4), count(*)',
+            'games', 'WHERE model_id % 1000000 >= 50 ', 3, limit=20000)
 
         sum_unluck_per = cloudy.bucket_query_db(
             bucket,
             'SELECT '
-            '   model_id % 10000, black_won, '
+            '   model_id % 1000000, black_won, '
             '   round(100 * (unluckiness_black - unluckiness_white) / '
             '       (unluckiness_black + unluckiness_white), 0), '
             '   count(*) ',
@@ -643,7 +643,7 @@ def eval_graphs(bucket):
     top_ten_threshold = eval_models_by_rank[10][3]
 
     older_newer_winrates = cloudy.query_db(
-        'SELECT model_id_1 % 10000, '
+        'SELECT model_id_1 % 1000000, '
         '       sum((model_id_1 > model_id_2) * (m1_black_wins+m1_white_wins)), '
         '       sum((model_id_1 > model_id_2) * games), '
         '       sum((model_id_1 < model_id_2) * (m1_black_wins+m1_white_wins)), '
@@ -1160,7 +1160,7 @@ def ratings_json(bucket):
     pairs = defaultdict(lambda: defaultdict(int))
 
     data = cloudy.query_db(
-        'SELECT model_id_1 % 10000, model_id_2 % 10000, games '
+        'SELECT model_id_1 % 1000000, model_id_2 % 1000000, games '
         'FROM eval_models '
         'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_1 < model_id_2',
         model_range)
@@ -1199,7 +1199,7 @@ def eval_json(bucket):
 
     data = cloudy.query_db(
         'SELECT '
-        '   model_id_1 % 10000, model_id_2 % 10000, '
+        '   model_id_1 % 1000000, model_id_2 % 1000000, '
         '   m1_black_wins + m1_white_wins, games '
         'FROM eval_models '
         'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_1 < model_id_2',
@@ -1213,7 +1213,7 @@ def ratings(bucket):
 
     model_range = CloudyGo.bucket_model_range(bucket)
     ratings = cloudy.query_db(
-        'SELECT model_id_1 % 10000, round(rankings, 3), round(std_err,3) '
+        'SELECT model_id_1 % 1000000, round(rankings, 3), round(std_err,3) '
         'FROM eval_models '
         'WHERE model_id_2 == 0 AND '
         '      model_id_1 BETWEEN ? and ?',
