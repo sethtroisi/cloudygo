@@ -38,7 +38,15 @@ from . import utils
 class CloudyGo:
     SALT_MULT = 10 ** 6
 
-    CROSS_EVAL_START = 2500  # offset from SALT_MULT to start
+    # TODO change to 10,000 if you get a chance
+    CROSS_EVAL_START = 2500    # offset from SALT_MULT to start
+    SPECIAL_EVAL_START = 20000 # offset ...
+
+    SPECIAL_EVAL_NAMES = [
+        "GNU Go:3.8",
+        "Pachi UCT:12.20",
+    ]
+
 
     # FAST UPDATE HACK fastness
     FAST_UPDATE_HOURS = 12
@@ -1118,8 +1126,17 @@ class CloudyGo:
 
             # HACK: figure out how to plumb is_sorted here
             if (bucket.startswith('v') and
-                re.match(r'[0-9]{6}-([a-zA-Z-]+)', name)):
+                    re.match(r'[0-9]{6}-([a-zA-Z-]+)', name)):
                 return bucket_salt + int(name.split('-', 1)[0])
+
+            # NOTE: static "models" (e.g. gnu go) get a special id range.
+            if name in CloudyGo.SPECIAL_EVAL_NAMES:
+                index = CloudyGo.SPECIAL_EVAL_NAMES.index(name)
+                start = bucket_salt + CloudyGo.SPECIAL_EVAL_START
+                number = start + index
+                name_to_num[name] = number
+                new_names.append((name, number))
+                return number
 
             # MINIGO-HACK: bucket ~= 'v10-19x19', name ~= 'model.ckpt.123'
             if bucket.startswith('v') and ckpt_num(name):
@@ -1136,7 +1153,7 @@ class CloudyGo:
 
             # LEELA-HACK: leela-zero-v3-eval hack.
             is_lz_name = re.match(r'^LZ([0-9]+)_[0-9a-f]{8,}_', name)
-            if is_lz_name:
+            if bucket.startswith('leela') and is_lz_name:
                 return bucket_salt + int(is_lz_name.group(1))
 
             first_eval_model = bucket_salt + CloudyGo.CROSS_EVAL_START
