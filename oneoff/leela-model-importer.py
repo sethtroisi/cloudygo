@@ -37,12 +37,12 @@ with open(FILE) as f:
 with open(INSERTS, 'w') as inserts, open(DOWNLOADER, 'w') as downloader:
     for num in range(1000):
         # check if we can find num in the model table
-        match = re.search('<tr><td>{}</td>.*</tr>'.format(num), data)
+        match = re.search('<tr>(<td>{}</td>.*)</tr>'.format(num), data)
         if not match:
             print('Did not find {} stopping'.format(num))
             break
 
-        parts = match.group().replace('</td>', '').split('<td>')
+        parts = match.group(1).replace('</td>', '').split('<td>')
         assert parts[1] == str(num), parts
 
         full_name = re.search(r'([0-9a-f]{64})', parts[3]).group()
@@ -51,6 +51,8 @@ with open(INSERTS, 'w') as inserts, open(DOWNLOADER, 'w') as downloader:
         date = parts[2]
         date = datetime.datetime.strptime(date, '%Y-%m-%d %H:%M')
         epoch = int(date.strftime('%s'))
+        network_size = parts[4]
+        network_blocks = int(network_size.split('x')[0])
 
         display_name = 'LZ{}_{}'.format(num, name)
 
@@ -65,7 +67,10 @@ with open(INSERTS, 'w') as inserts, open(DOWNLOADER, 'w') as downloader:
             display_name, display_name,
             BUCKET, num,
             epoch, epoch,
-            0, games, 0, 0)
+            network_blocks, # training_time_m (being abused)
+            games,
+            0, # num_stats_games
+            0) # num_eval_games
         inserts.write(row + '\n')
 
         model_path = 'models/' + display_name

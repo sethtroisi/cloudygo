@@ -39,7 +39,9 @@
 
     {% set is_full = (request.args.get("type", "") == "full") or player_evals %}
     {% set is_eval =  request.args.get("type", "") == "eval" %}
-    {%if is_full %}
+    {% set is_wide_comment =  is_full or (is_eval and bucket == 'cross-eval') %}
+
+    {% if is_wide_comment %}
     <style>
         .wgo-twocols .wgo-player-center {
             width: 55%;
@@ -109,7 +111,7 @@
     {% endif %}
     <div id="game-player"
          data-wgo-move="{{ request.args.get('M', '') }}"
-         style="width: {{ 1000 if is_full else 800 }}px">
+         style="width: {{ 1000 if is_wide_comment else 800 }}px">
       Sorry, your browser doesn't support WGo.js.
       <a href="{{ url_for('game_view', bucket=bucket, model=model,
                           filename=filename, raw="",

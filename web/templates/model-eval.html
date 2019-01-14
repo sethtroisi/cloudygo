@@ -122,10 +122,17 @@
           white-space: nowrap;
         }
         .game-link-column {
-          max-width: 930px;
+          max-width: 460px;
           max-height: 200px;
           text-overflow: ellipsis;
           overflow: hidden;
+          font-weight: bold;
+        }
+        .game-link-column .win {
+          color: #060;
+        }
+        .game-link-column .loss {
+          color: #900;
         }
       </style>
   </head>
@@ -242,18 +249,41 @@
             <td>{{ WLR(data[7] + data[9], data[6] + data[8], 1) }}</td>
           </tr>
           <tr>
-            <td colspan="100">
+            {# TODO figure out colspan here #}
+            <td>
               <div class="game-link-column">
                 {% set count = namespace(displayed=0) %}
                 {% for eval_game in eval_games %}
-                  {% if eval_game[0] == data[1] or eval_game[1] == data[1] %}
+                  {# if other model is white, imples we are baclk #}
+                  {% if eval_game[1] == data[1] %}
                     {% set count.displayed = count.displayed + 1 %}
-                    {% if count.displayed <= 100 %}
+                    {% if count.displayed <= 50 %}
                       <a href="{{ url_for('eval_view',
                                           bucket=bucket,
                                           model=data[0],
                                           filename=eval_game[2],
-                                          type='eval') }}">{{loop.index }}</a>,
+                                          type='eval') }}"
+                         class="{{ 'win' if eval_game[3] else 'loss' }}">
+                            {{loop.index }}</a>,
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </td>
+            <td>
+              <div class="game-link-column">
+                {% set count = namespace(displayed=0) %}
+                {% for eval_game in eval_games %}
+                  {% if eval_game[0] == data[1] %}
+                    {% set count.displayed = count.displayed + 1 %}
+                    {% if count.displayed <= 50 %}
+                      <a href="{{ url_for('eval_view',
+                                          bucket=bucket,
+                                          model=data[0],
+                                          filename=eval_game[2],
+                                          type='eval') }}"
+                         class="{{ 'win' if eval_game[3] else 'loss' }}">
+                            {{loop.index }}</a>,
                     {% endif %}
                   {% endif %}
                 {% endfor %}

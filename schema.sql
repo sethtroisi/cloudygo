@@ -39,7 +39,6 @@ CREATE TABLE IF NOT EXISTS models (
   last_updated integer not null,
   creation integer not null,
   training_time_m integer not null,
-
   num_games integer not null,
   num_stats_games integer not null,
   num_eval_games integer not null

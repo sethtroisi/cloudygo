@@ -796,10 +796,15 @@ def model_eval(bucket, model_name):
             later_models[1] += e_m[6] + e_m[8]
 
     eval_games = cloudy.query_db(
-        'SELECT model_id_1 % 1000000, model_id_2 % 1000000, filename '
+        'SELECT '
+        '    model_id_1 % 1000000, '
+        '    model_id_2 % 1000000, '
+        '    filename, '
+        '    black_won = (model_id_1 = ?) '
         'FROM eval_games '
-        'WHERE model_id_1 = ? or model_id_2 = ?',
-        (model[0], model[0]))
+        'WHERE model_id_1 = ? or model_id_2 = ? '
+        'ORDER by filename',
+        (model[0], model[0], model[0]))
 
     model[0] %= CloudyGo.SALT_MULT
 

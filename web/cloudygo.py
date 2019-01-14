@@ -1342,10 +1342,14 @@ class CloudyGo:
             'WHERE model_id_1 BETWEEN ? AND ? and model_id_2 = 0',
             model_range))
 
+        max_model_num = max(
+            [m_n for m_n in model_nums
+                if (m_n % CloudyGo.SALT_MULT) < CloudyGo.SPECIAL_EVAL_START],
+            default=0)
         print('loaded {} evals for {} models ({} to {})'.format(
             total_games, len(model_nums),
             min(model_nums, default=-1),
-            max(model_nums, default=-1)))
+            max_model_num))
 
         print('\t{} evals, ratings {:.0f} to {:.0f}'.format(
             len(previous_rating),
