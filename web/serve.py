@@ -611,7 +611,7 @@ def eval_graphs(bucket):
     eval_models = cloudy.query_db(
         'SELECT * FROM eval_models '
         'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_2 = 0 '
-        '      AND games >= 10 '
+        '      AND games >= 4 '
         'ORDER BY model_id_1 desc',
         model_range)
 

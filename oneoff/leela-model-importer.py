@@ -19,8 +19,8 @@ import os
 import re
 import urllib.request
 
-BUCKET = 'leela-zero-v3'
-BUCKET_NUM = 87
+BUCKET = 'leela-zero-v4'
+BUCKET_NUM = 24
 
 URL = 'http://zero.sjeng.org'
 MODEL_DIR = os.path.join('instance', 'data', BUCKET, 'models')
@@ -56,10 +56,10 @@ with open(INSERTS, 'w') as inserts, open(DOWNLOADER, 'w') as downloader:
 
         display_name = 'LZ{}_{}'.format(num, name)
 
-        fname = os.path.join(MODEL_DIR, full_name)
-        if not os.path.exists(fname):
-            open(fname, 'a').close()
-            os.utime(fname, (epoch, epoch))
+        #fname = os.path.join(MODEL_DIR, full_name)
+        #if not os.path.exists(fname):
+            #open(fname, 'a').close()
+        #    os.utime(fname, (epoch, epoch))
 
         display_name = 'LZ{}_{}'.format(num, name)
         row = INSERT.format(
