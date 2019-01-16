@@ -1,12 +1,15 @@
 # CloudyGo
 
-Frontend for displaying MiniGo training data.
+Frontend for displaying
+[MiniGo](https://github.com/tensorflow/minigo),
+[Leela-Zero](https://github.com/gcp/leela-zero),
+and other Go data.
 
 *This is not an official Google product.*
 
 ## Getting Started
 
-Checkout [CloudyGo.com](http://CloudyGo.com) to see a live version.
+Visit [CloudyGo.com](http://CloudyGo.com) to see a live version.
 
 ### Prerequisites
 
@@ -84,4 +87,13 @@ See also the list of [AUTHORS](AUTHORS) who participated in this project.
 
 * [MiniGo](https://github.com/tensorflow/minigo)
 * Andrew Jackson for his infinite patience with my questions
+
+## Links
+
+* [MiniGo](https://github.com/tensorflow/minigo)
+    website: [CloudyGo.com](http://CloudyGo.com)
+* [Leela-Zero](https://github.com/gcp/leela-zero)
+    website: [sjeng.org](http://zero.sjeng.org/home)
+* [Leela Chess Zero](https://github.com/LeelaChessZero/lc0)
+    website: [lczero.org](https://lczero.org/)
 
