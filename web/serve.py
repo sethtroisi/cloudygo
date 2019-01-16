@@ -98,6 +98,8 @@ def _jinja2_filter_strftime(time, fmt=None):
     tformat = '%Y-%m-%d %H:%M'
     return date.strftime(tformat)
 
+# TODO(seth): move file servers here
+
 #### PAGES ####
 
 @app.route('/results')
@@ -111,7 +113,6 @@ def results():
 def SPRT():
     # Consider adding params for a,b, wins, losses, ...
     return render_template('sprt.html')
-
 
 
 @app.route('/213-secret-site-nav')
@@ -205,6 +206,33 @@ def eval_image(bucket, filename):
         mimetype='image/png',
         cache_timeout=30*60)
 
+
+@app.route('/ringmaster/<filename>')
+@app.route('/<bucket>/ringmaster/<filename>')
+def ctl_file(filename, bucket=CloudyGo.DEFAULT_BUCKET):
+    filepath = os.path.join(app.instance_path, 'ringmaster', filename)
+    if is_naughty(filepath, app.instance_path, '.ctl'):
+        return ''
+
+    return send_file(
+        filepath,
+        mimetype='text/plain',
+        cache_timeout=15*60)
+
+
+@app.route('/ringmaster/')
+@app.route('/<bucket>/ringmaster/')
+def ctl_dir(bucket=CloudyGo.DEFAULT_BUCKET):
+    ctl_path = os.path.join(app.instance_path, 'ringmaster')
+    files = os.listdir(ctl_path)
+    f_stats = [(f, os.stat(os.path.join(ctl_path, f))) for f in files]
+    f_stats = sorted(f_stats, key=lambda f: f[1].st_mtime, reverse=True)
+
+    return render_template('fileslist.html',
+                           serve_func='ctl_file',
+                           files=f_stats)
+
+
 @app.route('/<bucket>/<model>/eval/<path:filename>')
 def eval_view(bucket, model, filename):
     return game_view(
@@ -212,6 +240,7 @@ def eval_view(bucket, model, filename):
         model,
         filename,
     )
+
 
 @app.route('/<bucket>/<model>/game/<filename>')
 # These two paths help with copying file paths.
