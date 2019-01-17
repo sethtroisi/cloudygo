@@ -72,7 +72,7 @@ def main(argv):
                     "model_id" if table in tables_model else "model_id_1")
                 query_db(query, (m_low, m_high))
             print("Deleted")
-
+    db.commit()
 
 if __name__ == "__main__":
     main(sys.argv)

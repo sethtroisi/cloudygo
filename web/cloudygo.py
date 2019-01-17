@@ -77,6 +77,9 @@ class CloudyGo:
     # Average length of game in seconds, used to attribute game to previous model.
     MINIGO_GAME_LENGTH = 25 * 60
 
+    # These do special things with PB and PW
+    ALL_EVAL_BUCKETS = ['synced-eval', 'cross-run-eval']
+
     CROSS_EVAL_BUCKET_MODEL = re.compile(
         r'1[0-9]{9}.*(v[0-9]+)-([0-9]*)-(?:vs-)*(v[0-9]*)-([0-9]*)')
 
@@ -1165,7 +1168,7 @@ class CloudyGo:
                     return test_id
             assert False
 
-        if bucket == "synced-eval":
+        if bucket in CloudyGo.ALL_EVAL_BUCKETS:
            #Look up all model names so we can v10-250 vs v12-250.
             name_to_bucket = self.query_db(
                 'SELECT name, bucket '
@@ -1194,6 +1197,9 @@ class CloudyGo:
                     xB += '-19x19'
                     yB += '-19x19'
 
+                    if xB == yB:
+                        return xB + "/" + PB, xB + "/" + PW
+
                     # Find what buckets this model name belongs too.
                     pB_B = name_to_buckets[PB]
                     pW_B = name_to_buckets[PW]
@@ -1210,7 +1216,7 @@ class CloudyGo:
                     elif x_is_w and y_is_b and not (x_is_b and y_is_w):
                         return yB + "/" + PB, xB + "/" + PW
                     else:
-                        print ("Utter confusion", filename, pB, pW, pB_B, pW_B)
+                        print ("Utter confusion", filename, PB, PW, pB_B, pW_B)
 
             return None, None
 
@@ -1221,7 +1227,7 @@ class CloudyGo:
                 new_record = list(record[:-2])
                 PB, PW = record[-2:]
                 # HACK: add the bucket name avoid name collusions
-                if bucket == "synced-eval":
+                if bucket in CloudyGo.ALL_EVAL_BUCKETS:
                     PB, PW = bucket_from_name(record[1], PB, PW)
                     if PB == None or PW == None:
                         print("Skipping", record)

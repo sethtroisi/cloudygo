@@ -726,9 +726,12 @@ def eval_graphs(bucket):
                            )
 
 @app.route('/all-eval-graphs')
-def all_eval_graphs():
+@app.route('/<bucket>/all-eval-graphs')
+def all_eval_graphs(bucket='synced-eval'):
     # unify with thing class above
-    bucket = 'synced-eval'
+    print ("all_eval:", bucket)
+    bucket = bucket if bucket in CloudyGo.ALL_EVAL_BUCKETS else 'synced-eval'
+    print ("all_eval:", bucket)
 
     model_range = CloudyGo.bucket_model_range(bucket)
     bucket_salt = CloudyGo.bucket_salt(bucket)
@@ -739,7 +742,12 @@ def all_eval_graphs():
         '      AND games >= 10 '
         'ORDER BY model_id_1 desc',
         model_range)
+    # Only count black games so not to double count.
     total_games = sum(m[5] for m in eval_models)
+    total_games_in_db = cloudy.query_db(
+        'SELECT count(*) FROM eval_games '
+        'WHERE (model_id_1 BETWEEN ? AND ?) ',
+        model_range)[0][0]
 
     num_to_name = cloudy.get_model_names(model_range)
 
@@ -780,6 +788,7 @@ def all_eval_graphs():
     return render_template('models-eval-cross.html',
                            bucket=bucket,
                            total_games=total_games,
+                           total_games_in_db=total_games_in_db,
                            models=eval_models,
                            sorted_models=eval_models_by_rank,
                            well_played_models=eval_models_by_games,
