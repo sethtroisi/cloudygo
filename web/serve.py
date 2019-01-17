@@ -17,13 +17,13 @@
 import itertools
 import json
 import heapq
-import math
 import operator
 import os
 import numpy as np
 import random
 import re
 import pickle
+import stat
 import sqlite3
 import time
 
@@ -83,9 +83,10 @@ cloudy = CloudyGo(
 def is_naughty(filepath, basepath, suffix):
     base_dir_abs = os.path.abspath(basepath)
     file_path_abs = os.path.abspath(filepath)
-    return not file_path_abs.startswith(base_dir_abs) or \
-           not file_path_abs.endswith(suffix) or \
-           not os.path.exists(file_path_abs)
+    return not (file_path_abs.startswith(base_dir_abs) and
+                file_path_abs.endswith(suffix) and
+                os.path.exists(file_path_abs))
+
 
 def get_bool_arg(name, args):
     value = args.get(name, 'false').lower()
@@ -207,25 +208,34 @@ def eval_image(bucket, filename):
         cache_timeout=30*60)
 
 
-@app.route('/ringmaster/<filename>')
-@app.route('/<bucket>/ringmaster/<filename>')
-def ctl_file(filename, bucket=CloudyGo.DEFAULT_BUCKET):
+@app.route('/ringmaster/')
+@app.route('/ringmaster/<path:filename>/')
+def ctl_file(filename=""):
+    print ("ringmaster", filename)
     filepath = os.path.join(app.instance_path, 'ringmaster', filename)
-    if is_naughty(filepath, app.instance_path, '.ctl'):
+    if is_naughty(filepath, app.instance_path, ''):
         return ''
 
-    return send_file(
-        filepath,
-        mimetype='text/plain',
-        cache_timeout=15*60)
+    if any(filepath.endswith('.' + ext) for ext in
+               ['ctl', 'report', 'hist', 'log', 'sgf']):
+        return send_file(
+            filepath,
+            mimetype='text/plain',
+            cache_timeout=15*60)
 
+    if not (filename == "" or filename.endswith(".games")):
+        return 'Restricted'
 
-@app.route('/ringmaster/')
-@app.route('/<bucket>/ringmaster/')
-def ctl_dir(bucket=CloudyGo.DEFAULT_BUCKET):
-    ctl_path = os.path.join(app.instance_path, 'ringmaster')
-    files = os.listdir(ctl_path)
-    f_stats = [(f, os.stat(os.path.join(ctl_path, f))) for f in files]
+    if not os.path.isdir(filepath):
+        return ''
+
+    files = os.listdir(filepath)
+    f_stats = []
+    for f in files:
+        f_stats.append([
+            os.path.join(filename, f),
+            os.stat(os.path.join(filepath, f)),
+        ])
     f_stats = sorted(f_stats, key=lambda f: f[1].st_mtime, reverse=True)
 
     return render_template('fileslist.html',
