@@ -211,17 +211,25 @@ def eval_image(bucket, filename):
 @app.route('/ringmaster/')
 @app.route('/ringmaster/<path:filename>/')
 def ctl_file(filename=""):
-    print ("ringmaster", filename)
     filepath = os.path.join(app.instance_path, 'ringmaster', filename)
     if is_naughty(filepath, app.instance_path, ''):
         return ''
 
     if any(filepath.endswith('.' + ext) for ext in
-               ['ctl', 'report', 'hist', 'log', 'sgf']):
+               ['ctl', 'report', 'hist', 'log']):
         return send_file(
             filepath,
             mimetype='text/plain',
             cache_timeout=15*60)
+
+    if filepath.endswith('.sgf') and os.path.isfile(filepath):
+        with open(filepath) as f:
+            data = f.read()
+        return render_game(
+            bucket="ringmaster",
+            model="",
+            data=data,
+            force_full=True)
 
     if not (filename == "" or filename.endswith(".games")):
         return 'Restricted'
@@ -249,6 +257,19 @@ def eval_view(bucket, model, filename):
         bucket,
         model,
         filename,
+    )
+
+
+def render_game(bucket, model, data, force_full=False):
+    return render_template(
+        'game.html',
+        bucket=bucket,
+        model=model,
+        data=data,
+        player_evals="",
+        filename="",
+        force_full=force_full,
+        render_sorry=False,
     )
 
 

@@ -39,7 +39,7 @@
 
     {% set is_full = (request.args.get("type", "") == "full") or player_evals %}
     {% set is_eval =  request.args.get("type", "") == "eval" %}
-    {% set is_wide_comment =  is_full or (is_eval and bucket == 'cross-eval') %}
+    {% set is_wide_comment =  force_full or is_full or (is_eval and bucket == 'cross-eval') %}
 
     {% if is_wide_comment %}
     <style>
@@ -113,9 +113,11 @@
          data-wgo-move="{{ request.args.get('M', '') }}"
          style="width: {{ 1000 if is_wide_comment else 800 }}px">
       Sorry, your browser doesn't support WGo.js.
-      <a href="{{ url_for('game_view', bucket=bucket, model=model,
-                          filename=filename, raw="",
-                          type=request.args['type']) }}">Download SGF file directly</a>
+      {% if filename %}
+        <a href="{{ url_for('game_view', bucket=bucket, model=model,
+                            filename=filename, raw="",
+                            type=request.args['type']) }}">Download SGF file directly</a>
+      {% endif %}
     </div>
     <div class="centered">
       <svg id="eval-graph"></svg>
