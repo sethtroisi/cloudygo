@@ -6,6 +6,9 @@ body {
     text-transform: capitalize;
 }
 
+a:visited {
+    color:#551A8B !important;
+}
 
 nav.navbar {
     border-bottom: 1px solid #e1e1e1;

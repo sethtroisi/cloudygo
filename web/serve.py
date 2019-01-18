@@ -663,8 +663,7 @@ def models_evolution(bucket):
                            )
 
 
-@app.route('/<bucket>/eval-graphs')
-def eval_graphs(bucket):
+def get_eval_data(bucket):
     model_range = CloudyGo.bucket_model_range(bucket)
     bucket_salt = CloudyGo.bucket_salt(bucket)
 
@@ -675,13 +674,20 @@ def eval_graphs(bucket):
         'ORDER BY model_id_1 desc',
         model_range)
 
+    # Only count black games so not to double count.
     total_games = sum(m[5] for m in eval_models)
+    num_to_name = cloudy.get_model_names(model_range)
+    return model_range, bucket_salt, eval_models, total_games, num_to_name
+
+
+@app.route('/<bucket>/eval-graphs')
+def eval_graphs(bucket):
+    model_range, bucket_salt, eval_models, total_games, num_to_name = \
+        get_eval_data(bucket)
 
     if len(eval_models) < 2:
         return render_template('models-eval-empty.html',
                                bucket=bucket, total_games=total_games)
-
-    num_to_name = cloudy.get_model_names(model_range)
 
     # Replace model_id_2 with name
     def eval_model_transform(m):
@@ -726,30 +732,21 @@ def eval_graphs(bucket):
                            )
 
 @app.route('/all-eval-graphs')
-@app.route('/<bucket>/all-eval-graphs')
-def all_eval_graphs(bucket='synced-eval'):
-    # unify with thing class above
-    print ("all_eval:", bucket)
+def all_eval_graphs():
+    bucket = request.args.get('bucket', 'synced-eval')
     bucket = bucket if bucket in CloudyGo.ALL_EVAL_BUCKETS else 'synced-eval'
-    print ("all_eval:", bucket)
 
-    model_range = CloudyGo.bucket_model_range(bucket)
-    bucket_salt = CloudyGo.bucket_salt(bucket)
+    model_range, bucket_salt, eval_models, total_games, num_to_name = \
+        get_eval_data(bucket)
 
-    eval_models = cloudy.query_db(
+    cross_run_models = cloudy.query_db(
         'SELECT * FROM eval_models '
-        'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_2 = 0 '
-        '      AND games >= 10 '
-        'ORDER BY model_id_1 desc',
+        'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_2 != 0 '
+        '      AND games >= 4 ',
         model_range)
-    # Only count black games so not to double count.
-    total_games = sum(m[5] for m in eval_models)
-    total_games_in_db = cloudy.query_db(
-        'SELECT count(*) FROM eval_games '
-        'WHERE (model_id_1 BETWEEN ? AND ?) ',
-        model_range)[0][0]
-
-    num_to_name = cloudy.get_model_names(model_range)
+    cross_run_games = sum(m[5] for m in cross_run_models
+        if num_to_name[m[0]].split('/')[0] !=
+           num_to_name[m[1]].split('/')[0])
 
     def eval_model_transform(m):
         model_id = m[0]
@@ -762,12 +759,12 @@ def all_eval_graphs(bucket='synced-eval'):
         name = '-'.join(test[2:])
 
         bucket = bucket.replace('v9', 'v09')
-        model_id %= CloudyGo.SALT_MULT
+        model_id -= bucket_salt
 
         metadata = (bucket, num, model_id, name)
         return metadata + m[2:]
 
-    eval_models = map(eval_model_transform, eval_models)
+    eval_models = list(map(eval_model_transform, eval_models))
     eval_models = sorted(eval_models, reverse=True)
 
     def sorted_by(column):
@@ -781,17 +778,17 @@ def all_eval_graphs(bucket='synced-eval'):
     # Make sure each bucket has at least a couple
     eval_models_by_games = sorted_by(6)
     other_buckets = sorted(set(m[0] for m in eval_models_by_games))
-    top_by_bucket = [[m for m in eval_models_by_games if m[0] == b][:2]
+    top_by_bucket = [[m for m in eval_models_by_games if m[0] == b][:3][::-1]
                         for b in other_buckets]
     eval_models_by_games = sum(top_by_bucket, [])
 
     return render_template('models-eval-cross.html',
                            bucket=bucket,
                            total_games=total_games,
-                           total_games_in_db=total_games_in_db,
+                           cross_run_games=cross_run_games,
                            models=eval_models,
                            sorted_models=eval_models_by_rank,
-                           well_played_models=eval_models_by_games,
+                           well_played_models=eval_models_by_games[::-1],
                            )
 
 @app.route('/<bucket>/eval-model/<model_name>')
