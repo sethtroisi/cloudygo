@@ -3,6 +3,8 @@ Disallow: */game/*
 Disallow: */full/*
 Disallow: */clean/*
 Disallow: */openings/*
+Disallow: */eval-model/*
+Disallow: */eval/*
 
 User-agent: MauiBot
 Disallow: /

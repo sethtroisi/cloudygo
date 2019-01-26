@@ -25,6 +25,17 @@ nav.navbar .breadcrumb-item.active {
     line-height: 1.5em;
 }
 
+@media (max-width: 992px) {
+    nav.navbar a,
+    nav.navbar p,
+    nav.navbar .navbar-text,
+    nav.navbar .breadcrumb-item.active {
+        font-size: 2.3em;
+        line-height: 2.3em;
+    }
+}
+
+
 .navbar .dropdown-toggle.h2 {
     margin: auto;
 }

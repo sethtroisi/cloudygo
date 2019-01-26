@@ -48,6 +48,9 @@
 
 {%- endmacro %}
 
+{% macro bucket_name(bucket) -%}
+  {{ (bucket or "").replace('-19x19','') }}
+{%- endmacro %}
 
 {% macro navbar(current_page, page_desc, model=None, other_page=None) -%}
   {% set model = (model or 'newest')|capitalize %}
@@ -100,7 +103,7 @@
   {% set other_run_page = other_page or current_page %}
   {% set page_name = dict(TOP_LEVEL_PAGES + MODEL_PAGES).get(current_page, "") %}
 
-  <nav class="navbar navbar-expand-md navbar-light">
+  <nav class="navbar navbar-expand-lg navbar-light">
     <a class="navbar-brand" href="/">CloudyGo</a>
     {# used for when stuff doesn't fit on nav bar #}
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapse-1" aria-controls="navbar-collapse-1" aria-expanded="false" aria-label="Toggle navigation">
@@ -109,7 +112,22 @@
 
     <!-- This div toggles when screen is thin -->
     <div class="collapse navbar-collapse" id="navbar-collapse-1">
-      <ul class="navbar-nav mr-auto">
+      <ul class="navbar-nav">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarRunDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Other Runs</a>
+          <div class="dropdown-menu dropdown-menu" aria-labelledby="navbarRunDropdown">
+            {{ other_buckets(MINIGO_FULL_SIZE_RUNS, page=other_run_page) }}
+            <div class="dropdown-divider"></div>
+            {{ other_buckets([ ('v3-9x9', '') ], page=other_run_page) }}
+            <div class="dropdown-divider"></div>
+            {{ other_buckets([
+                  ('leela-zero-v1', ' (partial)'),
+                  ('leela-zero-v2', ' (eval only)'),
+                  ('leela-zero-v3', ' (eval only)'),
+                  ('cross-eval', ' (eval only)'),
+                ], page=other_run_page) }}
+          </div>
+        </li>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarPageDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Pages</a>
           <div class="dropdown-menu" aria-labelledby="navbarPageDropdown">
@@ -128,9 +146,16 @@
             {% endfor %}
           </div>
         </li>
+      </ul>
+
+      <ul class="nav navbar-nav mx-auto">
         <li class="nav-item">
           <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('models_details', bucket=bucket) }}">{{bucket}}</a></li>
+            <li class="breadcrumb-item">
+              <a href="{{ url_for('models_details', bucket=bucket) }}">
+                {{ bucket_name(bucket) }}
+              </a>
+            </li>
             {% if current_page in PAGE_PARENT %}
               <li class="breadcrumb-item"><a href="{{ url_for(PAGE_PARENT[current_page][0], bucket=bucket, model_name=model) }}">
                 {{- PAGE_PARENT[current_page][1] -}}
@@ -143,25 +168,11 @@
         </li>
         <span class="navbar-text">{{page_desc|title}}</span>
       </ul>
-      {# TODO(sethtroisi): Consider adding model/bucket search #}
-      <ul class="nav navbar-nav navbar-right">
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('site_nav', bucket=bucket) }}">Site Nav</a></li>
-        <li class="nav-item dropdown">
 
-          <a class="nav-link dropdown-toggle" href="#" id="navbarRunDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Other Runs</a>
-          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarRunDropdown">
-            {{ other_buckets(MINIGO_FULL_SIZE_RUNS, page=other_run_page) }}
-            <div class="dropdown-divider"></div>
-            {{ other_buckets([ ('v3-9x9', '') ], page=other_run_page) }}
-            <div class="dropdown-divider"></div>
-            {{ other_buckets([
-                  ('leela-zero-v1', ' (partial)'),
-                  ('leela-zero-v2', ' (eval only)'),
-                  ('leela-zero-v3', ' (eval only)'),
-                  ('cross-eval', ' (eval only)'),
-                ], page=other_run_page) }}
-          </div>
-        </li>
+      {# TODO(sethtroisi): Consider adding model/bucket search #}
+      <ul class="nav navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('results') }}">RESULTS</a></li>
+        {# TODO(sethtroisi): readd site_name #}
       </ul>
     </div> <!-- /.navbar-collapse -->
   </nav>
@@ -170,12 +181,17 @@
 {% macro other_buckets(others, page='models_details') %}
   {% for other_bucket, desc in others %}
     <a class="h2 dropdown-item{{" disabled" if bucket == other_bucket else ""}}"
-       href="{{ url_for(page, bucket=other_bucket) }}">{{other_bucket}}{{desc}}</a>
+       href="{{ url_for(page, bucket=other_bucket) }}">
+          {{ bucket_name(other_bucket) }}{{ desc }}
+    </a>
   {% endfor %}
 {% endmacro %}
 
 {% macro cloudy_footer() -%}
     <div>
-      CloudyGo.com by Seth T direct all questions, comments, concerns, and feature requests to <a href="https://github.com/sethtroisi/cloudygo">Github</a>
+      CloudyGo.com by Seth T feel free to send comment and feature requests to
+      <a href="https://github.com/sethtroisi/cloudygo">Github</a>
+      or @Seth in
+      <a href="https://discord.gg/jNEwKBj">Minigo Discord</a>
     </div>
 {%- endmacro %}

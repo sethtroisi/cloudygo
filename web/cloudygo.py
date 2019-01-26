@@ -47,9 +47,8 @@ class CloudyGo:
         "Pachi UCT:12.20",
     ]
 
-
     # FAST UPDATE HACK fastness
-    FAST_UPDATE_HOURS = 2400
+    FAST_UPDATE_HOURS = 48
     MAX_INSERTS = 200000
 
     # set by __init__ but treated as constant
@@ -274,6 +273,13 @@ class CloudyGo:
             was.strftime("%Y-%m-%d %H:%M"),
             (deltaDays if delta.days > 0 else '') + deltaHours
         ]
+
+    def get_run_data(self, bucket):
+        runs = self.query_db(
+            'SELECT * FROM runs WHERE bucket = ?',
+            (bucket,))
+        assert len(runs) <= 1, (bucket, runs)
+        return runs[0] if runs else []
 
     def get_models(self, bucket):
         return self.query_db(

@@ -29,17 +29,25 @@
       <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/general.css') }}">
 
       <style>
+        .container.table-container {
+          max-width: 95%;
+          text-align: center;
+        }
+
+        .container.table-container .table {
+          text-align: left;
+        }
+
+
         .model-name-col {
           min-width: 150px;
         }
-        th {
-          text-align: left;
-        }
-        body .models-table:last-of-type {
-          margin-bottom: 30px;
+
+        .table-container .models-table:last-of-type {
+          margin-bottom: 40px;
         }
 
-        body table:first-of-type tr:first-of-type td {
+        .table-container table:first-of-type tr:first-of-type td {
           font-weight: bold;
           background-color: rgba(0, 0, 0, 0.1);
         }
@@ -52,35 +60,46 @@
   <body>
     {{ navbar('models_details', 'Model list') }}
 
-    {% set rows = 30 %}
-    {% set columns = (models|length - 1 + rows) // rows %}
-    {% for c in range(columns) %}
-    <table class="table table-striped table-hover models-table">
-      <thead class="thead-light">
-          <th>Model</th>
-          <th class="model-name-col">Name</th>
-          <th>Trained</th>
-          <th class="c-tooltip">Games {{ tip("Self-play Games") }}</td>
-      </thead>
-      <tbody>
-        {% for m in models[c*rows:(c+1)*rows] %}
-        <tr>
-          <td>{{m[4]}}</td>
-          <td><a href="{{ url_for('model_details', bucket=bucket, model_name=m[2]) }}">{{m[1]}}</a></td>
-          <td class="c-tooltip">{{m[6][0]}} {{ tip(m[6][1]) }}</td>
-          <td>
-            {{m[8]}}
-            {%- if m[9] + 30 < m[8] and m[9] != 0 %} ({{m[9]}} w/ stats){% endif -%}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% endfor %}
+    {% if run_data %}
+    <h3 class="text-center">
+      {{ run_data[1] }} ({{run_data[3]}}x{{run_data[4]}}): {{run_data[2]}}
+    </h3>
+    <br>
+    {% endif %}
 
-  <div>
-    <div>Last model update at {{ last_update|strftime }}, total games {{ total_games }}</div>
-    {{ cloudy_footer() }}
-  </div>
+    <div class="container table-container">
+      {% set rows = 30 %}
+      {% set columns = (models|length - 1 + rows) // rows %}
+      {% for c in range(columns) %}
+      <table class="table table-striped table-hover models-table">
+        <thead class="thead-light">
+            <th>Model</th>
+            <th class="model-name-col">Name</th>
+            <th>Trained</th>
+            <th class="c-tooltip">Games {{ tip("Self-play Games") }}</td>
+        </thead>
+        <tbody>
+          {% for m in models[c*rows:(c+1)*rows] %}
+          <tr>
+            <td>{{m[4]}}</td>
+            <td><a href="{{ url_for('model_details', bucket=bucket, model_name=m[2]) }}">
+              {{m[1]}}
+            </a></td>
+            <td class="c-tooltip">{{m[6][0]}} {{ tip(m[6][1]) }}</td>
+            <td>
+              {{m[8]}}
+              {%- if m[9] + 30 < m[8] and m[9] != 0 %} ({{m[9]}} w/ stats){% endif -%}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endfor %}
+
+      <div>
+        <div>Last model update at {{ last_update|strftime }}, total games {{ total_games }}</div>
+        {{ cloudy_footer() }}
+      </div>
+    </div>
   </body>
 </html>

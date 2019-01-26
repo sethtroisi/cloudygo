@@ -30,7 +30,10 @@ CREATE TABLE IF NOT EXISTS bucket_model_range (
 
 CREATE TABLE IF NOT EXISTS runs (
   bucket text NOT NULL PRIMARY KEY,
-  desc text NOT NULL DEFAULT ''
+  name text NOT NULL,
+  desc text NOT NULL DEFAULT '',
+  blocks integer not null,
+  filters integer not null
 );
 
 CREATE TABLE IF NOT EXISTS models (

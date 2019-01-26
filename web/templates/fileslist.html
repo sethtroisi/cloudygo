@@ -20,7 +20,7 @@
   <head lang="en">
       <meta charset="UTF-8">
       <meta http-equiv="Content-Language" content="en">
-      <title>Ringmaster CTL files</title>
+      <title>{{ navbar_title }}</title>
 
       {{ favicon_links() }}
       {{ bootstrap_links() }}
@@ -35,9 +35,9 @@
   </head>
 
   <body>
-    {{ navbar('eval_graphs', 'Ringmaster CTL Files({})'.format(files|length)) }}
+    {{ navbar('eval_graphs', navbar_title) }}
 
-    <h3>Various ringmaster CTL files (updated sporadically).</h3>
+    <h3>{{ header }}</h3>
     <hr>
     <table class="table table-sm table-hover">
       <thead>

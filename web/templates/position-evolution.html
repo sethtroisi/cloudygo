@@ -15,7 +15,7 @@
 -->
 <!DOCTYPE html>
 <html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
-  {% from "macros.html" import models_link,
+  {% from "macros.html" import models_link, bucket_name,
       bootstrap_links, favicon_links, navbar with context %}
   <head lang="en">
       <meta charset="UTF-8">
@@ -74,8 +74,7 @@
   </head>
   <body>
     {{ navbar('models_evolution',
-              bucket + ' Evolution',
-       ) }}
+              bucket_name(bucket) + ' Evolution') }}
 
     <div class="container-container">
       <div class="input-container">

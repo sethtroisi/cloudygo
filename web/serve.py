@@ -38,6 +38,7 @@ from flask import send_file, url_for, redirect, jsonify
 from . import sgf_utils
 from .cloudygo import CloudyGo
 
+
 app = Flask(__name__)
 app.jinja_env.trim_blocks = True
 app.jinja_env.lstrip_blocks = True
@@ -50,6 +51,8 @@ DATABASE_PATH = os.path.join(app.instance_path, 'clouds.db')
 
 RANDOMIZE_GAMES = True
 MAX_GAMES_ON_PAGE = 100
+
+CONVERTED_SUFFIX = "_converted.txt.gz"
 
 #### DB STUFF ####
 
@@ -183,6 +186,7 @@ def opening_image(filename):
     if is_naughty(path, app.instance_path, '.png'):
         return ''
 
+    # TODO: convert to send_from_directory
     return send_file(
         path,
         mimetype='image/png',
@@ -195,6 +199,7 @@ def model_thumb(name):
     if is_naughty(path, app.instance_path, '.jpg'):
         return ''
 
+    # TODO: convert to send_from_directory
     return send_file(
         path,
         mimetype='image/png',
@@ -207,10 +212,59 @@ def eval_image(bucket, filename):
     if is_naughty(filepath, LOCAL_EVAL_DIR, '.png'):
         return ''
 
+    # TODO: convert to send_from_directory
     return send_file(
         filepath,
         mimetype='image/png',
         cache_timeout=30*60)
+
+
+def _fstat_dir(directory, top_dir):
+    if not os.path.isdir(directory):
+        return []
+
+    files = os.listdir(directory)
+    f_stats = []
+    for f in files:
+        f_stats.append([
+            os.path.join(top_dir, f),
+            os.stat(os.path.join(directory, f)),
+        ])
+    f_stats = sorted(f_stats, key=lambda f: f[1].st_mtime, reverse=True)
+    return f_stats
+
+@app.route('/converted_model/')
+@app.route('/converted_model/<path:filename>/')
+def converted_model(filename=""):
+    if filename == "":
+        filename = os.path.join(CloudyGo.DEFAULT_BUCKET, "models")
+    filepath = os.path.join(LOCAL_DATA_DIR, filename)
+
+    if os.path.isfile(filepath):
+        if is_naughty(filepath, LOCAL_DATA_DIR, ".txt.gz"):
+            return 'Not Found'
+
+        # TODO: convert to send_from_directory
+        return send_file(
+            filepath,
+            as_attachment=True,
+            mimetype='application/gzip')
+
+    if is_naughty(filepath, LOCAL_DATA_DIR, "models"):
+        return 'must end in models'
+    if not os.path.isdir(filepath):
+        return ''
+
+    f_stats = _fstat_dir(filepath, filename)
+    f_stats = [(f,stats) for f,stats in f_stats if
+        f.endswith(CONVERTED_SUFFIX)]
+
+    return render_template(
+        'fileslist.html',
+        navbar_title='Minigo Models Converted to Leela-Zero weights',
+        header='{} Found'.format(len(f_stats)),
+        serve_func='converted_model',
+        files=f_stats)
 
 
 @app.route('/ringmaster/')
@@ -222,6 +276,7 @@ def ctl_file(filename=""):
 
     if any(filepath.endswith('.' + ext) for ext in
                ['ctl', 'report', 'hist', 'log']):
+        # TODO: convert to send_from_directory
         return send_file(
             filepath,
             mimetype='text/plain',
@@ -242,18 +297,14 @@ def ctl_file(filename=""):
     if not os.path.isdir(filepath):
         return ''
 
-    files = os.listdir(filepath)
-    f_stats = []
-    for f in files:
-        f_stats.append([
-            os.path.join(filename, f),
-            os.stat(os.path.join(filepath, f)),
-        ])
-    f_stats = sorted(f_stats, key=lambda f: f[1].st_mtime, reverse=True)
+    f_stats = _fstat_dir(filepath, filename)
 
-    return render_template('fileslist.html',
-                           serve_func='ctl_file',
-                           files=f_stats)
+    return render_template(
+        'fileslist.html',
+        navbar_title='Ringmaster CTL Files({})'.format(len(f_stats)),
+        header='Various ringmaster files (updated sporadically).',
+        serve_func='ctl_file',
+        files=f_stats)
 
 
 @app.route('/<bucket>/<model>/eval/<path:filename>')
@@ -365,6 +416,7 @@ def send_game(filename):
     mimetype = mimetypes.get(path[-4:], None)
 
     if mimetype:
+        # TODO: convert to send_from_directory
         return send_file(
             path,
             mimetype=mimetype,
@@ -453,11 +505,11 @@ def site_nav(bucket=CloudyGo.DEFAULT_BUCKET):
 @app.route('/')
 @app.route('/<bucket>/models/')
 def models_details(bucket=CloudyGo.DEFAULT_BUCKET):
-    # Limit to top ~120 interesting models
     models = sorted(cloudy.get_models(bucket))[::-1]
-
+    run_data = cloudy.get_run_data(bucket)
     total_games = sum((m[8] for m in models))
 
+    # Limit to top ~120 interesting models
     if len(models) > 120:
         trim_count = len(models) - 120
         skippable = sorted(m[0] for m in models if m[0] % 10 != 0)
@@ -475,6 +527,7 @@ def models_details(bucket=CloudyGo.DEFAULT_BUCKET):
     return render_template(
         'models.html',
         bucket=bucket,
+        run_data=run_data,
         models=models,
         last_update=last_update,
         total_games=total_games,
@@ -923,6 +976,7 @@ def model_details(bucket, model_name):
     model_id = model[0]
     model_name = model[2]
     model_num = model[4]
+    run_data = cloudy.get_run_data(bucket)
 
     game_names = cache.get(model_name)
     if game_names is None:
@@ -968,6 +1022,7 @@ def model_details(bucket, model_name):
 
     return render_template('model.html',
                            bucket=bucket,
+                           run_data=run_data,
                            model=model, model_stats=model_stats,
                            prev_model=model_num-1,
                            next_model=model_num+1,

@@ -15,7 +15,7 @@
 -->
 <!DOCTYPE html>
 <html lang="en" xml:lang="en" xmlns= "http://www.w3.org/1999/xhtml">
-  {% from "macros.html" import models_link,
+  {% from "macros.html" import models_link, bucket_name,
       bootstrap_links, favicon_links, navbar with context %}
   <head lang="en">
       <meta charset="UTF-8">
@@ -31,10 +31,11 @@
     {{ navbar('eval_graphs', "Sorry evaluation ratings don't exist yet :(") }}
 
     <h1>
-        Sorry, {{ bucket }} doesn't have enough evaluation games yet (currently {{ total_games}}).
+        Sorry, {{ bucket_name(bucket) }} doesn't have enough evaluation
+        games yet (currently {{ total_games }}).
         <hr>
         Check out
-        <a href="{{ url_for('eval_graphs', bucket='v13-19x19') }}">v13-19x19 Evaluation</a>
+        <a href="{{ url_for('eval_graphs', bucket='v13-19x19') }}">v13 Evaluation</a>
         in the meantime.
     </h1>
   </body>
