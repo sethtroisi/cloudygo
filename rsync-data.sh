@@ -142,7 +142,7 @@ fi
 
 first_model=$(echo "$models" | head -n 1)
 last_model=$(echo "$models" | tail -n 1)
-echo "Found $(echo "$models" | wc -l) models ($first_model to $last_model)"
+echo "Found $(echo "$models" | wc -l) models ($first_model to $last_model) [>= $MIN_MODEL]"
 
 if [[ "$MIN_MODEL" ]]; then
     models=$(echo "$models" | sed 's#^\(\([0-9-]*\)\(-.*\|/\)\)$#\2 \1#' |

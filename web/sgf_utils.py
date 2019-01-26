@@ -254,6 +254,19 @@ def fully_parse_comment(comment):
 
     tokens = re.split(r'[\n :,]+', comment[2:-1])
 
+    if len(tokens) > 5 and tokens[0] == 'move' and tokens[2] in 'BW':
+        # LEELA-HACK for ringmaster eval
+        assert tokens[8][-1] == '%'
+        playouts = tokens[6]
+        winrate = float(tokens[8][:-1]) / 100
+        Q_0 = 2 * winrate - 1
+        # Winrate is from player to play, not from black
+        if tokens[2] == 'W':
+            Q_0 *= -1
+
+        pv_moves = tokens[10:]
+        return ("LZ", 0), (pv_moves, [playouts]), (Q_0, Q_0), []
+
     resign = None
     if tokens[0] == 'Resign':
         resign = float(tokens[2])
@@ -301,7 +314,7 @@ def fully_parse_comment(comment):
     #    for i, v in enumerate(row[1:], 1):
     #        row[i] = float(v)
 
-    return (model, resign) , (pv_moves, pv_counts), (Q_0, Q_PV), table
+    return (model, resign), (pv_moves, pv_counts), (Q_0, Q_PV), table
 
 
 def derive_move_quality(played_moves, parsed_comments):
@@ -372,14 +385,25 @@ def parse_game_simple(game_path, data=None, include_players=False):
 
 
 def raw_game_data(data):
-    raw_moves = list(re.finditer(r';([BW]\[[a-s]*\])(C\[([^]]*)\])?', data))
+    # UGLY HACK to allow comment before or after W[] B[] tag.
+    raw_moves = list(re.finditer(
+        r';\s*([BW]\[[a-t]*\]|C\[[^]]*\])\s*([BW]\[[a-s]*\]|C\[[^]]*\])?',
+        data))
+
+    moves = []
+    comments = []
+    for match in raw_moves:
+        if match.group(1).startswith('C'):
+            comments.append(match.group(1))
+            moves.append(match.group(2))
+        else:
+            moves.append(match.group(1))
+            if match.group(2):
+                comments.append(match.group(2))
 
     # format is: resign, (pv_moves, pv_counts), (Q0, Qpv), table
-    comments = [move.group(2) for move in raw_moves if move.group(2)]
-    assert len(comments) in (0, len(raw_moves)), game_path
     parsed_comments = list(map(fully_parse_comment, comments))
-
-    return raw_moves, parsed_comments
+    return moves, parsed_comments
 
 
 def parse_game(game_path):
@@ -394,12 +418,11 @@ def parse_game(game_path):
 
     result_margin = float(result.split('+')[1]) if ('+R' not in result) else 0
 
-    raw_moves, parsed_comments = raw_game_data(data)
+    moves, parsed_comments = raw_game_data(data)
 
     model = parsed_comments[0][0][0] if parsed_comments else ""
 
-    played_moves = [sgf_to_cord(board_size, move.group(1))
-                    for move in raw_moves]
+    played_moves = [sgf_to_cord(board_size, move) for move in moves]
 
     first_two_moves = ';'.join(played_moves[:2])
     early_moves = ';'.join(played_moves[:10])

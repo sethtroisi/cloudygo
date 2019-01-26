@@ -39,7 +39,7 @@ class CloudyGo:
     SALT_MULT = 10 ** 6
 
     # TODO change to 10,000 if you get a chance
-    CROSS_EVAL_START = 2500    # offset from SALT_MULT to start
+    CROSS_EVAL_START = 2400    # offset from SALT_MULT to start
     SPECIAL_EVAL_START = 20000 # offset ...
 
     SPECIAL_EVAL_NAMES = [
@@ -49,7 +49,7 @@ class CloudyGo:
 
 
     # FAST UPDATE HACK fastness
-    FAST_UPDATE_HOURS = 12
+    FAST_UPDATE_HOURS = 2400
     MAX_INSERTS = 200000
 
     # set by __init__ but treated as constant
@@ -66,7 +66,7 @@ class CloudyGo:
     SECRET_CLOUD_BUCKET = os.environ.get(
         'SECRET_CLOUD_BUCKET_PREFIX', FULL_GAME_CLOUD_BUCKET)
 
-    DEFAULT_BUCKET = 'v15-19x19'
+    DEFAULT_BUCKET = 'v16-19x19'
     LEELA_ID = 'leela-zero'
 
     # NOTE: From v9 on sgf folders has timestamp instead of model directories

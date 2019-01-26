@@ -56,6 +56,7 @@
         .rating-desc {
           vertical-align: top;
           margin-top: 50px;
+          margin-right: 20px;
         }
         .filter-good-models,
         .filter-recent-models {
@@ -139,7 +140,7 @@
             <td>Averages</td>
             <td>-</td>
             <td>{{ (sorted_models|sum(attribute="4") / num_models)|round|int }}</td>
-            <td>&plusmn; {{ (sorted_models|sum(attribute="5") / num_models)|round|int }}</td>
+            <td>&plusmn; {{ (sorted_models|sum(attribute="5") / num_models)|round(2) }}</td>
           </tr>
           </tbody>
         </table>

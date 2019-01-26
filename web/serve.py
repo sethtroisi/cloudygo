@@ -156,12 +156,17 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
             print("log: {} does not exist".format(log_filename))
             continue
 
-        log_data = ''
+        log_lines = []
+        full_count = 0
         with open(log_filename, 'r', encoding='utf-8') as log_file:
-            log_data = log_file.readlines()
-        full_count = len(log_data)
-        log_data = list(filter(not_boring_line, log_data))
-        log_datas.append((log_filename, full_count, log_data))
+            log_data = set()
+            for line in log_file.readlines():
+                full_count += 1
+                if line not in log_data:
+                    log_lines.append(line)
+                    log_data.add(line)
+
+        log_datas.append((log_filename, full_count, log_lines))
 
     return render_template(
         'secret-site-nav.html',
@@ -261,12 +266,27 @@ def eval_view(bucket, model, filename):
 
 
 def render_game(bucket, model, data, force_full=False):
+    # 3200 > 500 * 'B[aa];'
+    player_evals = []
+    if len(data) > 3200:
+        try:
+            # NOTE: evals are printed ~near~ the move they are for but plus or
+            # minus one because of 2*m+1 below.
+            _, comments = sgf_utils.raw_game_data(data)
+            evals = [comment[2][0] for comment in comments]
+            for m, (b_eval, w_eval) in enumerate(zip(evals[::2], evals[1::2])):
+                player_evals.append((2 * m + 1, b_eval, w_eval))
+        except Exception as e:
+            print("Failed to eval parse:", bucket, model)
+            print(e)
+            pass
+
     return render_template(
         'game.html',
         bucket=bucket,
         model=model,
         data=data,
-        player_evals="",
+        player_evals=player_evals,
         filename="",
         force_full=force_full,
         render_sorry=False,
@@ -300,6 +320,7 @@ def game_view(bucket, model, filename):
     # HACK: we'd like all eval games to be full in the future
     is_full_eval = 'cc-evaluator' in filename
 
+    # TODO: unify this code into render_game
     # 3200 > 500 * 'B[aa];'
     player_evals = []
     if len(data) > 3200:

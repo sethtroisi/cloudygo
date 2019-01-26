@@ -21,11 +21,16 @@ CREATE TABLE IF NOT EXISTS name_to_model_id (
   PRIMARY KEY (name, model_id)
 );
 
-CREATE TABLE IF NOT EXISTS bucket_model_range(
+CREATE TABLE IF NOT EXISTS bucket_model_range (
   /* convience table used to remember the hash lookup */
   bucket text not null primary key,
   model_id_1 integer not null,
   model_id_2 integer not null
+);
+
+CREATE TABLE IF NOT EXISTS runs (
+  bucket text NOT NULL PRIMARY KEY,
+  desc text NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS models (
