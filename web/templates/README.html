@@ -55,8 +55,38 @@
             </thead>
 
             <tr class>
+              <td>v16</td>
+              <td>19</td>
+              <td>40</td>
+              <td>256</td>
+              <td>X00 TPU</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr class="sep-bot"><td colspan="7">
+              Running: Increased blocksize to 40.
+            </td></tr>
+
+            <tr class>
+              <td>v15</td>
+              <td>19</td>
+              <td>20</td>
+              <td>256</td>
+              <td>X00 TPU</td>
+              <td>1008</td>
+              <td>25.6M</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="7">
+              Big Success: Using our run bigtable pipeline this was our fastest start.
+              Changing to init Q to loss made v14 stronger so we started v15 with init Q to loss.
+              This run got stronger than our previous runs. At the end of the run
+              We played a series of games with LZ (going 50-50 vs LZ201) and ELF (40-60% winrate
+              depending on model) which was awesome.
+            </td></tr>
+
+            <tr class>
               <td>v14</td>
-              <td>19x19</td>
+              <td>19</td>
               <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
@@ -64,7 +94,7 @@
               <td></td>
             </tr>
             <tr class="sep-bot"><td colspan="7">
-              Running: Started as a test of our new data pipeline using
+              Started as a test of our new data pipeline using
               <a href="https://cloud.google.com/bigtable/">Cloud Bigtable</a>,
               Around model 475 Andrew changed from using init Q to parent to init Q to loss.
               This seems to have made a postitive impact on policy and value sharpness, similiar
@@ -73,7 +103,7 @@
 
             <tr class>
               <td>v13</td>
-              <td>19x19</td>
+              <td>19</td>
               <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
@@ -86,7 +116,7 @@
 
             <tr class>
               <td>v12</td>
-              <td>19x19</td>
+              <td>19</td>
               <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
@@ -99,7 +129,7 @@
 
             <tr class>
               <td>v11</td>
-              <td>19x19</td>
+              <td>19</td>
               <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
@@ -115,7 +145,7 @@
 
             <tr class>
               <td>v10</td>
-              <td>19x19</td>
+              <td>19</td>
               <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
@@ -128,7 +158,7 @@
 
             <tr class>
               <td>v9</td>
-              <td>19x19</td>
+              <td>19</td>
               <td>20</td>
               <td>128</td>
               <td>TPU</td>
@@ -142,7 +172,7 @@
 
             <tr class>
               <td>v8</td>
-              <td>19x19</td>
+              <td>19</td>
               <td>20</td>
               <td>256</td>
               <td>TPU</td>
@@ -155,7 +185,7 @@
 
             <tr class>
               <td>v7</td>
-              <td>19x19</td>
+              <td>19</td>
               <td>20??</td>
               <td>128</td>
               <td>GPU</td>
@@ -171,7 +201,7 @@
 
             <tr>
               <td>v5</td>
-              <td>19x19</td>
+              <td>19</td>
               <td>10</td>
               <td>128</td>
               <td>GPU</td>
