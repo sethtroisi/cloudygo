@@ -48,7 +48,7 @@ class CloudyGo:
     ]
 
     # FAST UPDATE HACK fastness
-    FAST_UPDATE_HOURS = 48
+    FAST_UPDATE_HOURS = 12
     MAX_INSERTS = 200000
 
     # set by __init__ but treated as constant

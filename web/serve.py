@@ -165,7 +165,7 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
             log_data = set()
             for line in log_file.readlines():
                 full_count += 1
-                if line not in log_data:
+                if line not in log_data and not_boring_line(line):
                     log_lines.append(line)
                     log_data.add(line)
 
@@ -561,12 +561,15 @@ def models_graphs(bucket):
             '   black_won * -bleakest_eval_black + '
             '   (1-black_won) * bleakest_eval_white '
             'FROM games '
-            'WHERE (model_id BETWEEN ? AND ?) AND black_won',
-            (max(model_range[0], newest_model - 10), newest_model))
+            'WHERE (model_id BETWEEN ? AND ?)',
+            (max(model_range[0], newest_model - 30), newest_model))
 
         # model, rate below which would fail
         bad_resign_thresh = defaultdict(list)
         for model, bleakest in alternative_resign_rate:
+            if bleakest == None:
+                # TODO: https://github.com/tensorflow/minigo/issues/666
+                continue
             bad_resign_thresh[model].append(bleakest)
 
         # calculate some percentages
