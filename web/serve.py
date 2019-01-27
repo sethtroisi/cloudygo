@@ -30,10 +30,10 @@ import time
 from collections import defaultdict
 from datetime import datetime
 
-from werkzeug.contrib.cache import SimpleCache
 from flask import Flask, g
 from flask import request, render_template
-from flask import send_file, url_for, redirect, jsonify
+from flask import send_from_directory, url_for, redirect, jsonify
+from werkzeug.contrib.cache import SimpleCache
 
 from . import sgf_utils
 from .cloudygo import CloudyGo
@@ -182,27 +182,27 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
 
 @app.route('/openings/<filename>')
 def opening_image(filename):
-    path = os.path.join(app.instance_path, 'openings', filename)
+    folder = os.path.join(app.instance_path, 'openings')
+    path = os.path.join(folder, filename)
     if is_naughty(path, app.instance_path, '.png'):
         return ''
 
-    # TODO: convert to send_from_directory
-    return send_file(
-        path,
-        mimetype='image/png',
+    return send_from_directory(
+        folder,
+        filename,
         cache_timeout=60*60)
 
 
 @app.route('/photos/thumbs/<name>')
 def model_thumb(name):
-    path = os.path.join(app.instance_path, 'photos', 'thumbs', name)
+    folder = os.path.join(app.instance_path, 'photos', 'thumbs')
+    path = os.path.join(folder, name)
     if is_naughty(path, app.instance_path, '.jpg'):
         return ''
 
-    # TODO: convert to send_from_directory
-    return send_file(
-        path,
-        mimetype='image/png',
+    return send_from_directory(
+        folder,
+        name,
         cache_timeout=60*60)
 
 
@@ -212,10 +212,9 @@ def eval_image(bucket, filename):
     if is_naughty(filepath, LOCAL_EVAL_DIR, '.png'):
         return ''
 
-    # TODO: convert to send_from_directory
-    return send_file(
-        filepath,
-        mimetype='image/png',
+    return send_from_directory(
+        LOCAL_EVAL_DIR,
+        os.path.join(bucket, filename),
         cache_timeout=30*60)
 
 
@@ -244,11 +243,10 @@ def converted_model(filename=""):
         if is_naughty(filepath, LOCAL_DATA_DIR, ".txt.gz"):
             return 'Not Found'
 
-        # TODO: convert to send_from_directory
-        return send_file(
-            filepath,
-            as_attachment=True,
-            mimetype='application/gzip')
+        return send_from_directory(
+            LOCAL_DATA_DIR,
+            filename,
+            as_attachment=True)
 
     if is_naughty(filepath, LOCAL_DATA_DIR, "models"):
         return 'must end in models'
@@ -270,15 +268,16 @@ def converted_model(filename=""):
 @app.route('/ringmaster/')
 @app.route('/ringmaster/<path:filename>/')
 def ctl_file(filename=""):
-    filepath = os.path.join(app.instance_path, 'ringmaster', filename)
+    folder = os.path.join(app.instance_path, 'ringmaster')
+    filepath = os.path.join(folder, filename)
     if is_naughty(filepath, app.instance_path, ''):
         return ''
 
-    if any(filepath.endswith('.' + ext) for ext in
+    if any(filename.endswith('.' + ext) for ext in
                ['ctl', 'report', 'hist', 'log']):
-        # TODO: convert to send_from_directory
-        return send_file(
-            filepath,
+        return send_from_directory(
+            folder,
+            filename,
             mimetype='text/plain',
             cache_timeout=15*60)
 
@@ -402,11 +401,12 @@ def game_view(bucket, model, filename):
 @app.route('/sgf/<path:filename>')
 def send_game(filename):
     path = os.path.join(LOCAL_DATA_DIR, filename)
+    if is_naughty(path, LOCAL_DATA_DIR, ''):
+        return ''
+
     if not os.path.exists(path):
         return 'Not Found'
 
-    if is_naughty(path, LOCAL_DATA_DIR, ''):
-        return ''
 
     mimetypes = {
         '.png': 'image/png',
@@ -416,9 +416,9 @@ def send_game(filename):
     mimetype = mimetypes.get(path[-4:], None)
 
     if mimetype:
-        # TODO: convert to send_from_directory
-        return send_file(
-            path,
+        return send_from_directory(
+            LOCAL_DATA_DIR,
+            filename,
             mimetype=mimetype,
             cache_timeout=30*60)
     return 'Not Found'
