@@ -43,6 +43,10 @@ app = Flask(__name__)
 app.jinja_env.trim_blocks = True
 app.jinja_env.lstrip_blocks = True
 
+# Requires Apache support see:
+# https://stackoverflow.com/a/27303164/459714
+app.use_x_sendfile = True and not app.debug
+
 cache = SimpleCache()
 
 LOCAL_DATA_DIR = os.path.join(app.instance_path, 'data')
@@ -536,7 +540,7 @@ def models_details(bucket=CloudyGo.DEFAULT_BUCKET):
 
 @app.route('/<bucket>/graphs')
 def models_graphs(bucket):
-    model_limit = int(request.args.get('last_n', 100))
+    model_limit = int(request.args.get('last_n', 300))
     model_range = CloudyGo.bucket_model_range(bucket)
 
     key = '{}/graphs/{}'.format(bucket, model_limit)
