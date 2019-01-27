@@ -1,0 +1,8 @@
+# vim oneoff/setup-runs-data.sh
+
+# oneoff/convert_to_lz.py
+
+NEW_RUN='v17-19x19'
+# oneoff/setup-run.sh $NEW_RUN
+# cp -r instance/positions/v12-19x19 instance/positions/$NEW_RUN
+#
