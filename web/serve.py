@@ -210,18 +210,6 @@ def model_thumb(name):
         cache_timeout=60*60)
 
 
-@app.route('/eval/<bucket>/<filename>')
-def eval_image(bucket, filename):
-    filepath = os.path.join(LOCAL_EVAL_DIR, bucket, filename)
-    if is_naughty(filepath, LOCAL_EVAL_DIR, '.png'):
-        return ''
-
-    return send_from_directory(
-        LOCAL_EVAL_DIR,
-        os.path.join(bucket, filename),
-        cache_timeout=30*60)
-
-
 def _fstat_dir(directory, top_dir):
     if not os.path.isdir(directory):
         return []
@@ -454,44 +442,51 @@ def pro_game_view(filename):
                            )
 
 
+def parse_fig3_data(bucket):
+    fig3_json = '{"acc":{}, "mse":{}, "num":{}}'
+
+    json_file = os.path.join(LOCAL_EVAL_DIR, bucket, "fig3.json")
+    if os.path.exists(json_file):
+        with open(json_file, "r") as f:
+            fig3_json = f.read()
+
+    fig3_data = []
+    try:
+        fig3_json = json.loads(fig3_json)
+        for k, v in fig3_json["num"].items():
+            acc = fig3_json["acc"][k]
+            mse = fig3_json["mse"][k]
+            fig3_data.append((v, acc, mse))
+    except Exception as e:
+        print("Error parsing fig3 json:", e)
+
+    return sorted(fig3_data)
+
+
 @app.route('/<bucket>/figure-three')
 def figure_three(bucket):
-    eval_path = os.path.join(LOCAL_EVAL_DIR, bucket)
-    exists = os.path.exists(os.path.join(eval_path, 'move_acc.png'))
+    figure_data = None
+    figure_three_data = []
 
-    # This is a longtime request from andrew.
-    key = '{}/fig3-json'.format(bucket)
-    fig3_data = cache.get(key)
-    if fig3_data is None:
-        fig3_json = '{"acc":{"0":0.01}, "mse":{"0":0.25}, "num":{"0":1}}'
+    # This list is a reasonable proxy for 'all' minigo runs.
+    for other_bucket in CloudyGo.MINIGO_TS:
+        key = '{}/fig3-json'.format(other_bucket)
+        fig3_data = cache.get(key)
+        if fig3_data is None:
+            fig3_data = parse_fig3_data(other_bucket)
+            cache.set(key, fig3_data, timeout=5 * 60)
 
-        json_file = os.path.join(eval_path, "fig3.json")
-        if os.path.exists(json_file):
-            with open(json_file, "r") as f:
-                fig3_json = f.read()
+        if other_bucket == bucket:
+            figure_data = fig3_data
 
-        fig3_data = []
-        try:
-            fig3_json = json.loads(fig3_json)
-            for k, v in fig3_json["num"].items():
-                acc = fig3_json["acc"][k]
-                mse = fig3_json["mse"][k]
-                fig3_data.append((v, acc, mse))
-        except Exception as e:
-            print("Error parsing fig3 json:", e)
-
-        fig3_data.sort()
-
-        cache.set(key, fig3_data, timeout=5 * 60)
+        for values in fig3_data:
+            if values[0] % 2 == 0:
+                figure_three_data.append((other_bucket,) + values)
 
     return render_template('figure-three.html',
                            bucket=bucket,
-                           exists=exists,
-                           fig3_data=fig3_data,
-                           eval_files=[
-                               'move_acc.png',  'value_mse.png',
-                               'move_acc2.png', 'value_mse2.png',
-                           ],
+                           fig3_data=figure_data,
+                           figure_three_data=figure_three_data,
                            )
 
 
