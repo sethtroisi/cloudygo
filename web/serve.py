@@ -280,6 +280,7 @@ def ctl_file(filename=""):
             bucket="ringmaster",
             model="",
             data=data,
+            filename="",
             force_full=True)
 
     if not (filename == "" or filename.endswith(".games")):
@@ -307,7 +308,11 @@ def eval_view(bucket, model, filename):
     )
 
 
-def render_game(bucket, model, data, force_full=False):
+def render_game(bucket, model, data, filename="",
+                force_full=False, is_raw=False, render_sorry=False):
+    if is_raw:
+        return sgf_utils.pretty_print_sgf(data)
+
     # 3200 > 500 * 'B[aa];'
     player_evals = []
     if len(data) > 3200:
@@ -329,8 +334,8 @@ def render_game(bucket, model, data, force_full=False):
         model=model,
         data=data,
         player_evals=player_evals,
-        filename="",
-        force_full=force_full,
+        filename=filename,
+        force_full=force_full or len(player_evals) > 0,
         render_sorry=False,
     )
 
@@ -354,39 +359,15 @@ def game_view(bucket, model, filename):
     data, game_view = cloudy.get_game_data(
         bucket, model, filename, view_type)
 
-    if is_raw:
-        return sgf_utils.pretty_print_sgf(data)
-
     render_sorry = game_view != view_type
 
     # HACK: we'd like all eval games to be full in the future
     is_full_eval = 'cc-evaluator' in filename
 
-    # TODO: unify this code into render_game
-    # 3200 > 500 * 'B[aa];'
-    player_evals = []
-    if len(data) > 3200:
-        try:
-            # NOTE: evals are printed ~near~ the move they are for but plus or
-            # minus one because of 2*m+1 below.
-            _, comments = sgf_utils.raw_game_data(data)
-            evals = [comment[2][0] for comment in comments]
-            for m, (b_eval, w_eval) in enumerate(zip(evals[::2], evals[1::2])):
-                player_evals.append((2 * m + 1, b_eval, w_eval))
-        except Exception as e:
-            print("Failed to eval parse:", filename)
-            print(e)
-            pass
-
-    return render_template(
-        'game.html',
-        bucket=bucket,
-        model=model,
-        data=data,
-        player_evals=player_evals,
+    return render_game(bucket, model, data,
         filename=filename,
-        force_full=is_full_eval or len(player_evals) > 0,
-        render_sorry=render_sorry,
+        force_full=is_full_eval,
+        is_raw=is_raw,
     )
 
 
@@ -429,17 +410,13 @@ def pro_game_view(filename):
         data = f.read()
 
     is_raw = get_bool_arg('raw', request.args)
-    if is_raw:
-        return sgf_utils.pretty_print_sgf(data)
-
-    return render_template('game.html',
-                           bucket=CloudyGo.DEFAULT_BUCKET,  # Any value will do
-                           model='100',      # needs some value
-                           data=data,
-                           player_evals="",
-                           filename=filename,
-                           force_full=False
-                           )
+    return render_game(
+        bucket=CloudyGo.DEFAULT_BUCKET,  # Any value will do
+        model='100',      # needs some value
+        data=data,
+        filename=filename,
+        is_raw=is_raw,
+    )
 
 
 def parse_fig3_data(bucket):
@@ -830,14 +807,14 @@ def all_eval_graphs():
 
         test = re.split(r'[/-]', name)
         assert len(test) >= 4, (name, test)
-        bucket = '-'.join(test[0:2])
+        e_bucket = '-'.join(test[0:2])
         num = int(test[2])
         name = '-'.join(test[2:])
 
-        bucket = bucket.replace('v9', 'v09')
+        e_bucket = bucket.replace('v9', 'v09')
         model_id -= bucket_salt
 
-        metadata = (bucket, num, model_id, name)
+        metadata = (e_bucket, num, model_id, name)
         return metadata + m[2:]
 
     eval_models = list(map(eval_model_transform, eval_models))

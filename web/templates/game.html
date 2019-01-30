@@ -95,7 +95,7 @@
                         sorted=is_sorted) }}">{{ model }}</a>
           {% endif %}
           | Game
-          {% if not is_eval and 'leela' not in bucket %}
+          {% if not is_eval and 'leela' not in bucket and filename %}
           | <a href="{{ url_for('game_view',
                                 bucket=bucket,
                                 model=model,
