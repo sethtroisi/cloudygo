@@ -76,7 +76,7 @@ def sgf_to_cord(board_size, move):
 
 
 def count_moves(sgf):
-    return sgf.count('B[') + sgf.count('W[')
+    return sgf.count(';B[') + sgf.count(';W[')
 
 
 def pretty_print_sgf(data):
