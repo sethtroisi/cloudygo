@@ -811,7 +811,7 @@ def all_eval_graphs():
         num = int(test[2])
         name = '-'.join(test[2:])
 
-        e_bucket = bucket.replace('v9', 'v09')
+        e_bucket = e_bucket.replace('v9', 'v09')
         model_id -= bucket_salt
 
         metadata = (e_bucket, num, model_id, name)
