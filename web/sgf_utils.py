@@ -16,6 +16,7 @@
 
 from subprocess import Popen, PIPE, STDOUT
 
+import math
 import re
 import os.path
 
@@ -464,6 +465,12 @@ def parse_game(game_path):
         else:
             resign_threshold = -0.99
 
+        bleakest_eval_black = 1 if black_won else -1
+        bleakest_eval_white = -1 if black_won else 1
+
+    if (bleakest_eval_black is None or bleakest_eval_white is None or
+       math.isnan(bleakest_eval_black) or math.isnan(bleakest_eval_white)):
+        print("Bad bleakest:", game_path)
         bleakest_eval_black = 1 if black_won else -1
         bleakest_eval_white = -1 if black_won else 1
 

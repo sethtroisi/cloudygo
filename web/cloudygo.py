@@ -48,7 +48,7 @@ class CloudyGo:
     ]
 
     # FAST UPDATE HACK fastness
-    FAST_UPDATE_HOURS = 12
+    FAST_UPDATE_HOURS = 6
     MAX_INSERTS = 200000
 
     # set by __init__ but treated as constant
@@ -65,14 +65,15 @@ class CloudyGo:
     SECRET_CLOUD_BUCKET = os.environ.get(
         'SECRET_CLOUD_BUCKET_PREFIX', FULL_GAME_CLOUD_BUCKET)
 
-    DEFAULT_BUCKET = 'v16-19x19'
+    DEFAULT_BUCKET = 'v17-19x19'
     LEELA_ID = 'leela-zero'
 
     # NOTE: From v9 on sgf folders has timestamp instead of model directories
     # this radically complicates several parts of the update code. Those places
     # should be documented with either MINIGO_TS or MINIGO-HACK.
     MINIGO_TS = ['v9-19x19',  'v10-19x19', 'v11-19x19', 'v12-19x19',
-                 'v13-19x19', 'v14-19x19', 'v15-19x19', 'v16-19x19']
+                 'v13-19x19', 'v14-19x19', 'v15-19x19', 'v16-19x19',
+                 'v17-19x19', 'v18-19x19', 'v19-19x19', 'v20-19x19']
     # Average length of game in seconds, used to attribute game to previous model.
     MINIGO_GAME_LENGTH = 25 * 60
 
@@ -1443,8 +1444,8 @@ class CloudyGo:
             p1, p2, black_won = eval_game
             p1 = new_num[p1]
             p2 = new_num[p2]
-            assert 0 <= p1 <= 6000
-            assert 0 <= p2 <= 6000
+            assert 0 <= p1 <= 10000, p1
+            assert 0 <= p2 <= 10000, p2
 
             return (p1, p2) if black_won else (p2, p1)
 

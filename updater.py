@@ -181,7 +181,7 @@ if __name__ == "__main__":
 
     # Always update names
     cloudy.update_model_names()
-    if updates > 0:
+    if updates >= 0:
         cloudy.update_bucket_ranges(buckets)
 
     T1 = time.time()

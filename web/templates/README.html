@@ -55,16 +55,33 @@
             </thead>
 
             <tr class>
-              <td>v16</td>
+              <td>v17</td>
               <td>19</td>
-              <td>40</td>
+              <td>20</td>
               <td>256</td>
               <td>X00 TPU</td>
               <td></td>
               <td></td>
             </tr>
             <tr class="sep-bot"><td colspan="7">
-              Running: Increased blocksize to 40.
+              Running: Using new
+              <a href="https://github.com/tensorflow/minigo/issues/683">
+                Squeeze-And-Excitation network
+              </a>
+            </td></tr>
+
+            <tr class>
+              <td>v16</td>
+              <td>19</td>
+              <td>40</td>
+              <td>256</td>
+              <td>X00 TPU</td>
+              <td>1186</td>
+              <td>29.3M</td>
+            </tr>
+            <tr class="sep-bot"><td colspan="7">
+              Meh: Increased blocksize to 40. Didn't result in strength gain on equal playouts,
+              likely worse when played with time parity.
             </td></tr>
 
             <tr class>

@@ -58,5 +58,7 @@ sqlite3 instance/clouds.db """
         ('v15-19x19', 'v15', 'Q=loss',
             20, 256),
         ('v16-19x19', 'v16', 'First 40 block run',
-            40, 256);
+            40, 256),
+        ('v17-19x19', 'v17', 'Squeeze and Exicitation',
+            20, 256);
 """

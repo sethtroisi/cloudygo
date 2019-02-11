@@ -479,13 +479,20 @@ def site_nav(bucket=CloudyGo.DEFAULT_BUCKET):
 
 
 @app.route('/')
+@app.route('/<bucket>/')
 @app.route('/<bucket>/models/')
 def models_details(bucket=CloudyGo.DEFAULT_BUCKET):
     models = sorted(cloudy.get_models(bucket))[::-1]
     run_data = cloudy.get_run_data(bucket)
     total_games = sum((m[8] for m in models))
 
-    # Limit to top ~120 interesting models
+    while len(models):
+        # If model has games or isn't recent
+        if models[0][8] > 0 or time.time() - models[0][5] > 3600:
+            break
+        models.pop(0)
+
+    # Limit to recent and mod ten models
     if len(models) > 120:
         trim_count = len(models) - 120
         skippable = sorted(m[0] for m in models if m[0] % 10 != 0)
