@@ -381,7 +381,7 @@ class CloudyGo:
     @staticmethod
     def guess_hour_dir(filename):
         file_time = int(filename.split('-', 1)[0])
-        assert 1520000000 < file_time < 1550000000, file_time
+        assert 1520000000 < file_time < 1580000000, file_time
         dt = datetime.utcfromtimestamp(file_time)
         return dt.strftime("%Y-%m-%d-%H")
 
@@ -583,9 +583,9 @@ class CloudyGo:
             'GROUP BY 1 ORDER BY 2 DESC LIMIT 16',
             (model_id,))
 
-        return [(move, round(100 * count / num_games))
+        return [(move, round(100 * count / num_games, 1))
                 for move, count in favorite_openings
-                if move and num_games and 100 * count >= num_games]
+                if move and num_games and 500 * count >= num_games]
 
     #### PAGES ####
 
@@ -879,7 +879,7 @@ class CloudyGo:
     def _model_guesser(filename, model_mtimes, model_ids):
         game_time = int(filename.split('-', 1)[0])
         game_time -= CloudyGo.MINIGO_GAME_LENGTH
-        assert 1520000000 < game_time < 1550000000, game_time
+        assert 1520000000 < game_time < 1580000000, game_time
         model_num = bisect.bisect(model_mtimes, game_time, 1) - 1
         assert model_num >= 0, model_num
         return model_ids[model_num]

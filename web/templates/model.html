@@ -49,7 +49,7 @@
       <link type="text/css" href="/static/wgo/wgo.player.css" rel="stylesheet" />
 
       <style>
-        .png-diagram,
+        .board-blob,
         .wgo-diagram {
             display: inline-block;
             width: 400px
@@ -162,12 +162,18 @@
 
     <hr>
       {% if opening_sgf|length != 0 -%}
-      <div class="wgo-diagram" id="opening-diagram">
-          Sorry, your browser doesn't support WGo.js (for opening sgf).
-          <br>
-          Favorite openings by count played: {{favorite_openings | safe}}
-      </div>
-      <div class="wgo-diagram" id="policy-diagram"></div>
+      <span class="board-blob">
+        <div class="text-center">Self-play openings move percent</div>
+        <div class="wgo-diagram" id="opening-diagram">
+            Sorry, your browser doesn't support WGo.js (for opening sgf).
+            <br>
+            Favorite openings by count played: {{favorite_openings | safe}}
+        </div>
+      </span>
+      <span class="board-blob">
+        <div class="text-center">Model policy for empty board</div>
+        <div class="wgo-diagram" id="policy-diagram"></div>
+      </span>
       {%- endif %}
     <hr>
     <table class="table table-striped table-hover">

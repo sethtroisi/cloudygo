@@ -147,9 +147,12 @@ def debug(bucket=CloudyGo.DEFAULT_BUCKET):
         r'^.{0,3}$',
         r'^idx \d* already processed',
         r'.*[0-9]{2}it/s',  # tqdm output
+        r'.*xfr#[0-9]+,',    # rsync --info=progress2
     ]))
 
     def not_boring_line(line):
+        if len(line) > 500:
+            return False
         return random.randrange(150) == 0 or \
             all(not pattern.match(line) for pattern in patterns)
 
@@ -1009,9 +1012,8 @@ def model_details(bucket, model_name):
     return render_template('model.html',
                            bucket=bucket,
                            run_data=run_data,
-                           model=model, model_stats=model_stats,
-                           prev_model=model_num-1,
-                           next_model=model_num+1,
+                           model=model,
+                           model_stats=model_stats,
                            games=games,
                            min_unluck=min_unluck,
                            is_random=RANDOMIZE_GAMES,
@@ -1281,47 +1283,6 @@ def puzzles(number=0, bucket=CloudyGo.DEFAULT_BUCKET):
                            result_text=result_text,
                            rating_deltas=rating_deltas,
                            )
-
-
-@app.route('/<bucket>/json/missing-ratings.json')
-def ratings_json(bucket):
-    # Not used by CloudyGo but easy to support for external people
-
-    model_range = CloudyGo.bucket_model_range(bucket)
-    models = cloudy.get_newest_model_num(bucket)
-
-    pairs = defaultdict(lambda: defaultdict(int))
-
-    data = cloudy.query_db(
-        'SELECT model_id_1 % 1000000, model_id_2 % 1000000, games '
-        'FROM eval_models '
-        'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_1 < model_id_2',
-        model_range)
-
-    for m_1, m_2, g in data:
-        assert m_1 < m_2
-        pairs[m_1][m_2] += g
-        pairs[m_2][m_1] += g
-
-    delta = list(itertools.chain(
-        range(1, 10),
-        range(10, 20, 2),
-        range(20, 51, 5),
-    ))
-
-    required = 6
-
-    missing = []
-    for m in range(models):
-        for d in delta:
-            if m < d:
-                continue
-
-            count = pairs[m][m - d]
-            if count < required:
-                missing.append((m, m-d, count))
-
-    return str(missing)
 
 
 @app.route('/<bucket>/json/eval-pairs.json')

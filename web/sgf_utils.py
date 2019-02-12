@@ -100,7 +100,9 @@ def commented_squares(board_size, setup, data, include_move, is_pv):
                 c = 'W' if c == 'B' else 'B'
 
     def label(d):
-        return '[{}:{}]'.format(cord_to_sgf(board_size, d[0]), d[1])
+        comment_fmt = "{:g}" if isinstance(d[1], float) else "{}"
+        comment = comment_fmt.format(d[1])
+        return '[{}:{}]'.format(cord_to_sgf(board_size, d[0]), comment)
 
     labels = '' if is_pv else ';LB' + ''.join(map(label, data))
     return '(;DT[2019]SZ[{}]KM[7.5]{}{}{})'.format(

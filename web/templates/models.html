@@ -86,10 +86,7 @@
               {{m[1]}}
             </a></td>
             <td class="c-tooltip">{{m[6][0]}} {{ tip(m[6][1]) }}</td>
-            <td>
-              {{m[8]}}
-              {%- if m[9] + 30 < m[8] and m[9] != 0 %} ({{m[9]}} w/ stats){% endif -%}
-            </td>
+            <td>{{m[8]}}</td>
           </tr>
           {% endfor %}
         </tbody>

@@ -53,7 +53,7 @@ def setup():
     #### CloudyGo ####
 
     print("Running updater:", datetime.datetime.now())
-    print("Setting up Update Cloudy")
+    print("Setting up Cloudy for update")
     cloudy = CloudyGo(
         INSTANCE_PATH,
         LOCAL_DATA_DIR,
@@ -61,6 +61,7 @@ def setup():
         None,  # cache
         Pool(4)
     )
+    print()
     return cloudy
 
 
@@ -122,7 +123,7 @@ def update_position_setups(cloudy, bucket):
     cloudy.insert_rows_db("position_setups", position_setups)
     db.commit()
 
-    return len(position_setups)
+    return 0
 
 
 def update_games(cloudy, bucket):
@@ -168,8 +169,18 @@ if __name__ == "__main__":
         for bucket in buckets:
             updates += update_games(cloudy, bucket)
 
-    if len(sys.argv) == 1 or arg1 == "eval_games":
+    if arg1 in ("eval_games", "all_eval_games"):
         for bucket in buckets:
+            if arg1 == "all_eval_games":
+                model_range = CloudyGo.bucket_model_range(bucket)
+                db = cloudy.db()
+                cur = db.execute(
+                    "DELETE FROM eval_games WHERE model_id_1 BETWEEN ? and ?",
+                    model_range)
+                if cur.rowcount:
+                    print("Deleted", cur.rowcount, "eval_games from", bucket)
+                db.commit()
+
             updates += cloudy.update_eval_games(bucket)
             updates += cloudy.update_eval_models(bucket)
 
