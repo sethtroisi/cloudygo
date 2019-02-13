@@ -1314,20 +1314,3 @@ def ratings(bucket):
         model_range)
     return jsonify(ratings)
 
-
-@app.route('/<bucket>/json/move-distribution-last-fifty-models.json')
-def move_length_dist(bucket):
-    model_range = CloudyGo.bucket_model_range(bucket)
-    newest_model = cloudy.get_newest_model_num(bucket) + model_range[0]
-
-    count_per_length = cloudy.query_db(
-        'SELECT '
-        '    result not like "_+R", 5 * cast(num_moves/5 as integer), count(*) '
-        'FROM games '
-        'WHERE model_id BETWEEN ? and ? and not has_stats '
-        'GROUP BY 1,2 '
-        'ORDER BY 1,2 asc ',
-        (newest_model - 50, newest_model))
-
-    return jsonify(count_per_length)
-
