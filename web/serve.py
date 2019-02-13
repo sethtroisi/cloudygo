@@ -312,7 +312,8 @@ def eval_view(bucket, model, filename):
 
 
 def render_game(bucket, model, data, filename="",
-                force_full=False, is_raw=False, render_sorry=False):
+                force_full=False, render_sorry=False):
+    is_raw = get_bool_arg('raw', request.args)
     if is_raw:
         return sgf_utils.pretty_print_sgf(data)
 
@@ -357,8 +358,6 @@ def game_view(bucket, model, filename):
             view_type = 'clean'
     assert view_type in ('clean', 'eval', 'full'), view_type
 
-    is_raw = get_bool_arg('raw', request.args)
-
     data, game_view = cloudy.get_game_data(
         bucket, model, filename, view_type)
 
@@ -370,7 +369,6 @@ def game_view(bucket, model, filename):
     return render_game(bucket, model, data,
         filename=filename,
         force_full=is_full_eval,
-        is_raw=is_raw,
     )
 
 
@@ -412,13 +410,11 @@ def pro_game_view(filename):
     with open(file_path, 'r') as f:
         data = f.read()
 
-    is_raw = get_bool_arg('raw', request.args)
     return render_game(
         bucket=CloudyGo.DEFAULT_BUCKET,  # Any value will do
         model='100',      # needs some value
         data=data,
         filename=filename,
-        is_raw=is_raw,
     )
 
 
