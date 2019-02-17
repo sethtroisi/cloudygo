@@ -177,12 +177,13 @@ if __name__ == "__main__":
                 cur = db.execute(
                     "DELETE FROM eval_games WHERE model_id_1 BETWEEN ? and ?",
                     model_range)
-                if cur.rowcount:
-                    print("Deleted", cur.rowcount, "eval_games from", bucket)
                 db.commit()
+                print("Deleted", cur.rowcount, "eval_games from", bucket)
 
-            updates += cloudy.update_eval_games(bucket)
-            updates += cloudy.update_eval_models(bucket)
+            bucket_updates = cloudy.update_eval_games(bucket)
+            if bucket_updates or True:
+                updates += bucket_updates
+                updates += cloudy.update_eval_models(bucket)
 
     if len(sys.argv) == 1 or arg1 == "position_evals":
         for bucket in buckets:

@@ -38,8 +38,7 @@ from . import utils
 class CloudyGo:
     SALT_MULT = 10 ** 6
 
-    # TODO change to 10,000 if you get a chance
-    CROSS_EVAL_START = 2400    # offset from SALT_MULT to start
+    CROSS_EVAL_START   = 10000 # offset from SALT_MULT to start
     SPECIAL_EVAL_START = 20000 # offset ...
 
     SPECIAL_EVAL_NAMES = [
@@ -610,7 +609,7 @@ class CloudyGo:
                 # Note: this is brittle but I can't think of how to get model_id
                 lz = [m for m in existing_models
                             if raw_name.startswith(m[1])]
-                assert len(lz) == 1, (model_filename, lz)
+                assert len(lz) == 1, (model_filename, raw_name, lz)
                 lz = lz[0]
 
                 raw_name = raw_name[:8]  # otherwise sgf loading fails
@@ -778,49 +777,68 @@ class CloudyGo:
         return game_num + (model_id, filename) + tuple(result)
 
     def update_model_names(self):
-        model_names = dict(self.query_db('SELECT model_id, raw_name from models'))
-        query = self.query_db('SELECT model_id, name FROM name_to_model_id')
+        model_names = self.query_db(
+            'SELECT model_id, raw_name, bucket from models')
+        query = self.query_db(
+            'SELECT name, bucket, model_id FROM name_to_model_id')
+
+        MODEL_SRC = 'model'
 
         names = defaultdict(set)
-        for m, n in query:
-            names[m].add(n)
+        aliases = {}
+
+        def verify_unique(alias, bucket, model_id):
+            key = (bucket, alias)
+            test = aliases.get(key)
+            if test not in (None, model_id):
+                # NOTE:
+                #   v16 000001 and 000002 both map to model.ckpt-1024
+                #   v14 000319 and 000318 both map to model.ckpt-331136
+                print('Proposed alias {} => {} already mapped to {}'
+                    .format(key, model_id, test))
+                assert False
+            aliases[key] = model_id
+
+        def consider_alias(alias, bucket, model_id, source):
+            verify_unique(alias, bucket, model_id)
+            if alias not in names[model_id]:
+                inserts.append((alias, bucket, model_id, source))
+                names[model_id].add(alias)
+
+        for alias, bucket, model_id in query:
+            names[model_id].add(alias)
+            verify_unique(alias, bucket, model_id)
 
         inserts = []
-        for model_id, model_name in sorted(model_names.items()):
-            if model_name not in names[model_id]:
-                inserts.append((model_name, model_id))
-                names[model_id].add(model_name)
+        for model_id, model_name, bucket in sorted(model_names):
+            consider_alias(model_name, bucket, model_id, MODEL_SRC)
 
             # LEELA-HACK: also add short name.
             if re.match(r'$[0-9a-fA-F]{64}^', model_name):
                 short_name = model_name[:8]
-                if short_name not in names[model_id]:
-                    inserts.append((short_name, model_id))
-                    names[model_id].add(short_name)
+                consider_alias(short_name, bucket_model_id, MODEL_SRC)
+            if re.match(r'$LZ[0-9]*_[0-9a-fA-F]{8}^', model_name):
+                short_name = model_name.split('_')[1][:8]
+                consider_alias(short_name, bucket, model_id, MODEL_SRC)
 
         # MINIGO-HACK
-        for model_id, name in sorted(model_names.items()):
-            bucket = [b for b in CloudyGo.MINIGO_TS
-                      if model_id in range(*CloudyGo.bucket_model_range(b))]
-            if not bucket:
+        for model_id, model_name, bucket in sorted(model_names):
+            if bucket not in CloudyGo.MINIGO_TS:
                 continue
-            bucket = bucket[0]
 
-            cur = any(n.startswith(CloudyGo.MODEL_CKPT)
-                      for n in names[model_id])
-            if len(name) > 3 and not cur:
-                # VERY SLOW
-                print ("Slow lookup of checkpoint step for", model_id, name)
-                path = os.path.join(self.model_path(bucket), name)
-                import tensorflow.train as tf_train
-                ckpt = tf_train.load_checkpoint(path)
-                step = ckpt.get_tensor('global_step')
-                new_name = CloudyGo.MODEL_CKPT + str(step)
-                assert new_name not in names[model_id], (new_name, model_id)
-                names[model_id].add(new_name)
 
-                inserts.append((new_name, model_id))
-                print ("\t", model_id, name, " =>  ", new_name)
+            # Check if checkpoint name already looked up.
+            cur = any(n.startswith(CloudyGo.MODEL_CKPT) for n in names[model_id])
+            if len(model_name) > 3 and not cur:
+                path = os.path.join(self.model_path(bucket), model_name)
+                if os.path.isfile(path + '.meta'):
+                    print ('Slow lookup of checkpoint step for', model_id, model_name)
+                    import tensorflow.train as tf_train
+                    ckpt = tf_train.load_checkpoint(path)
+                    step = ckpt.get_tensor('global_step')
+                    new_name = CloudyGo.MODEL_CKPT + str(step)
+                    consider_alias(new_name, bucket, model_id, MODEL_SRC)
+                    print ("\t", model_id, model_name, " =>  ", new_name)
 
         if inserts:
             self.insert_rows_db('name_to_model_id', inserts)
@@ -1115,6 +1133,8 @@ class CloudyGo:
         return name
 
     def process_sgf_names(self, bucket, records):
+        SGF_SRC = 'sgf'
+
         model_range = CloudyGo.bucket_model_range(bucket)
         bucket_salt = model_range[0]
         name_to_num = dict(self.query_db(
@@ -1134,10 +1154,14 @@ class CloudyGo:
             if name in name_to_num:
                 return name_to_num[name]
 
-            # HACK: figure out how to plumb is_sorted here
-            if (bucket.startswith('v') and
-                    re.match(r'[0-9]{6}-([a-zA-Z-]+)', name)):
+            # MINIGO-HACK: figure out how to plumb is_sorted here
+            if (bucket.startswith('v') and re.match(r'[0-9]{6}-([a-zA-Z-]+)', name)):
                 return bucket_salt + int(name.split('-', 1)[0])
+
+            # LEELA-HACK: leela-zero-v3-eval hack.
+            is_lz_name = re.match(r'^LZ([0-9]+)_[0-9a-f]{8,}', name)
+            if bucket.startswith('leela') and is_lz_name:
+                return bucket_salt + int(is_lz_name.group(1))
 
             # NOTE: static "models" (e.g. gnu go) get a special id range.
             if name in CloudyGo.SPECIAL_EVAL_NAMES:
@@ -1145,11 +1169,15 @@ class CloudyGo:
                 start = bucket_salt + CloudyGo.SPECIAL_EVAL_START
                 number = start + index
                 name_to_num[name] = number
-                new_names.append((name, number))
+                new_names.append((name, bucket, number, SGF_SRC))
                 return number
 
             # MINIGO-HACK: bucket ~= 'v10-19x19', name ~= 'model.ckpt.123'
             if bucket.startswith('v') and ckpt_num(name):
+                # These should really be handled by update_model_names
+                # This mostly handles eval record, and update_model_names
+                # does validation, so this is okay, but not great.
+
                 num = ckpt_num(name)
                 previous = set(ckpt_num(other) for other in name_to_num.keys())
                 count_less = sum(1 for p in previous if p and p < num)
@@ -1157,31 +1185,25 @@ class CloudyGo:
                 # awkwardly count_less filters ckpt-0 so the count is correct.
                 number = bucket_salt + count_less
                 name_to_num[name] = number
-                new_names.append((name, number))
+                new_names.append((name, bucket, number, SGF_SRC))
                 print("get_or_add_name ckpt:", name, number)
                 return number
-
-            # LEELA-HACK: leela-zero-v3-eval hack.
-            is_lz_name = re.match(r'^LZ([0-9]+)_[0-9a-f]{8,}_', name)
-            if bucket.startswith('leela') and is_lz_name:
-                return bucket_salt + int(is_lz_name.group(1))
 
             first_eval_model = bucket_salt + CloudyGo.CROSS_EVAL_START
             keys = set(name_to_num.values())
             for test_id in range(first_eval_model, model_range[1]):
                 if test_id not in keys:
                     name_to_num[name] = test_id
-                    new_names.append((name, test_id))
+                    new_names.append((name, bucket, test_id, SGF_SRC))
                     return test_id
             assert False
 
         if bucket in CloudyGo.ALL_EVAL_BUCKETS:
-           #Look up all model names so we can v10-250 vs v12-250.
+           #Look up all model names so we can differentiate v10-250 vs v12-250.
             name_to_bucket = self.query_db(
                 'SELECT name, bucket '
-                'FROM name_to_model_id join bucket_model_range '
-                'WHERE model_id BETWEEN model_id_1 and model_id_2 '
-                '   AND bucket like "v%"')
+                'FROM name_to_model_id '
+                'WHERE bucket like "v%"')
             name_to_buckets = defaultdict(list)
             for name, b in name_to_bucket:
                 name_to_buckets[name].append(b)
@@ -1190,7 +1212,6 @@ class CloudyGo:
 
         def bucket_from_name(filename, PB, PW):
             # Attempt to find what bucket PB and PW belong too
-            # TODO: load bucket names from bucket_model_range.
             first_folder = filename.split('/')[0]
             if first_folder in CloudyGo.MINIGO_TS:
                 prefix = first_folder + '/'

@@ -16,9 +16,15 @@ limitations under the License.
 CREATE TABLE IF NOT EXISTS name_to_model_id (
   /* SGF player names (PB and PW) are lookup in this table */
   name text not null,
+
+  /* used to keep alias unique per bucket */
+  bucket text not null,
   model_id integer not null,
 
-  PRIMARY KEY (name, model_id)
+  /* 'model' or 'sgf' currently, useful to sgf names only */
+  source text not null,
+
+  PRIMARY KEY (name, bucket)
 );
 
 CREATE TABLE IF NOT EXISTS bucket_model_range (
@@ -29,9 +35,9 @@ CREATE TABLE IF NOT EXISTS bucket_model_range (
 );
 
 CREATE TABLE IF NOT EXISTS runs (
-  bucket text NOT NULL PRIMARY KEY,
-  name text NOT NULL,
-  desc text NOT NULL DEFAULT '',
+  bucket text not null primary key,
+  name text not null,
+  desc text not null default '',
   blocks integer not null,
   filters integer not null
 );
