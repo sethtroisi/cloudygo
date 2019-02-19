@@ -336,7 +336,7 @@ class CloudyGo:
                 games.append(game[0])
         return games
 
-    def __get_gs_game(self, bucket, model, filename, view_type):
+    def __get_gs_game(self, bucket, model_name, filename, view_type):
         assert 'full' in view_type, view_type
 
 
@@ -362,14 +362,14 @@ class CloudyGo:
         if bucket in CloudyGo.MINIGO_TS:
             # Take a guess at based on timestamp
             hour_guess = CloudyGo.guess_hour_dir(filename)
-            model = hour_guess
+            model_name = hour_guess
 
             path = os.path.join('sgf', 'full', hour_guess, filename)
             if bucket == CloudyGo.FULL_GAME_CLOUD_BUCKET:
                 # MINIGO_PUB has an outer folder of the bucket name
                 path = os.path.join(bucket, path)
         else:
-            path = os.path.join(bucket, 'sgf', model, 'full', filename)
+            path = os.path.join(bucket, 'sgf', model_name, 'full', filename)
 
         blob = self.storage_clients[bucket].get_blob(path)
         print("Checking {}: {}".format(filename, blob is not None))
@@ -387,10 +387,10 @@ class CloudyGo:
         dt = datetime.utcfromtimestamp(file_time)
         return dt.strftime("%Y-%m-%d-%H")
 
-    def get_game_data(self, bucket, model, filename, view_type):
+    def get_game_data(self, bucket, model_name, filename, view_type):
         # Reconstruct path from filename
 
-        base_path = os.path.join(self.sgf_path(bucket), model)
+        base_path = os.path.join(self.sgf_path(bucket), model_name)
         if view_type == 'eval':
             base_path = os.path.join(self.data_path(bucket))
 
@@ -400,6 +400,7 @@ class CloudyGo:
         if (view_type != 'eval' and
                 bucket in CloudyGo.MINIGO_TS and
                 not os.path.isfile(file_path)):
+            # TODO include this in filename
             # Take a guess at based on timestamp
             hour_guess = CloudyGo.guess_hour_dir(filename)
             base_path = os.path.join(self.sgf_path(bucket), view_type)
@@ -415,20 +416,22 @@ class CloudyGo:
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
                 data = f.read()
-        else:
-            if 'full' in view_type \
-                    and CloudyGo.LEELA_ID not in bucket \
-                    and CloudyGo.FULL_GAME_CLOUD_BUCKET:
-                data = self.__get_gs_game(bucket, model, filename, view_type)
-                if data:
-                    return data, view_type
+            return data, view_type
 
-            # Full games get deleted after X time, fallback to clean
-            if 'full' in view_type:
-                new_type = view_type.replace('full', 'clean')
-                return self.get_game_data(bucket, model, filename, new_type)
+        if 'full' in view_type \
+                and CloudyGo.LEELA_ID not in bucket \
+                and CloudyGo.FULL_GAME_CLOUD_BUCKET:
+            data = self.__get_gs_game(bucket, model_name, filename, view_type)
+            if data:
+                return data, view_type
+
+        # Full games get deleted after X time, fallback to clean
+        if 'full' in view_type:
+            new_type = view_type.replace('full', 'clean')
+            return self.get_game_data(bucket, model_name, filename, new_type)
 
         return data, view_type
+
 
     def _get_existing_games(self, where, args):
         query = ('SELECT timestamp, game_num, has_stats '
@@ -867,28 +870,44 @@ class CloudyGo:
 
     def get_model_names(self, model_range):
         raw_names = self.query_db(
-            'SELECT model_id, name FROM name_to_model_id '
-            'WHERE model_id BETWEEN ? AND ?',
+            'SELECT model_id, name, source FROM name_to_model_id '
+            'WHERE model_id BETWEEN ? AND ? '
+            'ORDER by source ', # 'model' before 'sgf'
+            model_range)
+
+        # TODO: make this generic?
+        display_names = self.query_db(
+            'SELECT model_id, display_name FROM models '
+            'WHERE model_id BETWEEN ? AND ? ',
             model_range)
 
         num_to_name = {}
-        for model_id, name in raw_names:
+        for model_id, display_name in display_names:
+            num_to_name[model_id] = display_name
+
+        for model_id, name, source in raw_names:
             if name.startswith(CloudyGo.MODEL_CKPT):
                 continue
 
             if "ELF" in name:
                 continue
 
-            if model_id in num_to_name:
+            existing = num_to_name.get(model_id)
+            if existing == name:
+                continue
+
+            if existing and source == 'model':
+                continue
+
+            if existing:
                 # NOTE(sethtroisi): Models having multiple names complicates
                 # things, e.g. eval page.
-                # TODO come back and look at using display_name from models.
                 print("ERROR: {}, multiple names: {}, {}".format(
                     model_id, name, num_to_name[model_id]))
 
             num_to_name[model_id] = name
 
-        for model_id, name in raw_names:
+        for model_id, name, source in raw_names:
             if model_id in num_to_name:
                 continue
 
@@ -934,6 +953,8 @@ class CloudyGo:
         to_process = []
 
         for game_path in sorted(game_paths):
+            # TODO keep inner folder with timestamp run, LZ
+
             filename = os.path.basename(game_path)
             game_num = CloudyGo.get_game_num(bucket_salt, filename)
             has_stats = '/full/' in game_path
@@ -945,6 +966,7 @@ class CloudyGo:
 
             existing[game_num] = has_stats
 
+            # TODO can this be moved to process_sgf_model_names?
             # MINIGO-HACK, this would be easy otherwise
             model_id = model_lookup(filename)
             to_process.append((game_path, game_num, filename, model_id))
@@ -977,12 +999,14 @@ class CloudyGo:
         model_lookup = lambda filename: model_range[0]
 
         for block_dir in block_dirs:
-            name = os.path.basename(time_dir)
+            name = os.path.basename(block_dir)
+            # TODO include block_dir in this in filename
 
             game_paths = glob.glob(os.path.join(block_dir, '*.sgf'))
             to_process = CloudyGo._game_paths_to_to_process(
                 bucket, existing, model_lookup, game_paths, max_inserts)
             yield name, to_process, len(existing)
+            break
 
 
     def _get_update_games_time_dir(self, bucket, max_inserts):
@@ -1093,7 +1117,7 @@ class CloudyGo:
         if bucket in CloudyGo.MINIGO_TS:
             games_source = self._get_update_games_time_dir(bucket, max_inserts)
         elif CloudyGo.LEELA_ID in bucket:
-            game_source = _get_update_games_block_folders(bucket, max_inserts)
+            games_source = self._get_update_games_block_folders(bucket, max_inserts)
         else:
             games_source = self._get_update_games_model(bucket, max_inserts)
 
@@ -1104,9 +1128,8 @@ class CloudyGo:
 
                 new_games = self.map_and_filter(CloudyGo.process_game, to_process)
 
-                # Something like
                 # Post-process PB/PW to model_id (when folder/filename is ambiguous)
-                new_games = self.process_model_sgf_names(bucket, new_games)
+                new_games = self.process_sgf_model_names(bucket, new_games)
 
                 # Some Games were processed as clean may now have stats data.
                 self.insert_rows_db('games', new_games, allow_existing=True)
@@ -1201,6 +1224,43 @@ class CloudyGo:
             'WHERE model_id BETWEEN ? AND ?',
             model_range))
         new_names = []
+
+        def get_name(name):
+            name = CloudyGo.sanitize_player_name(name)
+
+            if name in name_to_num:
+                return name_to_num[name]
+
+            # LEELA-HACK: leela-zero-v3-eval hack.
+            is_lz_name = re.match(r'^LZ([0-9]+)_[0-9a-f]{8,}', name)
+            if bucket.startswith('leela') and is_lz_name:
+                return bucket_salt + int(is_lz_name.group(1))
+
+            return None
+            #TODO assert False
+
+
+        # process game returns
+        # ((game_path, sgf_model),
+        #  (game_num + (model_id, filename) + parse_result))
+
+        new_records = []
+        for record in records:
+            model_id = record[1][2]
+            if model_id != 0:
+                new_records.append(record[1])
+            else:
+                gam_path = record[0][0]
+                sgf_model = record[0][1]
+                test_model_id = get_name(sgf_model)
+                if not test_model_id:
+                    print("Skipping", game_path)
+                else:
+                    new_record = list(record[1])
+                    new_record[2] = test_model_id
+                    new_records.append(tuple(new_record))
+
+        return new_records
 
     def process_sgf_names(self, bucket, records):
         # Used for eval_games

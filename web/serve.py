@@ -281,7 +281,7 @@ def ctl_file(filename=""):
             data = f.read()
         return render_game(
             bucket="ringmaster",
-            model="",
+            model_name="",
             data=data,
             filename="",
             force_full=True)
@@ -302,16 +302,15 @@ def ctl_file(filename=""):
         files=f_stats)
 
 
-@app.route('/<bucket>/<model>/eval/<path:filename>')
-def eval_view(bucket, model, filename):
+@app.route('/<bucket>/<model_name>/eval/<path:filename>')
+def eval_view(bucket, model_name, filename):
     return game_view(
         bucket,
-        model,
+        model_name,
         filename,
     )
 
-# TODO clarify what is model, model_id, model_name
-def render_game(bucket, model, data, filename="",
+def render_game(bucket, model_name, data, filename="",
                 force_full=False, render_sorry=False):
     is_raw = get_bool_arg('raw', request.args)
     if is_raw:
@@ -328,14 +327,14 @@ def render_game(bucket, model, data, filename="",
             for m, (b_eval, w_eval) in enumerate(zip(evals[::2], evals[1::2])):
                 player_evals.append((2 * m + 1, b_eval, w_eval))
         except Exception as e:
-            print("Failed to eval parse:", bucket, model)
+            print("Failed to eval parse:", bucket, model_name)
             print(e)
             pass
 
     return render_template(
         'game.html',
         bucket=bucket,
-        model=model,
+        model=model_name,
         data=data,
         player_evals=player_evals,
         filename=filename,
@@ -344,11 +343,10 @@ def render_game(bucket, model, data, filename="",
     )
 
 
-@app.route('/<bucket>/<model>/game/<filename>')
-# These two paths help with copying file paths.
-@app.route('/<bucket>/<model>/clean/<filename>')
-@app.route('/<bucket>/<model>/full/<filename>')
-def game_view(bucket, model, filename):
+@app.route('/<bucket>/<model_name>/game/<filename>')
+@app.route('/<bucket>/<model_name>/clean/<filename>')
+@app.route('/<bucket>/<model_name>/full/<filename>')
+def game_view(bucket, model_name, filename):
     view_type = request.args.get('type')
     if not view_type:
         path = re.search(r'/(clean|full|eval)/', request.base_url)
@@ -359,14 +357,14 @@ def game_view(bucket, model, filename):
     assert view_type in ('clean', 'eval', 'full'), view_type
 
     data, game_view = cloudy.get_game_data(
-        bucket, model, filename, view_type)
+        bucket, model_name, filename, view_type)
 
     render_sorry = game_view != view_type
 
     # HACK: we'd like all eval games to be full in the future
     is_full_eval = 'cc-evaluator' in filename
 
-    return render_game(bucket, model, data,
+    return render_game(bucket, model_name, data,
         filename=filename,
         force_full=is_full_eval,
     )
@@ -412,7 +410,7 @@ def pro_game_view(filename):
 
     return render_game(
         bucket=CloudyGo.DEFAULT_BUCKET,  # Any value will do
-        model='100',      # needs some value
+        model_name='100',      # needs some value
         data=data,
         filename=filename,
     )
@@ -1161,7 +1159,7 @@ def tsne(bucket, embedding_type="value_conv"):
     for i in range(len(metadata)):
         # TODO: fix path hacks here: 20 for /sgf/eval/YYYY-MM-DD/'
         filename = _embedding_serve_path(metadata[i][0], bucket)[20:]
-        url = url_for('eval_view', bucket=bucket, model=0, filename=filename)
+        url = url_for('eval_view', bucket=bucket, model_name=0, filename=filename)
         url += '?M=' + str(metadata[i][1])
 
         results.append([

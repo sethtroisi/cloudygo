@@ -63,7 +63,7 @@ def cord_name(i):
 
 
 def sgf_to_cord(board_size, move):
-    if len(move) == 3:
+    if len(move) == 3 or move.endswith('[tt]'):
         return 'pass'
 
     assert len(move) == 5, move  # expects B[dc]
@@ -388,6 +388,7 @@ def parse_game_simple(game_path, data=None, include_players=False):
 
 
 def raw_game_data(data):
+    # TODO this doesn't find comments not on moves.
     # UGLY HACK to allow comment before or after W[] B[] tag.
     raw_moves = list(re.finditer(
         r';\s*([BW]\[[a-t]*\]|C\[[^]]*\])\s*([BW]\[[a-s]*\]|C\[[^]]*\])?',
@@ -423,6 +424,8 @@ def parse_game(game_path):
 
     moves, parsed_comments = raw_game_data(data)
 
+    # TODO this was broken by Tom.
+    # TODO LZ needs to look for -w ..... and parse that
     model = parsed_comments[0][0][0] if parsed_comments else ""
 
     played_moves = [sgf_to_cord(board_size, move) for move in moves]

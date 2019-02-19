@@ -31,9 +31,9 @@ extract_sgf_to_folder() {
     mkdir -p "$folder_name"
     cd "$folder_name"
 
-    files_list="$(ls)"
-    num_files=$(echo "$files_list" | wc -l)
-    echo "Found $num_files files"
+#    files_list="$(ls)"
+#    num_files=$(echo "$files_list" | wc -l)
+    num_files=12180000
     if [ "$num_files" -le 1 ]; then
         echo "Splitting \"$combined\" ($(du -h "$combined" | cut -f1))"
         /usr/bin/time -f "Splitting took %e seconds" \
@@ -43,20 +43,28 @@ extract_sgf_to_folder() {
     fi
 
     if [ "$num_files" -ge 20000 ]; then
-        echo "Found $num_files files"
-        tmp_files="../${folder_name}_files_tmp"
-        echo "$files_list" > "$tmp_files"
+#        echo "Found $num_files files"
+        tmp_file_list="../${folder_name}_files_tmp"
+#        echo "$files_list" > "$tmp_file_list"
+
+        # assumes files_list is sorted and no directories exist yet
+        first=$(head -n 1 $tmp_file_list | grep -o '[1-9][0-9]*')
+        last=$(tail  -n 1 $tmp_file_list | grep -o '[0-9]*')
+
+        # TODO do something if first not a multiple of $PER_FOLDER
+
         # Create folder per X thousand
-        for lower in $(seq 0 $PER_FOLDER $num_files); do
+        first_folder=$(($first/$PER_FOLDER*$PER_FOLDER))
+        echo "$first to $last, starting with $first_folder"
+
+        for lower in $(seq $first_folder $PER_FOLDER $last); do
             echo "$lower" # so tqdm can track progress
             mkdir -p $lower
             set +e
-            grep -oP '\d*(?=.sgf)' "$tmp_files" \
-                | awk " ($lower <= \$1 && \$1 < ($lower + $PER_FOLDER)) { print \"$bucket-\" \$1 \".sgf\" }" \
-                | xargs --no-run-if-empty mv -t $lower
+            seq -f "${bucket}-%08.0f.sgf" $lower $(($lower + $PER_FOLDER - 1)) | xargs --no-run-if-empty mv -t $lower
             set -e
         done | tqdm --desc "Seperating" --total $(($num_files / $PER_FOLDER)) | wc
-        echo "Done seperating"
+#        echo "Done seperating"
     fi
     cd ..
 }
@@ -93,10 +101,10 @@ save_player_info() {
 ALL_MATCH_PATH="/media/eights/big-ssd/rsync/all_match.sgf"
 ALL_SGF_PATH="/media/eights/big-ssd/rsync/all_fixed.sgf"
 
-#echo "EVAL"
+#echo "Eval"
 #extract_sgf_to_folder "eval" "$ALL_MATCH_PATH"
 #save_player_info      "eval"
 
-echo "SGF"
+echo "Self Play"
 extract_sgf_to_folder "sgf" "$ALL_SGF_PATH"
 save_player_info      "sgf"

@@ -148,7 +148,7 @@
           <td colspan="{{2 if 'leela' in bucket else 4}}">
             <a href="{{ url_for('game_view',
                                 bucket=bucket,
-                                model=model[2],
+                                model_name=model[2],
                                 filename=d[1],
                                 type='full') }}">
               {{ d[0] }} luckiest game {{ d[2]|round(3) }} unluck
@@ -222,10 +222,12 @@
           {%- endif -%}
           {% for type in types -%}
             <td><a href="{{ url_for('game_view',
-                                    bucket=bucket, model=model[2],
+                                    bucket=bucket,
+                                    model_name=model[2],
                                     filename=game[3], type=type) }}">SGF Viewer</a></td>
             <td><a href="{{ url_for('game_view',
-                                    bucket=bucket, model=model[2],
+                                    bucket=bucket,
+                                    model_name=model[2],
                                     filename=game[3], type=type, raw='') }}">Raw SGF</a></td>
           {%- endfor -%}
           <td>{{game[5]}}</td>
@@ -235,6 +237,11 @@
           <td>{{game[13]}}|{{game[14]}}</td>
           <td>{{game[11]}}|{{game[12]}}</td>
           <td>{{game[18]|round(2)}}|{{game[19]|round(2)}}</td>
+          {%- else %}
+          <td class="debug-sep"></td>
+          <td></td>
+          <td></td>
+          <td></td>
           {%- endif %}
           <td>{{game[9]}}</td>
         </tr>

@@ -98,7 +98,7 @@
           {% if not is_eval and 'leela' not in bucket and filename %}
           | <a href="{{ url_for('game_view',
                                 bucket=bucket,
-                                model=model,
+                                model_name=model,
                                 filename=filename,
                                 type="clean" if is_full else "full") }}">
                 {{ "Game-Only" if is_full else "Debug" }}
@@ -114,7 +114,9 @@
          style="width: {{ 1000 if is_wide_comment else 800 }}px">
       Sorry, your browser doesn't support WGo.js.
       {% if filename %}
-        <a href="{{ url_for('game_view', bucket=bucket, model=model,
+        <a href="{{ url_for('game_view',
+                            bucket=bucket,
+                            model_name=model,
                             filename=filename, raw="",
                             type=request.args['type']) }}">Download SGF file directly</a>
       {% endif %}
