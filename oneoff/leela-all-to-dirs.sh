@@ -14,26 +14,89 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bucket="leela-zero-v1"
+set -euo pipefail
 
-cd "instance/data/$bucket" || cd "../instance/data/$bucket" || exit 2;
-mkdir -p eval models
+bucket="leela-zero"
 
-# For update_models
-# curl http://zero.sjeng.org/ > zero-sjeng-org.html
-# cd models
-# cat ../zero-sjeng-org.html | grep -o '<td>[0-9]\{1,3\}</td>.*networks/[a-f0-9]\{64\}.gz' | grep -o '[a-f0-9]\{64\}' | xargs touch -a
-# cat zero-sjeng-org.html | grep -o '<td>[0-9]\{1,3\}</td>.*networks/[a-f0-9]\{64\}.gz' | sed -n 's#^<td>\([0-9]\{1,3\}\)</td><td>\(20[0-9 :-]*\)</td>.*/networks/\([0-9a-f]\{64\}.gz\)#\1\t\2\t\3#p' > names.txt
-# cd ..
+cd "instance/data/$bucket"
 
+PER_FOLDER=5000
 
-# Extract all.sgf to "data"
-# cd eval
-# time sgfsplit -d7 -x 'leela-zero-v1-' ~/Downloads/leela-zero-all.sgf
-# ls . | grep '\.sgf$' | xargs grep -m1 -o 'PB\[[^]]*\]PW\[[^]]*\]' | tqdm > ../versions
-# cd ..
+extract_sgf_to_folder() {
+    # eval, sgf, ...
+    folder_name="$1"
+    combined="$2"
+    echo "Extracting \"$combined\" to \"$folder_name\""
 
-# python leela-eval-process.py
-# wc raw_moves nonprod_moves
+    mkdir -p "$folder_name"
+    cd "$folder_name"
 
-# python leela-model-importer.py
+    files_list="$(ls)"
+    num_files=$(echo "$files_list" | wc -l)
+    echo "Found $num_files files"
+    if [ "$num_files" -le 1 ]; then
+        echo "Splitting \"$combined\" ($(du -h "$combined" | cut -f1))"
+        /usr/bin/time -f "Splitting took %e seconds" \
+            sgfsplit -d8 -x "${bucket}-" "$combined"
+        files_list="$(ls)"
+        num_files=$(echo "$files_list" | wc -l)
+    fi
+
+    if [ "$num_files" -ge 20000 ]; then
+        echo "Found $num_files files"
+        tmp_files="../${folder_name}_files_tmp"
+        echo "$files_list" > "$tmp_files"
+        # Create folder per X thousand
+        for lower in $(seq 0 $PER_FOLDER $num_files); do
+            echo "$lower" # so tqdm can track progress
+            mkdir -p $lower
+            set +e
+            grep -oP '\d*(?=.sgf)' "$tmp_files" \
+                | awk " ($lower <= \$1 && \$1 < ($lower + $PER_FOLDER)) { print \"$bucket-\" \$1 \".sgf\" }" \
+                | xargs --no-run-if-empty mv -t $lower
+            set -e
+        done | tqdm --desc "Seperating" --total $(($num_files / $PER_FOLDER)) | wc
+        echo "Done seperating"
+    fi
+    cd ..
+}
+
+save_player_info() {
+    # eval, sgf, ...
+    folder_name="$1"
+
+    # Create a list of files to player names
+    player_file="${folder_name}_file_to_player"
+    if [ ! -f "$player_file" ]; then
+        echo "Saving player names to \"$player_file\""
+        # This sort is only pseudo good"
+        find "$folder_name" -type f -name '*.sgf' \
+            | sort \
+            | xargs grep -H -m1 -o 'PB\[[^]]*\]PW\[[^]]*\]' \
+            | tqdm --desc "PB/PW lookup" > "$player_file"
+    fi
+
+    players() {
+        cat "$player_file" | cut -d':' -f2-
+    }
+    group() {
+        sort | uniq -c | sort -n
+    }
+
+    player_combos=$(players | group | wc -l)
+    unique_player_combos=$(players | sed 's/Leela\s*Zero\s*[0-9]\+\(\.[0-9]\+\)*\s\+//g' | group | wc -l)
+    echo "Player pairs: $player_combos, $unique_player_combos unique"
+    echo
+}
+
+# Extract all_match.sgf to "data"
+ALL_MATCH_PATH="/media/eights/big-ssd/rsync/all_match.sgf"
+ALL_SGF_PATH="/media/eights/big-ssd/rsync/all_fixed.sgf"
+
+#echo "EVAL"
+#extract_sgf_to_folder "eval" "$ALL_MATCH_PATH"
+#save_player_info      "eval"
+
+echo "SGF"
+extract_sgf_to_folder "sgf" "$ALL_SGF_PATH"
+save_player_info      "sgf"

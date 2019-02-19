@@ -153,7 +153,7 @@
       <tbody>
       {% for data in model_list[c*rows:(c+1)*rows] %}
       <tr{% if data[3] > great_threshold %} class="great-model" {% endif %}>
-        <td>{{ eval_link(data[1], data[2] if is_sorted else data[1]) }}</a></td>
+        <td>{{ eval_link(data[1], data[2]) }}</a></td>
         <td>{{ data[3]|round|int }}
             {%- if data[4] > 80 %} (&plusmn;{{ data[4]|round|int }}){% endif -%}
         </td>

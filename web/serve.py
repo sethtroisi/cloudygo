@@ -853,8 +853,8 @@ def all_eval_graphs():
 @app.route('/<bucket>/eval-model/<model_name>')
 def model_eval(bucket, model_name):
     bucket_salt = CloudyGo.bucket_salt(bucket)
+    # TODO try and use model_name + name_to_model_id instead of model_id
     model, model_stats = cloudy.load_model(bucket, model_name)
-    date = "???"
     if model == None:
         try:
             model_id = bucket_salt + int(model_name)

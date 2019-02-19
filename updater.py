@@ -181,7 +181,7 @@ if __name__ == "__main__":
                 print("Deleted", cur.rowcount, "eval_games from", bucket)
 
             bucket_updates = cloudy.update_eval_games(bucket)
-            if bucket_updates or True:
+            if bucket_updates:
                 updates += bucket_updates
                 updates += cloudy.update_eval_models(bucket)
 

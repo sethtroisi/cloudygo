@@ -57,7 +57,8 @@ def main(argv):
         count = query_db(query, (m_low, m_high))[0][0]
         if count > 0:
             total_count += count
-            print(table, count, total_count)
+            print("Table: {:15} Rows: {:8} Total Rows: {}".format(
+                table, count, total_count))
     print()
 
     if total_count > 0:

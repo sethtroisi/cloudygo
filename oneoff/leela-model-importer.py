@@ -17,10 +17,11 @@
 import datetime
 import os
 import re
-import urllib.request
+import requests
 
-BUCKET = 'leela-zero-v4'
-BUCKET_NUM = 24
+BUCKET = 'leela-zero'
+# TODO from web import cloudygo?
+BUCKET_NUM = 9
 
 URL = 'http://zero.sjeng.org'
 MODEL_DIR = os.path.join('instance', 'data', BUCKET, 'models')
@@ -28,11 +29,9 @@ FILE = os.path.join('instance', 'data', BUCKET, 'zero-sjeng-org.html')
 INSERTS = os.path.join('instance', 'data', BUCKET, 'inserts.csv')
 DOWNLOADER = os.path.join('instance', 'data', BUCKET, 'download.sh')
 
-INSERT = ','.join(['{}'] * 11)
-
-#urllib.request.urlretrieve(URL, FILE)
-with open(FILE) as f:
-    data = f.read()
+data = requests.get(URL).content;
+with open(FILE, "wb") as f: f.write(data)
+with open(FILE) as f: data = f.read()
 
 with open(INSERTS, 'w') as inserts, open(DOWNLOADER, 'w') as downloader:
     for num in range(1000):
@@ -56,24 +55,28 @@ with open(INSERTS, 'w') as inserts, open(DOWNLOADER, 'w') as downloader:
 
         display_name = 'LZ{}_{}'.format(num, name)
 
-        fname = os.path.join(MODEL_DIR, full_name)
-        if not os.path.exists(fname):
-            open(fname, 'a').close()
-            os.utime(fname, (epoch, epoch))
+        def touch_utime(path, epoch):
+            if not os.path.exists(path):
+                open(path, 'a').close()
+                os.utime(path, (epoch, epoch))
 
-        display_name = 'LZ{}_{}'.format(num, name)
-        # a models row
-        row = INSERT.format(
+        fpath = os.path.join(MODEL_DIR, full_name)
+        touch_utime(fpath, epoch)
+
+        dpath = os.path.join(MODEL_DIR, display_name)
+        touch_utime(dpath, epoch)
+
+        row = ",".join(map(str, (
             BUCKET_NUM * 10 ** 6 + num,
             display_name,   # display_name
-            display_name,   # name in models dir
+            full_name,      # name in models dir
             full_name,      # name in sgf files
             BUCKET, num,
             epoch, epoch,
             network_blocks, # training_time_m (being abused)
             games,
             0, # num_stats_games
-            0) # num_eval_games
+            0))) # num_eval_games
         inserts.write(row + '\n')
 
         model_path = 'models/' + display_name

@@ -439,6 +439,11 @@ class CloudyGo:
     def _get_games_from_model(self, model_id):
         return self._get_existing_games('model_id = ?', model_id)
 
+    def _get_games_from_models(self, model_range):
+        return self._get_existing_games(
+            'model_id BETWEEN ? and ?',
+            model_range)
+
     def _get_games_from_ts(self, model_range, ts_range):
         return self._get_existing_games(
             'model_id BETWEEN ? and ? AND timestamp BETWEEN ? and ?',
@@ -594,7 +599,7 @@ class CloudyGo:
     def update_models(self, bucket, only_create=False):
         # LEELA-HACK
         if CloudyGo.LEELA_ID in bucket:
-            model_glob = os.path.join(self.model_path(bucket), '[0-9a-f]*')
+            model_glob = os.path.join(self.model_path(bucket), 'LZ_[0-9a-f_]*')
         else:
             model_glob = os.path.join(self.model_path(bucket), '*.meta')
         model_filenames = glob.glob(model_glob)
@@ -780,12 +785,8 @@ class CloudyGo:
         if not result:
             return None
 
-        # MINIGO-HACK
-        is_ts_game = any(b in game_path for b in CloudyGo.MINIGO_TS)
-        if sgf_model.isdigit() and is_ts_game:
-            model_id = int(sgf_model)
-
-        return game_num + (model_id, filename) + tuple(result)
+        return ((game_path, sgf_model),
+                (game_num + (model_id, filename) + tuple(result)))
 
     def update_model_names(self):
         MODEL_SRC = 'model'
@@ -823,7 +824,6 @@ class CloudyGo:
             'ORDER BY model_id')
         for model_id, bucket, name1, name2, name3 in model_names:
             for name in (name1, name2, name3):
-                names[model_id].add(name)
                 verify_unique(name, bucket, model_id)
 
         inserts = []
@@ -832,10 +832,10 @@ class CloudyGo:
                 consider_alias(name, bucket, model_id, MODEL_SRC)
 
                 # LEELA-HACK: also add short name.
-                if re.match(r'$[0-9a-fA-F]{64}^', name):
+                if re.match(r'^[0-9a-fA-F]{64}$', name):
                     short_name = name[:8]
-                    consider_alias(short_name, bucket_model_id, MODEL_SRC)
-                if re.match(r'$LZ[0-9]*_[0-9a-fA-F]{8}^', name):
+                    consider_alias(short_name, bucket, model_id, MODEL_SRC)
+                if re.match(r'^LZ[0-9]*_[0-9a-fA-F]{8}$', name):
                     short_name = name.split('_')[1][:8]
                     consider_alias(short_name, bucket, model_id, MODEL_SRC)
 
@@ -954,6 +954,37 @@ class CloudyGo:
         return to_process
 
 
+    def _get_update_games_block_folders(self, bucket, max_inserts):
+        # Folders numbered incrementally.
+        # At the current time assumes these aren't updated regurally.
+
+        base_paths = os.path.join(self.sgf_path(bucket), '*')
+        block_dirs = sorted(glob.glob(base_paths),
+                            key=lambda p: int(os.path.basename(p)))
+        if len(block_dirs) == 0:
+            return
+
+        print ("\t{} folders: {}".format(
+            len(block_dirs),
+            utils.list_preview(list(map(os.path.basename, block_dirs)), 2)))
+
+        # TODO: add some fast update hack.
+        model_range = CloudyGo.bucket_model_range(bucket)
+        existing = self._get_games_from_models(model_range)
+        print("{} existing games (FAST-UPDATE please)".format(len(existing)))
+
+        # These get fixed in after process_game
+        model_lookup = lambda filename: model_range[0]
+
+        for block_dir in block_dirs:
+            name = os.path.basename(time_dir)
+
+            game_paths = glob.glob(os.path.join(block_dir, '*.sgf'))
+            to_process = CloudyGo._game_paths_to_to_process(
+                bucket, existing, model_lookup, game_paths, max_inserts)
+            yield name, to_process, len(existing)
+
+
     def _get_update_games_time_dir(self, bucket, max_inserts):
         model_range = CloudyGo.bucket_model_range(bucket)
         models = self.get_models(bucket)
@@ -1061,6 +1092,8 @@ class CloudyGo:
 
         if bucket in CloudyGo.MINIGO_TS:
             games_source = self._get_update_games_time_dir(bucket, max_inserts)
+        elif CloudyGo.LEELA_ID in bucket:
+            game_source = _get_update_games_block_folders(bucket, max_inserts)
         else:
             games_source = self._get_update_games_model(bucket, max_inserts)
 
@@ -1070,6 +1103,10 @@ class CloudyGo:
                     len(to_process), model_name))
 
                 new_games = self.map_and_filter(CloudyGo.process_game, to_process)
+
+                # Something like
+                # Post-process PB/PW to model_id (when folder/filename is ambiguous)
+                new_games = self.process_model_sgf_names(bucket, new_games)
 
                 # Some Games were processed as clean may now have stats data.
                 self.insert_rows_db('games', new_games, allow_existing=True)
@@ -1155,7 +1192,18 @@ class CloudyGo:
         name = re.sub(r'([0-9a-f]{8})[0-9a-f]{56}', r'\1', name)
         return name
 
+    def process_sgf_model_names(self, bucket, records):
+        # Used for self-play games
+        model_range = CloudyGo.bucket_model_range(bucket)
+        bucket_salt = model_range[0]
+        name_to_num = dict(self.query_db(
+            'SELECT name, model_id FROM name_to_model_id '
+            'WHERE model_id BETWEEN ? AND ?',
+            model_range))
+        new_names = []
+
     def process_sgf_names(self, bucket, records):
+        # Used for eval_games
         SGF_SRC = 'sgf'
 
         model_range = CloudyGo.bucket_model_range(bucket)
@@ -1234,7 +1282,7 @@ class CloudyGo:
                 len(name_to_bucket), len(name_to_buckets)))
 
         def bucket_from_name(filename, PB, PW):
-            # Attempt to find what bucket PB and PW belong too
+            # Attempt to find what bucket PB and PW belong too for ALL_EVAL_BUCKETS
             first_folder = filename.split('/')[0]
             if first_folder in CloudyGo.MINIGO_TS:
                 prefix = first_folder + '/'
@@ -1277,7 +1325,7 @@ class CloudyGo:
             if bucket_salt == record[2] == record[3]:
                 new_record = list(record[:-2])
                 PB, PW = record[-2:]
-                # HACK: add the bucket name avoid name collusions
+                # HACK: add the bucket name to avoid name collusions
                 if bucket in CloudyGo.ALL_EVAL_BUCKETS:
                     PB, PW = bucket_from_name(record[1], PB, PW)
                     if PB == None or PW == None:

@@ -15,7 +15,7 @@ Visit [CloudyGo.com](http://CloudyGo.com) to see a live version.
 
 The site requires several python libraries, this may not be a complete list
 ```
-pip3 install choix flask numpy tqdm sqlite3
+pip3 install choix flask numpy tqdm sqlite3 requests
 ```
 sgftopng is required to render some images, but isn't required to run.
 

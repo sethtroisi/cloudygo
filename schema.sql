@@ -45,6 +45,15 @@ CREATE TABLE IF NOT EXISTS runs (
 CREATE TABLE IF NOT EXISTS models (
   model_id integer primary key,
 
+  /**
+   * Display:
+   *    Minigo: 000151-fury, 000250-golden-phoenix
+   *    LZ:     LZXXX_<8_of_hash>
+   * Raw:
+   *    Minigo: same
+   *    LZ:     0123456789abcdef0123...
+   */
+
   /* This column is rendered in the UI */
   display_name text not null,
   /* This column is the name in models directory */
@@ -83,7 +92,7 @@ CREATE TABLE IF NOT EXISTS games (
 
   has_stats boolean not null,
 
-  number_of_visits_black integer, /* index 10 */
+  number_of_visits_black integer,
   number_of_visits_white integer,
 
   number_of_visits_early_black integer,
