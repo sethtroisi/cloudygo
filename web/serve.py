@@ -310,7 +310,7 @@ def eval_view(bucket, model, filename):
         filename,
     )
 
-
+# TODO clarify what is model, model_id, model_name
 def render_game(bucket, model, data, filename="",
                 force_full=False, render_sorry=False):
     is_raw = get_bool_arg('raw', request.args)
@@ -483,11 +483,11 @@ def site_nav(bucket=CloudyGo.DEFAULT_BUCKET):
 def models_details(bucket=CloudyGo.DEFAULT_BUCKET):
     models = sorted(cloudy.get_models(bucket))[::-1]
     run_data = cloudy.get_run_data(bucket)
-    total_games = sum((m[8] for m in models))
+    total_games = sum((m[9] for m in models))
 
     while len(models):
         # If model has games or isn't recent
-        if models[0][8] > 0 or time.time() - models[0][5] > 3600:
+        if models[0][9] > 0 or (time.time() - models[0][6]) > 3600:
             break
         models.pop(0)
 
@@ -501,10 +501,10 @@ def models_details(bucket=CloudyGo.DEFAULT_BUCKET):
     # Convert tuples to mutable lists (so that timestamps can be datified).
     models = [list(m) for m in models]
 
-    last_update = max((m[5] for m in models), default=0)
+    last_update = max((m[6] for m in models), default=0)
     for m in models:
         # creation timestamp
-        m[6] = CloudyGo.time_stamp_age(m[6])
+        m[7] = CloudyGo.time_stamp_age(m[7])
 
     return render_template(
         'models.html',
@@ -667,8 +667,8 @@ def models_graphs_sliders(bucket):
         models = sorted(cloudy.get_models(bucket))
         for model in models:
             model_id = str(model[0])
-            opening = model_id+'-favorite-openings.png'
-            policy = model_id+'-policy-empty.png'
+            opening = model_id + '-favorite-openings.png'
+            policy = model_id + '-policy-empty.png'
 
             picture_sliders.append((
                 model[0] % CloudyGo.SALT_MULT,
@@ -858,7 +858,9 @@ def model_eval(bucket, model_name):
     if model == None:
         try:
             model_id = bucket_salt + int(model_name)
-            model = [model_id, model_name, model_name, bucket,
+            model = [model_id,
+                     model_name, model_name, model_name,
+                     bucket,
                      model_id, # num
                      0, 0, 0,  # last updated, creation, training_time
                      0, 0, 0]  # games, stat_games, eval_games
@@ -867,7 +869,7 @@ def model_eval(bucket, model_name):
 
     # Nicely format creation timestamp.
     model = list(model)
-    model[6] = CloudyGo.time_stamp_age(model[6])[0] if model[6] else '???'
+    model[7] = CloudyGo.time_stamp_age(model[7])[0] if model[7] else '???'
 
     eval_models = cloudy.query_db(
         'SELECT * FROM eval_models WHERE model_id_1 = ?',
@@ -935,7 +937,7 @@ def model_eval(bucket, model_name):
 
     is_sorted = get_bool_arg('sorted', request.args)
     sort_by = operator.itemgetter(3 if is_sorted else 1)
-    model_games = sorted(updated, key=sort_by)
+    eval_models = sorted(updated, key=sort_by)
 
     return render_template('model-eval.html',
                            bucket=bucket,
@@ -947,7 +949,7 @@ def model_eval(bucket, model_name):
                            played_better=played_better,
                            later_models=later_models,
                            earlier_models=earlier_models,
-                           model_games=model_games,
+                           eval_models=eval_models,
                            eval_games=eval_games,
     )
 
@@ -960,7 +962,7 @@ def model_details(bucket, model_name):
         return 'Model {} not found'.format(model_name)
     model_id = model[0]
     model_name = model[2]
-    model_num = model[4]
+    model_num = model[5]
     run_data = cloudy.get_run_data(bucket)
 
     game_names = cache.get(model_name)
@@ -1020,6 +1022,7 @@ def model_details(bucket, model_name):
 
 @app.route('/<bucket>/graphs/<model_name>')
 def model_graphs(bucket, model_name):
+    # TODO: consider lookup_model_id function.
     model, model_stats = cloudy.load_model(bucket, model_name)
     if model is None:
         return 'Model {} not found'.format(model_name)
@@ -1028,7 +1031,7 @@ def model_graphs(bucket, model_name):
     # Divide by two to help avoid 'only black can win on even moves'
     game_length = cloudy.query_db(
         'SELECT black_won, 2*(num_moves/2), count(*) FROM games ' +
-        'WHERE model_id = ? GROUP BY 1,2 ORDER BY 1,2', (model[0],))
+        'WHERE model_id = ? GROUP BY 1,2 ORDER BY 1,2', (model_id,))
 
     #### OPENING RESPONSES ####
 

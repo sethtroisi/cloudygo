@@ -71,8 +71,8 @@
   <body>
     {{ navbar('position_comparison',
               '{} Comparison of {} vs {}'.format(
-                  group|title, model_a[4], model_b[4]),
-              model=model_a[2],
+                  group|title, model_a[5], model_b[5]),
+              model=model_a[1],
               other_page='models_details',
        ) }}
     {# TODO(sethtroisi): More explicit link to model_a[1] Details #}
@@ -118,8 +118,8 @@
     /**** POSITION ****/
     var positionSlider = d3.select("#position-select");
 
-    var modelA = "{{ model_a[2] }}";
-    var modelB = "{{ model_b[2] }}";
+    var modelA = "{{ model_a[1] }}";
+    var modelB = "{{ model_b[1] }}";
 
     var sgfs = JSON.parse('{{ sgfs | tojson | safe }}');
     var sgfsA = sgfs[0];

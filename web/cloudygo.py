@@ -138,6 +138,7 @@ class CloudyGo:
         cur = self.db().execute(query, args)
         rv = cur.fetchall()
         cur.close()
+        # TODO sqlite3.Row is amazing, stop being silly here
         return list(map(tuple, rv))
 
     @staticmethod
@@ -303,8 +304,10 @@ class CloudyGo:
             model_name = self.get_newest_model_num(bucket)
 
         model = self.query_db(
-            'SELECT * FROM models WHERE bucket = ? AND (raw_name = ? or num = ?)',
-            (bucket, model_name, model_name))
+            'SELECT * FROM models WHERE '
+            '    bucket = ? AND '
+            '    (display_name = ? OR raw_name = ? OR num = ?)',
+            (bucket, model_name, model_name, model_name))
 
         stats = tuple()
         if model:
@@ -612,13 +615,18 @@ class CloudyGo:
                 assert len(lz) == 1, (model_filename, raw_name, lz)
                 lz = lz[0]
 
-                raw_name = raw_name[:8]  # otherwise sgf loading fails
                 model_id = lz[0]
-                model_name = lz[1]
-                model_num = lz[4]
+                display_name = lz[1]
+                raw_name = raw_name
+                sgf_name = raw_name
+                model_num = lz[5]
             else:
                 model_num, model_name = raw_name.split('-', 1)
                 model_id = CloudyGo.bucket_salt(bucket) + int(model_num)
+                display_name = raw_name
+                raw_name = raw_name
+                sgf_name = raw_name
+                # TODO add slow lookup here
 
             if only_create and model_id in existing:
                 continue
@@ -644,12 +652,15 @@ class CloudyGo:
             num_eval_games = num_eval_games[0][0] or 0
 
             model = (
-                model_id, model_name, raw_name,
+                model_id,
+                display_name, raw_name, sgf_name,
                 bucket, int(model_num),
+
+                # generated fields
                 last_updated, creation, training_time_m,
                 num_games, num_stats_games, num_eval_games
             )
-            assert len(model) == 11, model
+            assert len(model) == 12, model
             model_inserts.append(model)
 
             currently_processed = self.query_db(
@@ -777,11 +788,6 @@ class CloudyGo:
         return game_num + (model_id, filename) + tuple(result)
 
     def update_model_names(self):
-        model_names = self.query_db(
-            'SELECT model_id, raw_name, bucket from models')
-        query = self.query_db(
-            'SELECT name, bucket, model_id FROM name_to_model_id')
-
         MODEL_SRC = 'model'
 
         names = defaultdict(set)
@@ -805,40 +811,54 @@ class CloudyGo:
                 inserts.append((alias, bucket, model_id, source))
                 names[model_id].add(alias)
 
-        for alias, bucket, model_id in query:
+        query = self.query_db(
+            'SELECT model_id, bucket, name FROM name_to_model_id')
+        for model_id, bucket, alias in query:
             names[model_id].add(alias)
             verify_unique(alias, bucket, model_id)
 
-        inserts = []
-        for model_id, model_name, bucket in sorted(model_names):
-            consider_alias(model_name, bucket, model_id, MODEL_SRC)
+        model_names = self.query_db(
+            'SELECT model_id, bucket, display_name, raw_name, sgf_name '
+            'FROM models '
+            'ORDER BY model_id')
+        for model_id, bucket, name1, name2, name3 in model_names:
+            for name in (name1, name2, name3):
+                names[model_id].add(name)
+                verify_unique(name, bucket, model_id)
 
-            # LEELA-HACK: also add short name.
-            if re.match(r'$[0-9a-fA-F]{64}^', model_name):
-                short_name = model_name[:8]
-                consider_alias(short_name, bucket_model_id, MODEL_SRC)
-            if re.match(r'$LZ[0-9]*_[0-9a-fA-F]{8}^', model_name):
-                short_name = model_name.split('_')[1][:8]
-                consider_alias(short_name, bucket, model_id, MODEL_SRC)
+        inserts = []
+        for model_id, bucket, name1, name2, name3 in model_names:
+            for name in (name1, name2, name3):
+                consider_alias(name, bucket, model_id, MODEL_SRC)
+
+                # LEELA-HACK: also add short name.
+                if re.match(r'$[0-9a-fA-F]{64}^', name):
+                    short_name = name[:8]
+                    consider_alias(short_name, bucket_model_id, MODEL_SRC)
+                if re.match(r'$LZ[0-9]*_[0-9a-fA-F]{8}^', name):
+                    short_name = name.split('_')[1][:8]
+                    consider_alias(short_name, bucket, model_id, MODEL_SRC)
 
         # MINIGO-HACK
-        for model_id, model_name, bucket in sorted(model_names):
+        for model_id, bucket, display_name, raw_name, sgf_name in model_names:
             if bucket not in CloudyGo.MINIGO_TS:
                 continue
 
-
             # Check if checkpoint name already looked up.
             cur = any(n.startswith(CloudyGo.MODEL_CKPT) for n in names[model_id])
-            if len(model_name) > 3 and not cur:
-                path = os.path.join(self.model_path(bucket), model_name)
+            if len(raw_name) > 3 and not cur:
+                # TODO: extract to function
+                path = os.path.join(self.model_path(bucket), raw_name)
                 if os.path.isfile(path + '.meta'):
-                    print ('Slow lookup of checkpoint step for', model_id, model_name)
+                    print ('Slow lookup of checkpoint step for',
+                        model_id, raw_name)
                     import tensorflow.train as tf_train
                     ckpt = tf_train.load_checkpoint(path)
                     step = ckpt.get_tensor('global_step')
+
                     new_name = CloudyGo.MODEL_CKPT + str(step)
                     consider_alias(new_name, bucket, model_id, MODEL_SRC)
-                    print ("\t", model_id, model_name, " =>  ", new_name)
+                    print ("\t", model_id,raw_name, " =>  ", new_name)
 
         if inserts:
             self.insert_rows_db('name_to_model_id', inserts)
@@ -862,6 +882,7 @@ class CloudyGo:
             if model_id in num_to_name:
                 # NOTE(sethtroisi): Models having multiple names complicates
                 # things, e.g. eval page.
+                # TODO come back and look at using display_name from models.
                 print("ERROR: {}, multiple names: {}, {}".format(
                     model_id, name, num_to_name[model_id]))
 
@@ -937,7 +958,7 @@ class CloudyGo:
         model_range = CloudyGo.bucket_model_range(bucket)
         models = self.get_models(bucket)
 
-        model_mtimes = [model[6] for model in models]
+        model_mtimes = [model[7] for model in models]
         model_ids = [model[0] for model in models]
         model_lookup = functools.partial(
             CloudyGo._model_guesser,
@@ -991,19 +1012,21 @@ class CloudyGo:
         for model in self.get_models(bucket):
             # FAST UPDATE HACK: only newest day of model folders are updated.
             # Check if directory mtime is recent, if not skip
-            test_d = os.path.join(self.sgf_path(bucket), model[2], 'full')
+            raw_name = model[2]
+            test_d = os.path.join(self.sgf_path(bucket), raw_name, 'full')
             m_time = os.path.getmtime(test_d) if os.path.exists(test_d) else 0
-            if model[5] > m_time + 3600 * CloudyGo.FAST_UPDATE_HOURS:
-                skipped.append(model[4])
+            if model[6] > m_time + 3600 * CloudyGo.FAST_UPDATE_HOURS:
+                # If greater than FAST_UPDATE_HOURS since it was created, skip
+                skipped.append(model[5])
                 continue
 
-            name = '{}-{}'.format(model[4], model[1])
+            name = '{}-{}'.format(model[5], model[1])
             model_id = model[0]
             model_lookup = lambda: model_id
 
             existing = self._get_games_from_model(model_id)
             # TODO: Support update from clean if so desired.
-            game_paths = self.all_games(bucket, model[2])
+            game_paths = self.all_games(bucket, raw_name)
             to_process = CloudyGo._game_paths_to_to_process(
                 bucket, existing, model_lookup, game_paths, max_inserts)
 

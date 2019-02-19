@@ -69,7 +69,7 @@
   <body>
     {{ navbar('model_details',
               model[1] + ' details',
-              model=model[2],
+              model=model[1],
               other_page='models_details',
        ) }}
     {# TODO(sethtroisi): prev, next, newest links #}
@@ -78,7 +78,7 @@
       <thead class="thead-light">
         <th colspan="4">
             {# TODO(sethtroisi): add model photo #}
-            Stats for {{model[4]}} - {{model[1]}}</th>
+            Stats for {{model[2]}}</th>
         <th colspan="2">
             More stats coming <a href="https://developer.valvesoftware.com/wiki/Valve_Time">soon(tm)</a></th>
       </thead>
@@ -93,15 +93,15 @@
       </tr>
       {% endif %}
       <tr>
-        <td colspan="3">Created {{ model[6]|strftime }}</td>
-        <td colspan="3">Last updated {{ model[5]|strftime }}</td>
+        <td colspan="3">Created {{ model[7]|strftime }}</td>
+        <td colspan="3">Last updated {{ model[6]|strftime }}</td>
       </tr>
       <tr>
-        <td colspan="2">Played {{model[8]}} self-play games</td>
-        <td colspan="2">{{model[9]}} debug games loaded</td>
+        <td colspan="2">Played {{model[9]}} self-play games</td>
+        <td colspan="2">{{model[10]}} debug games loaded</td>
         <td colspan="2">
-          <a href="{{ url_for('model_eval', bucket=bucket, model_name=model[4]) }}">
-            {{model[10]}} evaluation games played</a>
+          <a href="{{ url_for('model_eval', bucket=bucket, model_name=model[5]) }}">
+            {{model[11]}} evaluation games played</a>
         </td>
       </tr>
     </table>
@@ -130,7 +130,7 @@
         {% for side_stats in model_stats -%}
         <tr>
           <td>{{side_stats[1]}}</td>
-          <td>{{side_stats[4]}} {{ percentR(side_stats[4], model[8], 1) }}</td>
+          <td>{{side_stats[4]}} {{ percentR(side_stats[4], model[9], 1) }}</td>
           <td>{{side_stats[5]}} {{ percentR(side_stats[5], side_stats[4], 1) }}</td>
           <td>{{side_stats[6]}}</td>
           <td>{{side_stats[7]}}</td>

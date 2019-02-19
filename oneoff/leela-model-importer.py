@@ -56,15 +56,18 @@ with open(INSERTS, 'w') as inserts, open(DOWNLOADER, 'w') as downloader:
 
         display_name = 'LZ{}_{}'.format(num, name)
 
-        #fname = os.path.join(MODEL_DIR, full_name)
-        #if not os.path.exists(fname):
-            #open(fname, 'a').close()
-        #    os.utime(fname, (epoch, epoch))
+        fname = os.path.join(MODEL_DIR, full_name)
+        if not os.path.exists(fname):
+            open(fname, 'a').close()
+            os.utime(fname, (epoch, epoch))
 
         display_name = 'LZ{}_{}'.format(num, name)
+        # a models row
         row = INSERT.format(
             BUCKET_NUM * 10 ** 6 + num,
-            display_name, display_name,
+            display_name,   # display_name
+            display_name,   # name in models dir
+            full_name,      # name in sgf files
             BUCKET, num,
             epoch, epoch,
             network_blocks, # training_time_m (being abused)

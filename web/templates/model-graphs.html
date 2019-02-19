@@ -65,8 +65,8 @@
   </head>
   <body>
     {{ navbar('model_graphs',
-              model[2] + ' graphs',
-              model=model[2],
+              model[1] + ' graphs',
+              model=model[1],
               other_page='models_details',
        ) }}
 
@@ -93,7 +93,7 @@
   <script>
     var game_length = JSON.parse('{{ game_length | tojson | safe}}');
 
-    var model_num = {{ model[4] }};
+    var model_num = {{ model[5] }};
     per_model_slider_graph(
         model_num,
         d3.select("#game-length-svg"),

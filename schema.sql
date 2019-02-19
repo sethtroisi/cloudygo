@@ -43,10 +43,16 @@ CREATE TABLE IF NOT EXISTS runs (
 );
 
 CREATE TABLE IF NOT EXISTS models (
-  /* TODO add new display_name column */
   model_id integer primary key,
-  name text not null,
+
+  /* This column is rendered in the UI */
+  display_name text not null,
+  /* This column is the name in models directory */
   raw_name text not null,
+  /* This column is used to match with sgf
+     (for model.ckpt-1024.pb, full lz hash) */
+  sgf_name text not null,
+
   bucket text not null,
   num integer not null,
 
@@ -194,8 +200,9 @@ CREATE TABLE IF NOT EXISTS position_setups (
 
 
 CREATE INDEX IF NOT EXISTS models_bucket_index ON models (bucket);
-CREATE INDEX IF NOT EXISTS models_name_index ON models (name);
-CREATE INDEX IF NOT EXISTS models_raw_name_index ON models (raw_name);
+CREATE INDEX IF NOT EXISTS models_display_name_index ON models (display_name);
+CREATE INDEX IF NOT EXISTS models_raw_name_index     ON models (raw_name);
+CREATE INDEX IF NOT EXISTS models_sgf_name_index     ON models (sgf_name);
 
 CREATE INDEX IF NOT EXISTS game_timestamp_index ON games (timestamp);
 CREATE INDEX IF NOT EXISTS game_game_num_index ON games (game_num);
