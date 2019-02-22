@@ -532,7 +532,7 @@ class CloudyGo:
     def render_position_eval(
             self, bucket, model_id,
             group, name, data,
-            filename=None, max_nodes=None):
+            filename=None):
         # Old style
         # data = self.query_db(
         #    'SELECT cord, policy, n '
@@ -542,19 +542,22 @@ class CloudyGo:
         #    (model_id, group, name))
 
         board_size = CloudyGo.bucket_to_board_size(bucket)
-        if max_nodes is None:
-            max_nodes = board_size + 1
 
         # The V stands for 'value' as in 'policy value'
         # I'm very sorry about that future reader.
         high_v = sorted([p for c, p, n in data], reverse=True)
-        cutoff = high_v[max_nodes] if len(high_v) > max_nodes else 0.01
+        cutoff = 0.005
+        if len(high_v) > 15:
+            cutoff = max(cutoff, high_v[15])
 
         position_nodes = []
-        for q, (cord, policy, n) in enumerate(data, 1):
+        for move_num, (cord, policy, n) in enumerate(data, 1):
             if 0 <= cord < board_size*board_size and (n > 0 or policy > cutoff):
                 j, i = divmod(cord, board_size)
-                value = q if n > 0 else round(100 * policy, 1)
+                if n > 0:
+                    value = move_num
+                else:
+                    value = round(100 * policy, 1)
 
                 position_nodes.append((
                     sgf_utils.ij_to_cord(board_size, (i, j)),
