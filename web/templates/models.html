@@ -82,7 +82,7 @@
           {% for m in models[c*rows:(c+1)*rows] %}
           <tr>
             <td>{{m[5]}}</td>
-            <td><a href="{{ url_for('model_details', bucket=bucket, model_name=m[2]) }}">
+            <td><a href="{{ url_for('model_details', bucket=bucket, model_name=m[1]) }}">
               {{m[1]}}
             </a></td>
             <td class="c-tooltip">{{m[7][0]}} {{ tip(m[7][1]) }}</td>

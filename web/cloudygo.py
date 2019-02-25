@@ -629,7 +629,7 @@ class CloudyGo:
     def update_models(self, bucket, only_create=False):
         # LEELA-HACK
         if CloudyGo.LEELA_ID in bucket:
-            model_glob = os.path.join(self.model_path(bucket), 'LZ_[0-9a-f_]*')
+            model_glob = os.path.join(self.model_path(bucket), 'LZ[0-9]*_[0-9a-f_]*')
         else:
             model_glob = os.path.join(self.model_path(bucket), '*.meta')
         model_filenames = glob.glob(model_glob)
