@@ -106,6 +106,8 @@
       </tr>
     </table>
     <br>
+    {% set has_any_debug = 'leela' not in bucket %}
+
     <table class="table">
       {% if model_stats is not none -%}
       <thead class="thead-light">
@@ -118,12 +120,12 @@
         <th>Wins by result</th>
         <th>Sum win margin</th>
         <th>Holdout games</th>
-        {%- if 'leela' not in bucket -%}
+      {%- if has_any_debug -%}
         <th>Bad resigns</th>
         <th class="c-tooltip">Unluckiness{{tip('Sum of soft-n for all moves above move choosen') }}</th>
         <th class="c-tooltip">Number moves{{tip('From both players, but only in games won by Player')}}</th>
         <th class="c-tooltip">Sum move visits{{tip('From both players, but only in games won by Player')}}</th>
-        {%- endif -%}
+      {%- endif -%}
       </thead>
       <tbody>
         <!-- TODO(sethtroisi): discuss renaming all observer -->
@@ -135,12 +137,12 @@
           <td>{{side_stats[6]}}</td>
           <td>{{side_stats[7]}}</td>
           <td>{{side_stats[8]}}</td>
-          {%- if 'leela' not in bucket -%}
+        {%- if has_any_debug -%}
           <td>{{side_stats[9]}} {{ percentR(side_stats[9], side_stats[8]) }}</td>
           <td>{{ rate(side_stats[13], side_stats[4], 3) }}</td>
           <td>{{side_stats[10]}} ({{ rate(side_stats[10], side_stats[4], 1) }} per game)</td>
           <td>({{ rate(side_stats[11], side_stats[10], 0) }} visits to top node per move)</td>
-          {%- endif -%}
+        {%- endif -%}
         </tr>
         {%- endfor %}
         <tr>
@@ -176,23 +178,24 @@
       </span>
       {%- endif %}
     <hr>
+
     <table class="table table-striped table-hover">
       <thead class="thead-light">
         <th colspan="7">{{ games|length }}{{ " Random" if is_random else "" }} games</th>
-        {%- if 'leela' not in bucket -%}
+      {%- if has_any_debug -%}
         <th class="debug-sep" colspan="5">Debug (hover headers for definition)</th>
-        {%- endif -%}
+      {%- endif -%}
       </thead>
       <thead class="thead-light">
         <th>Name</th>
         <th>Viewer</th>
         <th>Raw SGF</th>
-        {%- if 'leela' not in bucket -%}
+      {%- if has_any_debug -%}
         <th colspan="2">Debug (commented) SGF</th>
-        {%- endif -%}
+      {%- endif -%}
         <th>Results</th>
         <th>Moves</th>
-        {%- if 'leela' not in bucket -%}
+      {%- if has_any_debug -%}
         <th class="debug-sep c-tooltip">
           Unluckiness
           {{ tip('Sum of soft-n for moves ranked higher than selected move (summed over first thiry moves)') }}
@@ -206,7 +209,7 @@
           Bleakest eval
           {{ tip('Worst eval during the game by (black|white)') }}
         </th>
-        {%- endif -%}
+      {%- endif -%}
         <th class="c-tooltip">Opening
           {{ tip('First ten moves of game') }}
         </th>
@@ -232,6 +235,7 @@
           {%- endfor -%}
           <td>{{game[5]}}</td>
           <td>{{game[7]}}</td>
+      {%- if has_any_debug -%}
           {%if- game[10] -%}
           <td class="debug-sep">{{game[15]|round(2)}}|{{game[16]|round(2)}}</td>
           <td>{{game[13]}}|{{game[14]}}</td>
@@ -243,6 +247,7 @@
           <td></td>
           <td></td>
           {%- endif %}
+      {%- endif -%}
           <td>{{game[9]}}</td>
         </tr>
         {%- endfor %}
