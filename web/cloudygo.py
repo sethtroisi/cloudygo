@@ -114,12 +114,15 @@ class CloudyGo:
         return [p[0] for p in self.query_db(query, (model_id, limit))]
 
     def all_games(self, bucket, model, game_type='full'):
-        # LEELA-HACK
+        assert bucket != CloudyGo.LEELA_ID, "LZ uses _get_games_from_model"
+
+        # TODO can be cleaned up soon
+        # LEELA-HACK (v1)
         if CloudyGo.LEELA_ID in bucket:
             game_type = 'clean'
 
         if bucket in CloudyGo.MINIGO_TS:
-            assert False, bucket
+            assert False, (bucket, "Should use _get_games_from_ts")
 
         # NOTE: An older version of cloudygo would load games in two passes
         # Parsing clean then full games this gave some flexibility but at
@@ -346,8 +349,7 @@ class CloudyGo:
             return None
         self.last_cloud_request = now
 
-        # NOTE: needs to be before cloud_bucket cleas bucket.
-
+        # NOTE: needs to be before cloud_bucket clears bucket.
         from google.cloud import storage
         if bucket not in self.storage_clients:
             cloud_bucket = CloudyGo.SECRET_CLOUD_BUCKET
@@ -365,7 +367,7 @@ class CloudyGo:
             model_name = hour_guess
 
             path = os.path.join('sgf', 'full', hour_guess, filename)
-            if bucket == CloudyGo.FULL_GAME_CLOUD_BUCKET:
+            if cloud_bucket == CloudyGo.FULL_GAME_CLOUD_BUCKET:
                 # MINIGO_PUB has an outer folder of the bucket name
                 path = os.path.join(bucket, path)
         else:
@@ -387,6 +389,17 @@ class CloudyGo:
         dt = datetime.utcfromtimestamp(file_time)
         return dt.strftime("%Y-%m-%d-%H")
 
+    @staticmethod
+    def guess_number_dir(filename):
+        # leela-zero-vX-00001234.sgf
+        end = filename.rsplit('-', 1)[1]
+        assert end.endswith('.sgf')
+        number = int(end[:-4])
+        assert 0 < number < 50000000, number
+        # See ../oneoff/leela-all-to-dirs.sh PER_FOLDER
+        return str(number - (number % 5000))
+
+
     def get_game_data(self, bucket, model_name, filename, view_type):
         # Reconstruct path from filename
 
@@ -396,15 +409,25 @@ class CloudyGo:
 
         file_path = os.path.join(base_path, view_type, filename)
 
-        # MINIGO-HACK
-        if (view_type != 'eval' and
-                bucket in CloudyGo.MINIGO_TS and
-                not os.path.isfile(file_path)):
-            # TODO include this in filename
-            # Take a guess at based on timestamp
-            hour_guess = CloudyGo.guess_hour_dir(filename)
-            base_path = os.path.join(self.sgf_path(bucket), view_type)
-            file_path = os.path.join(base_path, hour_guess, filename)
+        # NOTE: To avoid making filename longer when it's determinisitic
+        # These two directory guesses are needed. If this becomes an issue
+        # I may revisit this, store the repeated folder name in the DB
+        # and not worry about this.
+
+        if view_type != 'eval' and not os.path.isfile(file_path):
+            base_path = os.path.join(self.sgf_path(bucket))
+
+            # MINIGO-HACK
+            if bucket in CloudyGo.MINIGO_TS:
+                hour_guess = CloudyGo.guess_hour_dir(filename)
+                file_path = os.path.join(base_path, view_type,
+                                         hour_guess, filename)
+
+            # LEEZA-HACK
+            if bucket == CloudyGo.LEELA_ID:
+                dir_guess = CloudyGo.guess_number_dir(filename)
+                file_path = os.path.join(base_path, dir_guess, filename)
+                print ("Hi", file_path)
 
         base_dir_abs = os.path.abspath(base_path)
         file_path_abs = os.path.abspath(file_path)
@@ -418,6 +441,7 @@ class CloudyGo:
                 data = f.read()
             return data, view_type
 
+        # NOTE: All clean games are kept but condition could be removed.
         if 'full' in view_type \
                 and CloudyGo.LEELA_ID not in bucket \
                 and CloudyGo.FULL_GAME_CLOUD_BUCKET:
@@ -1002,14 +1026,12 @@ class CloudyGo:
         model_lookup = lambda filename: model_range[0]
 
         for block_dir in block_dirs:
-            name = os.path.basename(block_dir)
-            # TODO include block_dir in this in filename
+            update_name = bucket + "/" + os.path.basename(block_dir) + "/"
 
             game_paths = glob.glob(os.path.join(block_dir, '*.sgf'))
             to_process = CloudyGo._game_paths_to_to_process(
                 bucket, existing, model_lookup, game_paths, max_inserts)
-            yield name, to_process, len(existing)
-            break
+            yield update_name, to_process, len(existing)
 
 
     def _get_update_games_time_dir(self, bucket, max_inserts):
