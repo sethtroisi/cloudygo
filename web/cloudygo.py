@@ -1022,8 +1022,8 @@ class CloudyGo:
         existing = self._get_games_from_models(model_range)
         print("{} existing games (FAST-UPDATE please)".format(len(existing)))
 
-        # These get fixed in after process_game
-        model_lookup = lambda filename: model_range[0]
+        # These get fixed after process_game by process_sgf_model_names
+        model_lookup = lambda filename: 0
 
         for block_dir in block_dirs:
             update_name = bucket + "/" + os.path.basename(block_dir) + "/"
@@ -1236,7 +1236,7 @@ class CloudyGo:
     def sanitize_player_name(name):
         # See oneoff/leela-all-to-dirs.sh
         name = re.sub(
-            r'Leela\s*Zero\s*([0-9](\.[0-9]+)*)?\s+(networks)?\s*', '', name)
+            r'Leela\s*Zero\s*([0-9](\.[0-9]+)*)?\s*(networks)?\s*', '', name)
         name = re.sub(r'([0-9a-f]{8})[0-9a-f]{56}', r'\1', name)
         return name
 
@@ -1250,8 +1250,8 @@ class CloudyGo:
             model_range))
         new_names = []
 
-        def get_name(name):
-            name = CloudyGo.sanitize_player_name(name)
+        def get_name(raw_name):
+            name = CloudyGo.sanitize_player_name(raw_name)
 
             if name in name_to_num:
                 return name_to_num[name]
@@ -1260,6 +1260,10 @@ class CloudyGo:
             is_lz_name = re.match(r'^LZ([0-9]+)_[0-9a-f]{8,}', name)
             if bucket.startswith('leela') and is_lz_name:
                 return bucket_salt + int(is_lz_name.group(1))
+
+            if name == '' and 'Leela Zero' in raw_name:
+                # Early LZ models => 0
+                return model_range[0]
 
             return None
             #TODO assert False
@@ -1273,13 +1277,15 @@ class CloudyGo:
         for record in records:
             model_id = record[1][2]
             if model_id != 0:
+                assert model_range[0] <= model_id <= model_range[1], (
+                    model_id, bucket, model_range)
                 new_records.append(record[1])
             else:
-                gam_path = record[0][0]
+                game_path = record[0][0]
                 sgf_model = record[0][1]
                 test_model_id = get_name(sgf_model)
                 if not test_model_id:
-                    print("Skipping", game_path)
+                    print("Skipping", record[1][3], sgf_model)
                 else:
                     new_record = list(record[1])
                     new_record[2] = test_model_id

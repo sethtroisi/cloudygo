@@ -410,6 +410,8 @@ def raw_game_data(data):
     return moves, parsed_comments
 
 
+PLAYER_BLACK_RE = re.compile(r'PB\[([^]]*)\]')
+
 def parse_game(game_path):
     data = read_game_data(game_path)
     if data is None:
@@ -427,6 +429,13 @@ def parse_game(game_path):
     # TODO this was broken by Tom.
     # TODO LZ needs to look for -w ..... and parse that
     model = parsed_comments[0][0][0] if parsed_comments else ""
+
+    # LEELA-HACK for getting model
+    # TODO: verify this hack with LZ people.
+    if 'leela' in game_path:
+        match = PLAYER_BLACK_RE.search(data)
+        if match:
+            model = match.group(1)
 
     played_moves = [sgf_to_cord(board_size, move) for move in moves]
 
