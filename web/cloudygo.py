@@ -50,10 +50,6 @@ class CloudyGo:
     FAST_UPDATE_HOURS = 6
     MAX_INSERTS = 200000
 
-    # set by __init__ but treated as constant
-    INSTANCE_PATH = None
-    DATA_DIR = None
-
     # To avoid storing all full (AKA debug) games, hotlink from the projects
     # Google Cloud Storage bucket. Some runs are in this public bucket, but
     # the current run may not yet be rsynced so we have extra secret path
@@ -67,6 +63,12 @@ class CloudyGo:
     DEFAULT_BUCKET = 'v17-19x19'
     LEELA_ID = 'leela-zero'
 
+    # These do special things with PB and PW
+    ALL_EVAL_BUCKETS = ['synced-eval', 'cross-run-eval']
+
+    CROSS_EVAL_BUCKET_MODEL = re.compile(
+        r'1[0-9]{9}.*(v[0-9]+)-([0-9]*)-(?:vs-)*(v[0-9]*)-([0-9]*)')
+
     # NOTE: From v9 on sgf folders has timestamp instead of model directories
     # this radically complicates several parts of the update code. Those places
     # should be documented with either MINIGO_TS or MINIGO-HACK.
@@ -76,13 +78,15 @@ class CloudyGo:
     # Average length of game in seconds, used to attribute game to previous model.
     MINIGO_GAME_LENGTH = 25 * 60
 
-    # These do special things with PB and PW
-    ALL_EVAL_BUCKETS = ['synced-eval', 'cross-run-eval']
-
-    CROSS_EVAL_BUCKET_MODEL = re.compile(
-        r'1[0-9]{9}.*(v[0-9]+)-([0-9]*)-(?:vs-)*(v[0-9]*)-([0-9]*)')
-
     MODEL_CKPT = 'model.ckpt-'
+
+    MIN_TS = int(datetime(2017, 6, 1).timestamp())
+    MAX_TS = int(datetime.utcnow().timestamp() + 10 * 86400)
+
+    # set by __init__ but treated as constant
+    INSTANCE_PATH = None
+    DATA_DIR = None
+
 
     def __init__(self, instance_path, data_dir, database, cache, pool):
         self.INSTANCE_PATH = instance_path
@@ -205,6 +209,15 @@ class CloudyGo:
     def bucket_model_range(bucket):
         bucket_salt = CloudyGo.bucket_salt(bucket)
         return (bucket_salt, bucket_salt + CloudyGo.SALT_MULT - 1)
+
+
+    @staticmethod
+    def get_cloud_bucket(bucket):
+        cloud_bucket = CloudyGo.SECRET_CLOUD_BUCKET
+        if cloud_bucket != CloudyGo.FULL_GAME_CLOUD_BUCKET:
+            # the secret bucket name includes part of the bucket name.
+            cloud_bucket += bucket.split('x')[0]
+        return cloud_bucket
 
     @staticmethod
     def get_game_num(bucket_salt, filename):
@@ -351,12 +364,8 @@ class CloudyGo:
 
         # NOTE: needs to be before cloud_bucket clears bucket.
         from google.cloud import storage
+        cloud_bucket = CloudyGo.get_cloud_bucket(bucket)
         if bucket not in self.storage_clients:
-            cloud_bucket = CloudyGo.SECRET_CLOUD_BUCKET
-            if cloud_bucket != CloudyGo.FULL_GAME_CLOUD_BUCKET:
-                # the secret bucket name includes part of the bucket name.
-                cloud_bucket += bucket.split('x')[0]
-
             client = storage.Client(project="minigo-pub").bucket(cloud_bucket)
             self.storage_clients[bucket] = client
 
@@ -385,7 +394,7 @@ class CloudyGo:
     @staticmethod
     def guess_hour_dir(filename):
         file_time = int(filename.split('-', 1)[0])
-        assert 1520000000 < file_time < 1580000000, file_time
+        assert CloudyGo.MIN_TS < file_time < CloudyGo.MAX_TS, file_time
         dt = datetime.utcfromtimestamp(file_time)
         return dt.strftime("%Y-%m-%d-%H")
 
@@ -427,7 +436,6 @@ class CloudyGo:
             if bucket == CloudyGo.LEELA_ID:
                 dir_guess = CloudyGo.guess_number_dir(filename)
                 file_path = os.path.join(base_path, dir_guess, filename)
-                print ("Hi", file_path)
 
         base_dir_abs = os.path.abspath(base_path)
         file_path_abs = os.path.abspath(file_path)
@@ -964,7 +972,7 @@ class CloudyGo:
     def _model_guesser(filename, model_mtimes, model_ids):
         game_time = int(filename.split('-', 1)[0])
         game_time -= CloudyGo.MINIGO_GAME_LENGTH
-        assert 1520000000 < game_time < 1580000000, game_time
+        assert CloudyGo.MIN_TS < game_time < CloudyGo.MAX_TS, game_time
         model_num = bisect.bisect(model_mtimes, game_time, 1) - 1
         assert model_num >= 0, model_num
         return model_ids[model_num]
