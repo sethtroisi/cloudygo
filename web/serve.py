@@ -585,24 +585,28 @@ def models_graphs(bucket):
             'SELECT model_id % 1000000, round(sum_unluckiness/stats_games,2)',
             'model_stats', 'WHERE perspective = "all"', 1, model_limit)
 
+        ratings_range = (model_range[0],
+                         model_range[0] + CloudyGo.CROSS_EVAL_START - 10)
         half_curve_rating_delta = cloudy.query_db(
             'SELECT '
             '    model_id_1 - model_id_2, '
             '    100 * avg((m1_black_wins + m1_white_wins) / ('
             '           (m1_black_games + m1_white_games + 0.001))) '
             'FROM eval_models m '
-            'WHERE (model_id_1 BETWEEN ? AND ?) AND model_id_2 != 0 '
+            'WHERE (model_id_1 BETWEEN ? AND ?) AND '
+            '      (model_id_2 BETWEEN ? AND ?) AND '
+            '       model_id_2 != 0 '
             'GROUP BY 1 ORDER BY 1 asc',
-            model_range)
+            ratings_range + ratings_range)
 
         rating_delta = cloudy.query_db(
             'SELECT m.model_id_1 % 1000000, m.rankings - m2.rankings '
             'FROM eval_models m INNER JOIN eval_models m2 '
             'WHERE m.model_id_2 = 0 AND m2.model_id_2 = 0 '
-            '   AND m2.model_id_1 = m.model_id_1 - 1 '
+            '   AND m.model_id_1 - 1 = m2.model_id_1 '
             '   AND (m.model_id_1 BETWEEN ? AND ?) '
             'ORDER BY m.model_id_1 desc LIMIT ?',
-            model_range + (model_limit,))
+            ratings_range + (model_limit,))
         rating_delta = list(reversed(rating_delta))
 
         graphs = (win_rate,
