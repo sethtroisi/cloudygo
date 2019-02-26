@@ -485,7 +485,7 @@ def models_details(bucket=CloudyGo.DEFAULT_BUCKET):
 
     while len(models):
         # If model has games or isn't recent
-        if models[0][9] > 0 or (time.time() - models[0][6]) > 3600:
+        if models[0][9] > 0 or (time.time() - models[0][7]) > 3600:
             break
         models.pop(0)
 
