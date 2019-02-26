@@ -39,6 +39,10 @@ coronation
 courageux
 culloden
 duke
+malabar
+mermaid
+mordaunt
+nassau
 repulse
 royal-sovereign
 sans-pareil
