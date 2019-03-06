@@ -82,8 +82,8 @@ function add_weighted_average(group, data, fx, fy, x, y, stroke='#111', alpha=0.
     }
 
     var line = d3.line()
-        .x(function(d) { return x(d[0]); })
-        .y(function(d) { return y(d[1]); });
+        .x((d) => x(d[0]))
+        .y((d) => y(d[1]));
 
     group.append('path')
         .data([trailing_avg_data])
@@ -120,8 +120,8 @@ function per_model_graph(
     // Line
     function add_line(data, x, y, funct, stroke) {
         var line = d3.line()
-            .x(function(d) { return x(fx(d)); })
-            .y(function(d) { return y(funct(d)); });
+            .x((d) => x(fx(d)))
+            .y((d) => y(funct(d)));
 
         return paths_group.append('path')
             .attr('class', 'data-line')
@@ -199,8 +199,8 @@ function per_model_slider_graph(
 
 // define the line
     var valueline = d3.line()
-        .x(function(d) { return x(f1(d)); })
-        .y(function(d) { return y(f2(d)); });
+        .x((d) => x(f1(d)))
+        .y((d) => y(f2(d)));
 
 
     // Scale the range of the data
@@ -254,9 +254,7 @@ function add_slider(slider, update_fn, min, max, init) {
         .attr('min', min)
         .attr('max', max)
         .attr('value', init)
-        .on('input', function() {
-            update_fn(parseInt(this.value));
-         });
+        .on('input', () => update_fn(parseInt(this.value)));
     update_fn(init);
 }
 
@@ -285,7 +283,7 @@ function per_model_slider_graph_setup(
     svg, slider, data, f1, f2,
     title_text, x_text, y_text) {
 
-    model_nums = d3.extent(data, function(d) { return d[0]; });
+    model_nums = d3.extent(data, (d) => d[0]);
 
     function update_graph(model_num) {
         per_model_slider_graph(
@@ -330,9 +328,7 @@ function rating_scatter_plot(
       .attr('class', 'd3-tip scatter-text')
       .offset([8, 0])
       .direction('s')
-      .html(function(d) {
-          return 'Model ' + model_fn(d) + ' ranking: ' + Math.round(f1(d));
-      });
+      .html((d) => 'Model ' + model_fn(d) + ' ranking: ' + Math.round(f1(d)));
 
     function add_dots_and_bars(group, points, x, y, funct, error_funct, colorScale, size) {
         var entering = group.selectAll('scatter-point')
@@ -341,14 +337,12 @@ function rating_scatter_plot(
 
         var g = entering
             .append('g')
-            .attr('transform', function(d) {
-                return translate(x(model_fn(d)), y(funct(d)));
-            })
+            .attr('transform', (d) => translate(x(model_fn(d)), y(funct(d))))
             .call(tool_tip);
 
         g.append('circle')
             .attr('r', size)
-            .attr('fill', function(d) { return colorScale(funct(d)); });
+            .attr('fill', (d) => colorScale(funct(d)));
         g.append('circle')
             .attr('r', 6)
             .attr('fill-opacity', 0)
@@ -373,7 +367,7 @@ function rating_scatter_plot(
             var add_line = function(class_name, x1, y1, x2, y2) {
               g.append('line')
                   .attr('class', class_name)
-                  .attr('stroke', function(d) { return colorScale(funct(d)); })
+                  .attr('stroke', (d) => colorScale(funct(d)))
                   .attr('x1', x1)
                   .attr('y1', y1)
                   .attr('x2', x2)
@@ -425,7 +419,7 @@ function rating_scatter_plot(
               d.values,
               x, y1,
               f1, f2,
-              solo ? colorScale : function() { return color; },
+              solo ? colorScale : () => color,
               solo ? 3 : 1);
 
           var trailing_avg_data = add_weighted_average(
@@ -449,19 +443,19 @@ function rating_scatter_plot(
             .enter()
             .append("rect")
               .attr("x", 20)
-              .attr("y", function(d, i){ return height - i * 20 - 50;})
+              .attr("y", (d, i) => height - i * 20 - 50)
               .attr("width", 10)
               .attr("height", 10)
-              .style("fill", function(d, i) { return bucket_color[i]; });
+              .style("fill", (d, i) => bucket_color[i]);
 
           legend.selectAll('text')
             .data(bucket_data)
             .enter()
             .append("text")
               .attr("x", 35)
-              .attr("y", function(d, i){ return height - i * 20 - 40;})
-              .text(function(d) { return d.key; })
-              .style("fill", function(d, i) { return bucket_color[i]; })
+              .attr("y", (d, i) => height - i * 20 - 40)
+              .text((d) => d.key)
+              .style("fill", (d, i) => bucket_color[i])
               .on("click", function(d) {
                 var toggled = d.active == 0 ? 1 : 0;
                 d.active = toggled;
@@ -519,23 +513,19 @@ function winrate_scatter_plot(
       .attr('class', 'd3-tip scatter-text')
       .offset([8, 0])
       .direction('s')
-      .html(function(d) {
-          return 'Model ' + d[0];
-      });
+      .html((d) => 'Model ' + d[0]);
 
     function add_dots(x, y, f1, f2, f3, colorScale) {
         var entering = graph_group.selectAll('scatter-point')
             .data(data).enter();
 
-        var g = entering.append('g');
-        g.attr('transform', function(d) {
-                return translate(x(f1(d)), y(f2(d)));
-            });
-        g.call(tool_tip);
+        var g = entering.append('g')
+            .attr('transform', (d) => translate(x(f1(d)), y(f2(d))))
+            .call(tool_tip);
 
         g.append('circle')
             .attr('r', function(d) { return (colorScale.domain()[1] - f3(d) < 50) ? 3 : 2; })
-            .attr('fill', function(d) { return colorScale(f3(d)); });
+            .attr('fill', (d) => colorScale(f3(d)));
         g.append('circle')
             .attr('r', 6)
             .attr('fill-opacity', 0)
@@ -564,8 +554,8 @@ function winrate_scatter_plot(
     add_dots(x, y, f1, f2, f3, colorScale);
 
     var line = d3.line()
-        .x(function(d) { return x(d[0]); })
-        .y(function(d) { return y(d[1]); });
+        .x((d) => x(d[0]))
+        .y((d) => y(d[1]));
 
     var paths_group = graph_group.append('g');
     function add_segment(x0, y0, x1, y1, stroke) {
