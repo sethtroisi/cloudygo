@@ -254,7 +254,7 @@ function add_slider(slider, update_fn, min, max, init) {
         .attr('min', min)
         .attr('max', max)
         .attr('value', init)
-        .on('input', () => update_fn(parseInt(this.value)));
+        .on('input',function() { update_fn(parseInt(this.value)); });
     update_fn(init);
 }
 
