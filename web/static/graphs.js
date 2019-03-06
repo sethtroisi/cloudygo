@@ -297,11 +297,18 @@ function per_model_slider_graph_setup(
     add_slider(slider, update_graph, model_nums[0], model_nums[1], model_nums[1]);
 }
 
-
+/**
+ * Used with figure 3 and eval page.
+ * Params:
+ *  f1 is name
+ *  f2 is rating
+ *  bucket_fn returns bucket
+ *  model_fn returns an model number
+ */
 function rating_scatter_plot(
         svg, data, f1, f2, bucket_fn, model_fn,
         title_text, x_text, y_text) {
-    var rightMargin = 20; // seperate incase we add a y2 axis label.
+    var rightMargin = 20; // seperate in case we add a y2 axis label.
     var margin = {top: 25, right: rightMargin, bottom: 50, left: 60};
     var width = svg.node().getBoundingClientRect().width -
         margin.left - margin.right;
@@ -327,15 +334,17 @@ function rating_scatter_plot(
           return 'Model ' + model_fn(d) + ' ranking: ' + Math.round(f1(d));
       });
 
-    function add_dots_and_bars(points, x, y, funct, error_funct, colorScale, size) {
-        var entering = graph_group.selectAll('scatter-point')
-            .data(points).enter();
+    function add_dots_and_bars(group, points, x, y, funct, error_funct, colorScale, size) {
+        var entering = group.selectAll('scatter-point')
+            .data(points)
+            .enter();
 
-        var g = entering.append('g');
-        g.attr('transform', function(d) {
+        var g = entering
+            .append('g')
+            .attr('transform', function(d) {
                 return translate(x(model_fn(d)), y(funct(d)));
-            });
-        g.call(tool_tip);
+            })
+            .call(tool_tip);
 
         g.append('circle')
             .attr('r', size)
@@ -407,7 +416,12 @@ function rating_scatter_plot(
         bucket_data.forEach(function(d, i) {
           var color = bucket_color[i];
 
+          var bucket_group = graph_group
+              .append('g')
+              .attr('class', 'bucket-' + d.key);
+
           add_dots_and_bars(
+              bucket_group,
               d.values,
               x, y1,
               f1, f2,
@@ -415,7 +429,7 @@ function rating_scatter_plot(
               solo ? 3 : 1);
 
           var trailing_avg_data = add_weighted_average(
-              graph_group,
+              bucket_group,
               d.values.filter(function(d) { return model_fn(d) > 10; }),
               model_fn, f1,
               x, y1,
@@ -445,9 +459,32 @@ function rating_scatter_plot(
             .enter()
             .append("text")
               .attr("x", 35)
-              .attr("y", function(d, i){ return height - i *  20 - 40;})
+              .attr("y", function(d, i){ return height - i * 20 - 40;})
               .text(function(d) { return d.key; })
-              .style("fill", function(d, i) { return bucket_color[i]; });
+              .style("fill", function(d, i) { return bucket_color[i]; })
+              .on("click", function(d) {
+                var toggled = d.active == 0 ? 1 : 0;
+                d.active = toggled;
+                d3.selectAll(".bucket-" + d.key)
+                  .transition()
+                  .duration(500)
+                  .style("opacity", toggled);
+              });
+
+          var active = 1;
+          legend
+            .append("text")
+            .attr("x", 35)
+            .attr("y", height - 20)
+            .text("click to toggle all")
+            .on("click", function() {
+              var toggled = active == 0 ? 1 : 0;
+              active = toggled;
+              d3.selectAll("[class^='bucket-'")
+                .transition()
+                .duration(500)
+                .style("opacity", toggled);
+            });
         }
     }
 

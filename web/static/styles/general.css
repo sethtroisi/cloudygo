@@ -6,6 +6,10 @@ body {
     text-transform: capitalize;
 }
 
+.legend {
+ cursor: pointer;
+}
+
 a:visited {
     color:#551A8B;
 }
