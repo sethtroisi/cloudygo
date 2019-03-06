@@ -794,8 +794,8 @@ def eval_graphs(bucket):
 
 @app.route('/all-eval-graphs')
 def all_eval_graphs():
-    bucket = request.args.get('bucket', 'synced-eval')
-    bucket = bucket if bucket in CloudyGo.ALL_EVAL_BUCKETS else 'synced-eval'
+    bucket = request.args.get('bucket', 'cross-run-eval')
+    bucket = bucket if bucket in CloudyGo.ALL_EVAL_BUCKETS else 'cross-run-eval'
 
     model_range, bucket_salt, eval_models, total_games, num_to_name = \
         get_eval_data(bucket)
