@@ -81,10 +81,11 @@ def count_moves(sgf):
 
 
 def pretty_print_sgf(data):
+    sep = '<br>'
+
     LINE_LEN = 100
-    return '<br>'.join(
-        '<br>'.join(line[i:i+LINE_LEN]
-                    for i in range(0, len(line), LINE_LEN))
+    return sep.join(
+        sep.join(line[i:i+LINE_LEN] for i in range(0, len(line), LINE_LEN))
         for line in data.split('\n'))
 
 

@@ -104,6 +104,11 @@
                 {{ "Game-Only" if is_full else "Debug" }}
             </a>
           {% endif %}
+          | <a href="{{ url_for('game_view',
+                                bucket=bucket,
+                                model_name=model,
+                                filename=filename, raw='sgf',
+                                type=request.args['type']) }}">Download SGF</a>
       </h2>
     </div>
     {% if render_sorry %}

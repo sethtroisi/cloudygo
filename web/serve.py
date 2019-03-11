@@ -31,8 +31,9 @@ from collections import defaultdict
 from datetime import datetime
 
 from flask import Flask, g
-from flask import request, render_template
-from flask import send_from_directory, url_for, redirect, jsonify
+from flask import render_template
+from flask import send_from_directory, url_for, jsonify
+from flask import request, Response
 from werkzeug.contrib.cache import SimpleCache
 
 from . import sgf_utils
@@ -314,6 +315,8 @@ def render_game(bucket, model_name, data, filename="",
                 force_full=False, render_sorry=False):
     is_raw = get_bool_arg('raw', request.args)
     if is_raw:
+        if request.args.get('raw', '') == 'sgf':
+            return Response(data, mimetype='application/x-go-sgf')
         return sgf_utils.pretty_print_sgf(data)
 
     # 3200 > 500 * 'B[aa];'
@@ -1092,7 +1095,6 @@ def model_graphs(bucket, model_name):
 
 def _embedding_serve_path(f, bucket):
     short_path = f[f.index(bucket):]
-    #f = url_for('send_game', filename=short_path)
     return os.path.join("/sgf/", short_path)
 
 
