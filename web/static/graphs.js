@@ -110,11 +110,12 @@ function per_model_graph(
         .attr('height', height - margin.top - margin.bottom)
         .attr('transform', translate(margin.left, margin.top));
 
-        paths_group.append('rect')
+    paths_group.append('rect')
         .attr('width', width)
         .attr('height', height)
         .attr('fill', '#fff');
 
+    // Model number
     var fx = function(d) { return d[0]; };
 
     // Line
@@ -201,7 +202,6 @@ function per_model_slider_graph(
     var valueline = d3.line()
         .x((d) => x(f1(d)))
         .y((d) => y(f2(d)));
-
 
     // Scale the range of the data
     x.domain(d3.extent(data, f1));
@@ -322,7 +322,6 @@ function rating_scatter_plot(
         .attr('width', width)
         .attr('height', height)
         .attr('fill', '#fff');
-
 
     var tool_tip = d3.tip()
       .attr('class', 'd3-tip scatter-text')
@@ -488,7 +487,14 @@ function rating_scatter_plot(
         x_text, y_text, title_text);
 }
 
-
+/**
+ * Generic scatter plot (used for winrate scatter plot)
+ *
+ * Params:
+ *  f1 is x
+ *  f2 is y
+ *  f3 is color on scale
+ */
 function winrate_scatter_plot(
         svg, data, f1, f2, f3,
         title_text, x_text, y_text) {
