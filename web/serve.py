@@ -346,9 +346,9 @@ def render_game(bucket, model_name, data, filename="",
     )
 
 
-@app.route('/<bucket>/<model_name>/game/<filename>')
-@app.route('/<bucket>/<model_name>/clean/<filename>')
-@app.route('/<bucket>/<model_name>/full/<filename>')
+@app.route('/<bucket>/<model_name>/game/<path:filename>')
+@app.route('/<bucket>/<model_name>/clean/<path:filename>')
+@app.route('/<bucket>/<model_name>/full/<path:filename>')
 def game_view(bucket, model_name, filename):
     view_type = request.args.get('type')
     if not view_type:
