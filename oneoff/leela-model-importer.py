@@ -18,10 +18,24 @@ import datetime
 import os
 import re
 import requests
+import sys
+
+import zlib
+
+def consistent_hash(string):
+    return zlib.adler32(string.encode('utf-8'))
+
+
+#### MAIN ####
+
 
 BUCKET = 'leela-zero'
-# TODO from web import cloudygo?
-BUCKET_NUM = 9
+if len(sys.argv) > 1 and sys.argv[1].startswith('leela'):
+    BUCKET = sys.argv[1]
+
+BUCKET_NUM = consistent_hash(BUCKET) % 100
+
+print ("BUCKET: {}, NUM: {}".format(BUCKET, BUCKET_NUM))
 
 URL = 'http://zero.sjeng.org'
 MODEL_DIR = os.path.join('instance', 'data', BUCKET, 'models')

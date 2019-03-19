@@ -122,11 +122,13 @@
             {{ other_buckets([ ('v3-9x9', '') ], page=other_run_page) }}
             <div class="dropdown-divider"></div>
             {{ other_buckets([
-                  ('leela-zero-v1', ' (partial)'),
-                  ('leela-zero-v2', ' (eval only)'),
-                  ('leela-zero-v3', ' (eval only)'),
-                  ('cross-eval', ' (eval only)'),
+                  ('leela-zero', ' Official LZ games and eval'),
                 ], page=other_run_page) }}
+            {{ other_buckets([
+                  ('leela-zero-eval', ' More eval games'),
+                  ('leela-zero-eval-time', ' Eval on even time'),
+                  ('cross-eval', ' (eval only)'),
+                ], page= 'eval_graphs') }}
           </div>
         </li>
         <li class="nav-item dropdown">
