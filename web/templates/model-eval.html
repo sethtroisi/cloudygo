@@ -143,7 +143,7 @@
       </style>
   </head>
   <body>
-    {% set name = overall[1] if is_sorted else model[2] %}
+    {% set name = overall[1] if is_sorted else model[1] %}
     {% set model_name = (name|string).split('-',1)[-1] %}
     {% set display_name = (name|string).lstrip('0') %}
     {{ navbar('model_eval',
