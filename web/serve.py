@@ -466,6 +466,13 @@ def figure_three(bucket):
                            figure_three_data=figure_three_data,
                            )
 
+@app.route('/<bucket>/openings.html')
+def joseki_openings(bucket):
+    return send_from_directory(
+        os.path.join(app.instance_path, 'joseki'),
+        bucket[:3] + "openings.html",
+        cache_timeout=10*60)
+
 
 @app.route('/site-nav')
 @app.route('/<bucket>/site-nav')
