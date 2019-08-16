@@ -468,10 +468,12 @@ def figure_three(bucket):
 
 @app.route('/<bucket>/openings.html')
 def joseki_openings(bucket):
-    return send_from_directory(
-        os.path.join(app.instance_path, 'joseki'),
-        bucket[:3] + "openings.html",
-        cache_timeout=10*60)
+    directory = os.path.join(app.instance_path, 'joseki')
+    f = bucket[:3] + "openings.html"
+    if not os.path.exists(os.path.join(directory, f)):
+        return 'Josekis not calculated for this run'
+
+    return send_from_directory(directory, f, cache_timeout=10*60)
 
 
 @app.route('/site-nav')
