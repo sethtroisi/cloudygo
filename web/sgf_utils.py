@@ -245,6 +245,15 @@ def read_game_data(game_path):
 def fully_parse_comment(comment):
     # SLOW!
 
+    assert comment.startswith('C['), comment
+    assert comment.endswith(']'), comment
+
+    tokens = re.split(r'[\n :,]+', comment[2:-1])
+
+    # KataGo format is float, float, float, float
+    if len(comment) in range(21, 24+1):
+        return None
+
     # comment format is:
     # <OPTIONAL resign rate>
     # <OPTIONAL model_name>
@@ -252,11 +261,6 @@ def fully_parse_comment(comment):
     # PV_move_1 (visits_1) ==> PV_move_2 (visits_2) ... ==> Q:<Q>\n
     # move: action Q U P P-Dir N soft-N p-delta p-rel
     # <15 rows>
-
-    assert comment.startswith('C['), comment
-    assert comment.endswith(']'), comment
-
-    tokens = re.split(r'[\n :,]+', comment[2:-1])
 
     if len(tokens) > 5 and tokens[0] == 'move' and tokens[2] in 'BW':
         # LEELA-HACK for ringmaster eval
@@ -370,6 +374,10 @@ def parse_game_simple(game_path, data=None, include_players=False):
         # This is a known issue, ignore these games
         if 'RE[None]' in data:
             return None
+        # This is present in ~3k KataGo games
+        if 'RE[0]' in data:
+            return None
+
     assert match, game_path
 
     result = match.group(1).upper()
@@ -388,7 +396,7 @@ def parse_game_simple(game_path, data=None, include_players=False):
     return black_won, result, moves
 
 
-def raw_game_data(data):
+def raw_game_data(filepath, data):
     # TODO this doesn't find comments not on moves.
     # UGLY HACK to allow comment before or after W[] B[] tag.
     raw_moves = list(re.finditer(
@@ -415,28 +423,31 @@ PLAYER_BLACK_RE = re.compile(r'PB\[([^]]*)\]')
 
 def parse_game(game_path):
     data = read_game_data(game_path)
-    if data is None:
-        return None
+    if data is None: return None
 
     board_size = 9 if 'SZ[9]' in data else 19
 
-    # Note: PB and PW are unused here
-    black_won, result, num_moves = parse_game_simple(game_path, data)
+    # Note: PB and PW are not requested here
+    result = parse_game_simple(game_path, data)
+    if not result: return None
+    black_won, result, num_moves = result
 
     result_margin = float(result.split('+')[1]) if ('+R' not in result) else 0
 
-    moves, parsed_comments = raw_game_data(data)
-
-    # TODO this was broken by Tom.
-    # TODO LZ needs to look for -w ..... and parse that
-    model = parsed_comments[0][0][0] if parsed_comments else ""
+    moves, parsed_comments = raw_game_data(game_path, data)
 
     # LEELA-HACK for getting model
     # TODO: verify this hack with LZ people.
-    if 'leela' in game_path:
+    if ('leela' in game_path) or ('KataGo' in game_path):
         match = PLAYER_BLACK_RE.search(data)
         if match:
             model = match.group(1)
+
+        parsed_comments = []
+    else:
+        # TODO this was broken by Tom.
+        # TODO LZ needs to look for -w ..... and parse that
+        model = parsed_comments[0][0][0] if parsed_comments else ""
 
     played_moves = [sgf_to_cord(board_size, move) for move in moves]
 

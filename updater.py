@@ -156,7 +156,7 @@ if __name__ == "__main__":
 
     arg1 = sys.argv[1] if len(sys.argv) > 1 else ""
     buckets = sys.argv[2:] if len(sys.argv) > 2 else [CURRENT_BUCKET]
-    assert 'True' not in buckets and 'False' not in buckets
+    assert 'True' not in buckets and 'False' not in buckets, buckets
 
     # Note: Models are also updated in update_games.
     if arg1 in ("models", "all_models"):

@@ -62,6 +62,7 @@ class CloudyGo:
 
     DEFAULT_BUCKET = 'v17-19x19'
     LEELA_ID = 'leela-zero'
+    KATAGO_ID = 'KataGo'
 
     # These do special things with PB and PW
     ALL_EVAL_BUCKETS = ['synced-eval', 'cross-run-eval']
@@ -118,12 +119,8 @@ class CloudyGo:
         return [p[0] for p in self.query_db(query, (model_id, limit))]
 
     def all_games(self, bucket, model, game_type='full'):
-        assert bucket != CloudyGo.LEELA_ID, "LZ uses _get_games_from_model"
-
-        # TODO can be cleaned up soon
-        # LEELA-HACK (v1)
-        if CloudyGo.LEELA_ID in bucket:
-            game_type = 'clean'
+        assert CloudyGo.LEELA_ID not in bucket, "LZ uses _get_games_from_model"
+        assert CloudyGo.KATAGO_ID not in bucket, "KataGo uses _get_games_from_model"
 
         if bucket in CloudyGo.MINIGO_TS:
             assert False, (bucket, "Should use _get_games_from_ts")
@@ -221,8 +218,8 @@ class CloudyGo:
 
     @staticmethod
     def get_game_num(bucket_salt, filename):
-        # LEELA-HACK
-        if CloudyGo.LEELA_ID in filename:
+        # LEELA-HACK, KATAGO-HACK
+        if (CloudyGo.LEELA_ID in filename) or (CloudyGo.KATAGO_ID in filename):
             number = filename.rsplit('-', 1)[-1]
             assert number.endswith('.sgf')
             # TODO(sethtroisi): these are generated from sgfsplit
@@ -437,6 +434,11 @@ class CloudyGo:
                 dir_guess = CloudyGo.guess_number_dir(filename)
                 file_path = os.path.join(base_path, dir_guess, filename)
 
+            # KATAGO-HACK
+            if CloudyGo.KATAGO_ID in bucket:
+                dir_guess = re.sub(r'-d[0-9]*$', '', model_name)
+                file_path = os.path.join(base_path, dir_guess, filename)
+
         base_dir_abs = os.path.abspath(base_path)
         file_path_abs = os.path.abspath(file_path)
         if not file_path_abs.startswith(base_dir_abs) or \
@@ -452,6 +454,7 @@ class CloudyGo:
         # NOTE: All clean games are kept but condition could be removed.
         if 'full' in view_type \
                 and CloudyGo.LEELA_ID not in bucket \
+                and CloudyGo.KATAGO_ID not in bucket \
                 and CloudyGo.FULL_GAME_CLOUD_BUCKET:
             data = self.__get_gs_game(bucket, model_name, filename, view_type)
             if data:
@@ -635,9 +638,10 @@ class CloudyGo:
     #### PAGES ####
 
     def update_models(self, bucket, only_create=False):
-        # LEELA-HACK
-        if CloudyGo.LEELA_ID in bucket:
+        if CloudyGo.LEELA_ID in bucket:     # LEELA-HACK
             model_glob = os.path.join(self.model_path(bucket), 'LZ[0-9]*_[0-9a-f_]*')
+        elif CloudyGo.KATAGO_ID in bucket:  # KATAGO-HACK
+            model_glob = os.path.join(self.model_path(bucket), 'KataGo-b[0-9]*c[0-9]*-s[0-9]*')
         else:
             model_glob = os.path.join(self.model_path(bucket), '*.meta')
         model_filenames = glob.glob(model_glob)
@@ -650,19 +654,18 @@ class CloudyGo:
         for model_filename in sorted(model_filenames):
             raw_name = os.path.basename(model_filename).replace('.meta', '')
 
-            # LEELA-HACK
-            if CloudyGo.LEELA_ID in bucket:
+            if (CloudyGo.LEELA_ID in bucket) or (CloudyGo.KATAGO_ID in bucket):
+                # LEELA-HACK and KATAGO-HACK
                 # Note: this is brittle but I can't think of how to get model_id
-                lz = [m for m in existing_models
-                            if raw_name.startswith(m[1])]
-                assert len(lz) == 1, (model_filename, raw_name, lz)
-                lz = lz[0]
+                exist = [m for m in existing_models if raw_name.startswith(m[1])]
+                assert len(exist) == 1, (model_filename, raw_name, lz)
+                exist = exist[0]
 
-                model_id = lz[0]
-                display_name = lz[1]
+                model_id = exist[0]
+                display_name = exist[1]
                 raw_name = raw_name
                 sgf_name = raw_name
-                model_num = lz[5]
+                model_num = exist[5]
             else:
                 model_num, model_name = raw_name.split('-', 1)
                 model_id = CloudyGo.bucket_salt(bucket) + int(model_num)
@@ -678,12 +681,14 @@ class CloudyGo:
             training_time_m = 120
             creation = int(os.path.getmtime(model_filename))
 
-            if last_updated - creation > (CloudyGo.FAST_UPDATE_HOURS * 3600):
+            # TODO Check if existing count is small.
+            if (last_updated - creation > (CloudyGo.FAST_UPDATE_HOURS * 3600)):
                 continue
 
             num_games = self.query_db(
                 'SELECT count(*), sum(has_stats) from games WHERE model_id = ?',
                 (model_id,))
+
             assert len(num_games) == 1
             num_games, num_stats_games = num_games[0]
             num_stats_games = num_stats_games or 0
@@ -819,9 +824,10 @@ class CloudyGo:
     @staticmethod
     def process_game(data):
         game_path, game_num, filename, model_id = data
-        sgf_model, *result = sgf_utils.parse_game(game_path)
-        if not result:
-            return None
+        results = sgf_utils.parse_game(game_path)
+        if not results: return None
+        sgf_model, *result = results
+        assert result, (game_path, results)
 
         return ((game_path, sgf_model),
                 (game_num + (model_id, filename) + tuple(result)))
@@ -841,7 +847,7 @@ class CloudyGo:
                 #   v14 000319 and 000318 both map to model.ckpt-331136
                 print('Proposed alias {} => {} already mapped to {}'
                     .format(key, model_id, test))
-                assert False
+                assert False, (key, test)
             aliases[key] = model_id
 
         def consider_alias(alias, bucket, model_id, source):
@@ -1016,8 +1022,14 @@ class CloudyGo:
         # At the current time assumes these aren't updated regurally.
 
         base_paths = os.path.join(self.sgf_path(bucket), '*')
-        block_dirs = sorted(glob.glob(base_paths),
-                            key=lambda p: int(os.path.basename(p)))
+
+        # KATAGO-HACK use step number instead of all of dir name
+        if CloudyGo.KATAGO_ID in bucket:
+            sort_by_func = lambda p: int(os.path.basename(p).split('s')[-1])
+        else:
+            sort_by_func = lambda p: int(os.path.basename(p))
+
+        block_dirs = sorted(glob.glob(base_paths), key=sort_by_func)
         if len(block_dirs) == 0:
             return
 
@@ -1103,7 +1115,7 @@ class CloudyGo:
             raw_name = model[2]
             test_d = os.path.join(self.sgf_path(bucket), raw_name, 'full')
             m_time = os.path.getmtime(test_d) if os.path.exists(test_d) else 0
-            if model[6] > m_time + 3600 * CloudyGo.FAST_UPDATE_HOURS:
+            if model[9] > 0 and model[6] > m_time + 3600 * CloudyGo.FAST_UPDATE_HOURS:
                 # If greater than FAST_UPDATE_HOURS since it was created, skip
                 skipped.append(model[5])
                 continue
@@ -1150,6 +1162,8 @@ class CloudyGo:
         if bucket in CloudyGo.MINIGO_TS:
             games_source = self._get_update_games_time_dir(bucket, max_inserts)
         elif CloudyGo.LEELA_ID in bucket:
+            games_source = self._get_update_games_block_folders(bucket, max_inserts)
+        elif CloudyGo.KATAGO_ID in bucket:
             games_source = self._get_update_games_block_folders(bucket, max_inserts)
         else:
             games_source = self._get_update_games_model(bucket, max_inserts)
@@ -1273,9 +1287,11 @@ class CloudyGo:
                 # Early LZ models => 0
                 return model_range[0]
 
+            # KATAGO-HACK (not hack)
+            assert CloudyGo.KATAGO_ID not in name, name
+
             return None
             #TODO assert False
-
 
         # process game returns
         # ((game_path, sgf_model),
@@ -1332,6 +1348,9 @@ class CloudyGo:
             is_lz_name = re.match(r'^LZ([0-9]+)_[0-9a-f]{8,}', name)
             if bucket.startswith('leela') and is_lz_name:
                 return bucket_salt + int(is_lz_name.group(1))
+
+            # KATAGO-HACK (not hack)
+            assert CloudyGo.KATAGO_ID not in name, name
 
             # NOTE: static "models" (e.g. gnu go) get a special id range.
             if name in CloudyGo.SPECIAL_EVAL_NAMES:

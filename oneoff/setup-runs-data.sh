@@ -33,6 +33,8 @@ sqlite3 instance/clouds.db """
             0, 0),
         ('leela-zero-eval-time', 'leela-zero eval with even time', 'Leela-Zero (eval on equal time)',
             0, 0),
+        ('KataGo', 'KataGo', 'KataGo g104',
+            20, 256);
         ('synced-eval', 'synced-eval', 'Eval games between minigo runs',
             0, 0),
         ('v3-9x9', 'v3', 'Old 9x9 Run',
