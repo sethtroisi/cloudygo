@@ -436,7 +436,7 @@ class CloudyGo:
 
             # KATAGO-HACK
             if CloudyGo.KATAGO_ID in bucket:
-                dir_guess = re.sub(r'-d[0-9]*$', '', model_name)
+                dir_guess = re.sub(r'(KataGo-)?(.*)(-d[0-9]*)?$', r'\2', model_name)
                 file_path = os.path.join(base_path, dir_guess, filename)
 
         base_dir_abs = os.path.abspath(base_path)
