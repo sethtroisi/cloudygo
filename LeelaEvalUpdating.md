@@ -3,10 +3,12 @@
 ```
 # Get new model list
 cd ~/Projects/cloudygo
-./oneoff/leela-model-importer.py
+oneoff/leela-model-importer.py
+oneoff/leela-model-importer.py leela-zero-eval
 
 # Update sql db
 sqlite3 instance/clouds.db ".mode csv" ".import instance/data/leela-zero/inserts.csv models"
+sqlite3 instance/clouds.db ".mode csv" ".import instance/data/leela-zero-eval/inserts.csv models"
 
 # Remove empty weight files from leela-model-importer.py
 find instance/data/leela-zero/models/ -iname 'LZ*' -type f -empty
