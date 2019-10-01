@@ -8,3 +8,6 @@ Disallow: */eval/*
 
 User-agent: MauiBot
 Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
