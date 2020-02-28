@@ -19,7 +19,7 @@ cd instance/data/leela-zero
 ./download.sh
 
 # Rsync weights to fast (this is Seth specific)
-rsync -tr --info=progress2 "models/LZ*" eights@fast.cloudygo.com:~/Projects/ringmaster/leela-zero-v3/
+rsync -tr --info=progress2 models/LZ* "eights@fast.cloudygo.com:~/Projects/ringmaster/leela-zero-v3/"
 
 # Later sync games back with this helpful macro
 cd ~/Projects/cloudygo

@@ -5,6 +5,7 @@ Disallow: */clean/*
 Disallow: */openings/*
 Disallow: */eval-model/*
 Disallow: */eval/*
+Disallow: */graphs-sliders
 
 User-agent: MauiBot
 Disallow: /
