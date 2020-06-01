@@ -26,6 +26,7 @@ from tqdm import tqdm
 
 from web import sgf_utils
 from web.cloudygo import CloudyGo
+from web import cloudyback
 
 
 # get this script location to help with running in cron
@@ -37,7 +38,7 @@ DATABASE_PATH = os.path.join(INSTANCE_PATH, 'clouds.db')
 #CURRENT_BUCKET = 'leela-zero-v1'
 #CURRENT_BUCKET = 'v3-9x9'
 #CURRENT_BUCKET = 'v13-19x19'
-CURRENT_BUCKET = CloudyGo.DEFAULT_BUCKET
+#CURRENT_BUCKET = CloudyGo.DEFAULT_BUCKET
 
 # Note when importing a new DB consider lowing
 # for an initial pass to make sure everything is okay.
@@ -100,7 +101,7 @@ def update_position_eval(cloudy, bucket, group):
     # Avoid tqdm output if no entries.
     if to_process:
         for entry in tqdm(to_process):
-            cloudy.update_position_eval(*entry)
+            cloudyback.update_position_eval(cloudy, *entry)
 
     return len(to_process)
 
@@ -131,19 +132,19 @@ def update_games(cloudy, bucket):
     print("{}: Updating Models and Games".format(bucket))
 
     # Setup models if they don't exist, don't update stats
-    cloudy.update_models(bucket, only_create=True)
+    cloudyback.update_models(cloudy, bucket, only_create=True)
 
     models = cloudy.get_models(bucket)
     if len(models) == 0:
         return 0
 
     print("\tupdating_games({})".format(MAX_INSERTS))
-    count = cloudy.update_games(bucket, MAX_INSERTS)
+    count = cloudyback.update_games(cloudy, bucket, MAX_INSERTS)
     updates += count
 
     if updates > 0:
         # Sync models with new data
-        count += cloudy.update_models(bucket)
+        count += cloudyback.update_models(cloudy, bucket)
     return updates
 
 
@@ -161,7 +162,8 @@ if __name__ == "__main__":
     # Note: Models are also updated in update_games.
     if arg1 in ("models", "all_models"):
         for bucket in buckets:
-            updates += cloudy.update_models(
+            updates += cloudyback.update_models(
+                cloudy,
                 bucket,
                 only_create=(arg1 == "models"))
 
@@ -180,10 +182,10 @@ if __name__ == "__main__":
                 db.commit()
                 print("Deleted", cur.rowcount, "eval_games from", bucket)
 
-            bucket_updates = cloudy.update_eval_games(bucket)
+            bucket_updates = cloudyback.update_eval_games(cloudy, bucket)
             if bucket_updates:
                 updates += bucket_updates
-                updates += cloudy.update_eval_models(bucket)
+                updates += cloudyback.update_eval_models(cloudy, bucket)
 
     if len(sys.argv) == 1 or arg1 == "position_evals":
         for bucket in buckets:
@@ -192,9 +194,9 @@ if __name__ == "__main__":
                 updates += update_position_eval(cloudy, bucket, group)
 
     # Always update names
-    cloudy.update_model_names()
+    cloudyback.update_model_names(cloudy)
     if updates >= 0:
-        cloudy.update_bucket_ranges(buckets)
+        cloudyback.update_bucket_ranges(cloudy, buckets)
 
     T1 = time.time()
     delta = T1 - T0
